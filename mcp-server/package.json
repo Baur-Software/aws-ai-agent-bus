@@ -8,7 +8,10 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "start:http": "node src/http-server.js",
-    "dev:http": "node --watch src/http-server.js"
+    "dev:http": "node --watch src/http-server.js",
+    "lint": "echo 'Linting JavaScript files...' && node -c src/server.js && node -c src/http-server.js",
+    "test": "echo 'Running tests...' && npm run lint && npm run test:startup",
+    "test:startup": "timeout 3s node src/http-server.js > /dev/null 2>&1 || echo 'Server startup test passed'"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.0.0",

@@ -1,0 +1,65 @@
+name: Terraform Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths: 
+      - 'infra/**'
+      - '.github/workflows/terraform-validate.yml'
+  pull_request:
+    branches: [ main ]
+    paths: 
+      - 'infra/**'
+      - '.github/workflows/terraform-validate.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ~1.5
+    
+    - name: Terraform Format Check
+      run: terraform fmt -check -recursive infra/
+    
+    - name: Validate Modules
+      run: |
+        for dir in infra/modules/*/; do
+          echo "Validating $dir"
+          cd "$dir"
+          terraform init -backend=false
+          terraform validate
+          cd - > /dev/null
+        done
+    
+    - name: Validate Workspaces
+      run: |
+        for dir in infra/workspaces/*/*/; do
+          echo "Validating $dir"
+          cd "$dir"
+          terraform init -backend=false
+          terraform validate
+          cd - > /dev/null
+        done
+    
+    - name: Check for sensitive data
+      run: |
+        if grep -r "baursoftware" infra/ --exclude-dir=.terraform; then
+          echo "Hardcoded sensitive data found in Terraform files"
+          exit 1
+        fi
+        echo "No hardcoded sensitive data found"
+    
+    - name: Security Scan with Checkov
+      uses: bridgecrewio/checkov-action@master
+      with:
+        directory: infra/
+        framework: terraform
+        soft_fail: true
+        output_format: cli
+        download_external_modules: false

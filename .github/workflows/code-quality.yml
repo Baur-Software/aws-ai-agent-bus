@@ -1,0 +1,85 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-project:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check for sensitive data in entire project
+      run: |
+        # Check for hardcoded secrets (excluding git logs, terraform state, and workflow files)
+        if find . -type f \
+          \( -name "*.js" -o -name "*.json" -o -name "*.md" \) \
+          -not -path "./.git/*" \
+          -not -path "./node_modules/*" \
+          -not -path "./.terraform/*" \
+          -not -path "./infra/workspaces/*/terraform.tfstate" \
+          -exec grep -l "baursoftware" {} + 2>/dev/null; then
+          echo "❌ Found hardcoded 'baursoftware' in source files"
+          exit 1
+        fi
+        echo "✅ No hardcoded sensitive data found"
+    
+    - name: Check file permissions
+      run: |
+        # Ensure shell scripts are executable
+        find . -name "*.sh" -not -perm -755 -exec echo "Warning: {} is not executable" \;
+        # Make them executable
+        find . -name "*.sh" -exec chmod +x {} \;
+        echo "✅ Shell script permissions verified"
+    
+    - name: Validate JSON files
+      run: |
+        for file in $(find . -name "*.json" -not -path "./node_modules/*" -not -path "./infra/modules/*/state_machine.json"); do
+          echo "Validating $file"
+          if ! python -m json.tool "$file" > /dev/null; then
+            echo "❌ Invalid JSON: $file"
+            exit 1
+          fi
+        done
+        echo "✅ All JSON files are valid"
+    
+    - name: Check documentation links
+      run: |
+        # Basic check for broken internal links in README files
+        for readme in $(find . -name "README.md"); do
+          echo "Checking links in $readme"
+          # Look for relative links and check if files exist
+          grep -o '\[.*\]([^)]*\.md)' "$readme" | while read -r link; do
+            file=$(echo "$link" | sed 's/.*(\(.*\)).*/\1/')
+            if [[ "$file" == *".md" ]] && [[ ! -f "$(dirname "$readme")/$file" ]]; then
+              echo "Warning: Broken link in $readme: $file"
+            fi
+          done
+        done
+        echo "✅ Documentation links checked"
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run secret scan
+      run: |
+        # Check for common secret patterns
+        patterns=(
+          'aws_access_key_id.*=.*[A-Z0-9]{20}'
+          'aws_secret_access_key.*=.*[A-Za-z0-9/+=]{40}'
+          'password.*=.*[^\s]{8,}'
+          'api_key.*=.*[A-Za-z0-9]{20,}'
+        )
+        
+        for pattern in "${patterns[@]}"; do
+          if grep -r -E "$pattern" . --exclude-dir=.git --exclude-dir=node_modules; then
+            echo "❌ Potential secret found: $pattern"
+            exit 1
+          fi
+        done
+        echo "✅ No secrets detected"
