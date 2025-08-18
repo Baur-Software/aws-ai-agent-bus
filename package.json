@@ -37,10 +37,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/baur-software/agent-mesh-mcp-server.git"
+    "url": "https://github.com/Baur-Software/aws-ai-agent-bus.git",
+    "directory": "mcp-server"
   },
   "bugs": {
-    "url": "https://github.com/baur-software/agent-mesh-mcp-server/issues"
+    "url": "https://github.com/Baur-Software/aws-ai-agent-bus/issues"
   },
-  "homepage": "https://github.com/baur-software/agent-mesh-mcp-server#readme"
+  "homepage": "https://github.com/Baur-Software/aws-ai-agent-bus/tree/main/mcp-server#readme"
 }
