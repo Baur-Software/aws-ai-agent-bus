@@ -17,7 +17,6 @@ The server provides two implementations:
 
 1. **`src/server.js`** - Standard MCP server using stdio transport (recommended)
 2. **`src/http-server.js`** - HTTP-based MCP server for web integrations
-3. **`test-server.js`** - Simple test server for development
 
 ## Prerequisites
 
@@ -227,20 +226,16 @@ npm run dev
 
 # HTTP server with file watching
 npm run dev:http
-
-# Test server
-node test-server.js
 ```
 
 ### Testing
 
-Test the server using the included test server:
+You can test the server by starting it and connecting with an MCP client, or by using the HTTP server's health endpoint:
 
 ```bash
-node test-server.js
+# Test HTTP server health endpoint
+curl http://localhost:3000/health
 ```
-
-This provides a simple "hello" tool for verifying MCP connectivity.
 
 ## API Reference (HTTP Server)
 
