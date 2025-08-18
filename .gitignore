@@ -35,7 +35,6 @@ crash.log
 # Claude Memory (local state)
 .claude/memory/
 .claude/snapshots/
-
 # OS generated files
 .DS_Store
 .DS_Store?
