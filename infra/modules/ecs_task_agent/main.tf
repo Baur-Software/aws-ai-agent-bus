@@ -108,7 +108,7 @@ resource "aws_ecs_task_definition" "agent" {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = "/ecs/agent-mesh/${var.env}/${var.agent_name}"
-          "awslogs-region"        = data.aws_region.current.name
+          "awslogs-region"        = data.aws_region.current.id
           "awslogs-stream-prefix" = "ecs"
         }
       }
