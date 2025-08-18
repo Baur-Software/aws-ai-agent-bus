@@ -31,7 +31,8 @@ jobs:
     
     - name: Validate Modules
       run: |
-        for dir in infra/modules/*/; do
+        cd infra
+        for dir in modules/*/; do
           echo "Validating $dir"
           cd "$dir"
           terraform init -backend=false
@@ -41,7 +42,9 @@ jobs:
     
     - name: Validate Workspaces
       run: |
-        for dir in infra/workspaces/*/*/; do
+        # Change to infra directory so relative paths work
+        cd infra
+        for dir in workspaces/*/*/; do
           echo "Validating $dir"
           cd "$dir"
           terraform init -backend=false
