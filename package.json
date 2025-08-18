@@ -8,7 +8,12 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "start:http": "node src/http-server.js",
-    "dev:http": "node --watch src/http-server.js"
+    "dev:http": "node --watch src/http-server.js",
+    "tf:fmt": "terraform fmt -recursive infra/",
+    "tf:init": "cd infra/workspaces/${WS:-small/kv_store} && terraform init",
+    "tf:plan": "cd infra/workspaces/${WS:-small/kv_store} && terraform plan -var env=${ENV:-dev}",
+    "tf:apply": "cd infra/workspaces/${WS:-small/kv_store} && terraform apply -auto-approve -var env=${ENV:-dev}",
+    "tf:destroy": "cd infra/workspaces/${WS:-small/kv_store} && terraform destroy -auto-approve -var env=${ENV:-dev}"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.0.0",
