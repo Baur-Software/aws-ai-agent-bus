@@ -68,11 +68,10 @@ jobs:
     
     - name: Run secret scan
       run: |
-        # Check for common secret patterns
+        # Check for common secret patterns (excluding legitimate password hashing)
         patterns=(
           'aws_access_key_id.*=.*[A-Z0-9]{20}'
           'aws_secret_access_key.*=.*[A-Za-z0-9/+=]{40}'
-          'password.*=.*[^\s]{8,}'
           'api_key.*=.*[A-Za-z0-9]{20,}'
         )
         
@@ -82,4 +81,11 @@ jobs:
             exit 1
           fi
         done
+        
+        # Check for password patterns but exclude legitimate password hashing
+        if grep -r -E 'password.*=.*[^\s]{8,}' . --exclude-dir=.git --exclude-dir=node_modules | grep -v 'hashed_password.*=.*pwd_context\.hash'; then
+          echo "❌ Potential hardcoded password found"
+          exit 1
+        fi
+        
         echo "✅ No secrets detected"
