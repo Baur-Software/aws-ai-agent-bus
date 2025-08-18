@@ -82,20 +82,20 @@ jobs:
           fi
         done
         
-        # Check for password patterns but exclude legitimate cases
-        scan_results=$(find . -type f \
-          \( -name "*.js" -o -name "*.json" -o -name "*.md" -o -name "*.py" -o -name "*.ts" \) \
-          -not -path "./.claude/*" \
-          -not -path "*/node_modules/*" \
-          -not -path "*/.terraform/*" \
-          -exec grep -H -E 'password.*=.*[^\s]{8,}' {} \; 2>/dev/null | \
+        # Check for password patterns in source code (excluding examples and dependencies)
+        password_matches=$(find . -name "*.js" -o -name "*.json" -o -name "*.md" -o -name "*.py" -o -name "*.ts" | \
+          grep -v "/.git/" | \
+          grep -v "/node_modules/" | \
+          grep -v "/.claude/" | \
+          grep -v "/.terraform/" | \
+          xargs grep -E 'password.*=.*[^\s]{8,}' 2>/dev/null | \
           grep -v 'hashed_password.*pwd_context\.hash' | \
           grep -v "password='testpass" | \
           grep -v 'password_hash=')
         
-        if [ -n "$scan_results" ]; then
+        if [ -n "$password_matches" ]; then
           echo "❌ Potential hardcoded password found:"
-          echo "$scan_results"
+          echo "$password_matches"
           exit 1
         fi
         
