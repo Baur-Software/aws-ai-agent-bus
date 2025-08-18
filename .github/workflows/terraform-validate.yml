@@ -25,7 +25,9 @@ jobs:
         terraform_version: ~1.5
     
     - name: Terraform Format Check
-      run: terraform fmt -check -recursive infra/
+      run: |
+        chmod +x $TERRAFORM_CLI_PATH/terraform
+        terraform fmt -check -recursive infra/
     
     - name: Validate Modules
       run: |

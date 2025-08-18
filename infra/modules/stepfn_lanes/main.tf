@@ -33,9 +33,9 @@ data "aws_iam_policy_document" "stepfn_policy" {
   }
 
   statement {
-    sid    = "PassRole"
-    effect = "Allow"
-    actions = ["iam:PassRole"]
+    sid       = "PassRole"
+    effect    = "Allow"
+    actions   = ["iam:PassRole"]
     resources = var.task_role_arns
   }
 

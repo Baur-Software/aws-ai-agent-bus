@@ -11,9 +11,9 @@ locals {
 }
 
 resource "aws_dynamodb_table" "kv" {
-  name           = local.name
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "key"
+  name         = local.name
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "key"
 
   attribute {
     name = "key"

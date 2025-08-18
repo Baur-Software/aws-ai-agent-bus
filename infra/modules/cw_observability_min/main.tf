@@ -12,17 +12,17 @@ locals {
 
 resource "aws_cloudwatch_log_group" "agents" {
   for_each = toset(var.agent_names)
-  
+
   name              = "/ecs/agent-mesh/${var.env}/${each.key}"
   retention_in_days = 30
-  
+
   tags = local.tags
 }
 
 resource "aws_cloudwatch_log_group" "stepfunctions" {
   name              = "/aws/stepfunctions/${local.name}-lanes"
   retention_in_days = 30
-  
+
   tags = local.tags
 }
 
@@ -49,7 +49,7 @@ resource "aws_cloudwatch_dashboard" "agents" {
           ]
           view    = "timeSeries"
           stacked = false
-          region  = data.aws_region.current.name
+          region  = data.aws_region.current.id
           title   = "Agent Resource Utilization"
           period  = 300
         }
@@ -62,13 +62,11 @@ resource "aws_cloudwatch_dashboard" "agents" {
         height = 6
 
         properties = {
-          query   = "SOURCE '/ecs/agent-mesh/${var.env}/conductor' | SOURCE '/ecs/agent-mesh/${var.env}/critic' | SOURCE '/ecs/agent-mesh/${var.env}/sweeper' | fields @timestamp, @message | sort @timestamp desc | limit 100"
-          region  = data.aws_region.current.name
-          title   = "Recent Agent Logs"
+          query  = "SOURCE '/ecs/agent-mesh/${var.env}/conductor' | SOURCE '/ecs/agent-mesh/${var.env}/critic' | SOURCE '/ecs/agent-mesh/${var.env}/sweeper' | fields @timestamp, @message | sort @timestamp desc | limit 100"
+          region = data.aws_region.current.id
+          title  = "Recent Agent Logs"
         }
       }
     ]
   })
-  
-  tags = local.tags
 }

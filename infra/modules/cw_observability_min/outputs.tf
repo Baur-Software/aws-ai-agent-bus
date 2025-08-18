@@ -5,5 +5,5 @@ output "log_group_names" {
 
 output "dashboard_url" {
   description = "CloudWatch dashboard URL"
-  value       = "https://${data.aws_region.current.name}.console.aws.amazon.com/cloudwatch/home?region=${data.aws_region.current.name}#dashboards:name=${aws_cloudwatch_dashboard.agents.dashboard_name}"
+  value       = "https://${data.aws_region.current.id}.console.aws.amazon.com/cloudwatch/home?region=${data.aws_region.current.id}#dashboards:name=${aws_cloudwatch_dashboard.agents.dashboard_name}"
 }

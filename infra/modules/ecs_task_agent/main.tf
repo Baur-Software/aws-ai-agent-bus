@@ -79,14 +79,14 @@ resource "aws_iam_role_policy" "task_role_policy" {
 
 resource "aws_security_group" "task" {
   name_prefix = "${local.name}-"
-  
+
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
   tags = local.tags
 }
 
@@ -97,13 +97,13 @@ resource "aws_ecs_task_definition" "agent" {
   cpu                      = var.cpu
   memory                   = var.memory
   execution_role_arn       = aws_iam_role.task_execution_role.arn
-  task_role_arn           = aws_iam_role.task_role.arn
+  task_role_arn            = aws_iam_role.task_role.arn
 
   container_definitions = jsonencode([
     {
       name  = var.agent_name
       image = var.container_image
-      
+
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -112,7 +112,7 @@ resource "aws_ecs_task_definition" "agent" {
           "awslogs-stream-prefix" = "ecs"
         }
       }
-      
+
       environment = [
         {
           name  = "AGENT_NAME"

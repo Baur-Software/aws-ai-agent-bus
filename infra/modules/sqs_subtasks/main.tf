@@ -13,20 +13,20 @@ locals {
 resource "aws_sqs_queue" "subtasks_dlq" {
   name                      = "${local.name}-dlq"
   message_retention_seconds = 1209600 # 14 days
-  
+
   tags = local.tags
 }
 
 resource "aws_sqs_queue" "subtasks" {
-  name                      = local.name
+  name                       = local.name
   visibility_timeout_seconds = 300
-  message_retention_seconds = 1209600 # 14 days
-  
+  message_retention_seconds  = 1209600 # 14 days
+
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.subtasks_dlq.arn
     maxReceiveCount     = 3
   })
-  
+
   tags = local.tags
 }
 
@@ -34,17 +34,17 @@ data "aws_iam_policy_document" "sqs_policy" {
   statement {
     sid    = "AllowStepFunctionsAccess"
     effect = "Allow"
-    
+
     principals {
       type        = "Service"
       identifiers = ["states.amazonaws.com"]
     }
-    
+
     actions = [
       "sqs:SendMessage",
       "sqs:GetQueueAttributes"
     ]
-    
+
     resources = [aws_sqs_queue.subtasks.arn]
   }
 }
