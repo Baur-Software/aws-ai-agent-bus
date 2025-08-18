@@ -1,0 +1,46 @@
+{
+  "name": "agent-mesh",
+  "version": "1.0.0",
+  "description": "Configuration for the Mesh Agent that integrates with the Agent Mesh MCP server",
+  "mcpServers": [
+    {
+      "name": "agent-mesh-mcp",
+      "type": "url",
+      "url": "${MCP_SERVER_URL:-http://localhost:3000}",
+      "authorization_token": "${MCP_AUTH_TOKEN}",
+      "tool_configuration": {
+        "enabled": true,
+        "allowed_tools": [
+          "mesh_kv_get",
+          "mesh_kv_set",
+          "mesh_artifacts_list",
+          "mesh_artifacts_get",
+          "mesh_artifacts_put",
+          "mesh_timeline_get",
+          "mesh_event_send",
+          "mesh_workflow_start",
+          "mesh_status"
+        ]
+      }
+    }
+  ],
+  "aws": {
+    "profile": "${AWS_PROFILE}",
+    "region": "${AWS_REGION:-us-west-2}"
+  },
+  "retry": {
+    "max_attempts": 3,
+    "backoff_base": 2,
+    "backoff_scale": 100
+  },
+  "caching": {
+    "enabled": true,
+    "default_ttl_seconds": 300,
+    "max_size_mb": 100
+  },
+  "monitoring": {
+    "enabled": true,
+    "sample_rate": 0.1,
+    "log_level": "info"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "agent-mesh": {
+    "command": "node",
+    "args": ["src/modern-server.js"],
+    "cwd": "mcp-server",
+    "env": {
+      "AWS_PROFILE": "baursoftware"
+    }
+  }
+}

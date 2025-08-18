@@ -1,0 +1,3 @@
+# Changelog
+
+- Initialized repository structure.

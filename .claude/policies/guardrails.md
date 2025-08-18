@@ -1,0 +1,11 @@
+- default_lane: read_only
+- cost_delta_monthly_limit: 500
+- sensitive_paths:
+  - infra/terraform/**/prod/**
+  - k8s/**/prod/**
+  - apps/**/auth/**
+  - network/**
+- prohibited_without_explicit_approval:
+  - route53 apex changes
+  - cloudfront default behaviors
+  - IAM admin policy changes
