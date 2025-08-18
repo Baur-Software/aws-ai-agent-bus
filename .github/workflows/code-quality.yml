@@ -82,20 +82,13 @@ jobs:
           fi
         done
         
-        # Check for password patterns in source code (excluding examples and dependencies)
-        password_matches=$(find . -name "*.js" -o -name "*.json" -o -name "*.md" -o -name "*.py" -o -name "*.ts" | \
-          grep -v "/.git/" | \
-          grep -v "/node_modules/" | \
-          grep -v "/.claude/" | \
-          grep -v "/.terraform/" | \
-          xargs grep -E 'password.*=.*[^\s]{8,}' 2>/dev/null | \
-          grep -v 'hashed_password.*pwd_context\.hash' | \
-          grep -v "password='testpass" | \
-          grep -v 'password_hash=')
-        
-        if [ -n "$password_matches" ]; then
-          echo "❌ Potential hardcoded password found:"
-          echo "$password_matches"
+        # Check for password patterns but exclude .claude directory
+        if find . -type f \( -name "*.js" -o -name "*.json" -o -name "*.md" -o -name "*.py" -o -name "*.ts" \) \
+          ! -path "./.claude/*" \
+          ! -path "*/node_modules/*" \
+          ! -path "*/.terraform/*" \
+          -exec grep -l -E 'password.*=.*[^\s]{8,}' {} + 2>/dev/null | head -1 | grep .; then
+          echo "❌ Potential secret found: password.*=.*[^\s]{8,}"
           exit 1
         fi
         
