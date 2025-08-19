@@ -1,0 +1,22 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Install test dependencies
+RUN npm install --save-dev \
+    jest \
+    @jest/globals \
+    aws-sdk-client-mock \
+    @aws-sdk/client-dynamodb \
+    @aws-sdk/lib-dynamodb \
+    supertest
+
+# Run tests
+CMD ["npm", "test"]

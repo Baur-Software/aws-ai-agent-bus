@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  localstack:
+    container_name: agent-mesh-localstack
+    image: localstack/localstack:3.0
+    ports:
+      - "4566:4566"            # LocalStack Gateway
+      - "4510-4559:4510-4559"  # External services port range
+    environment:
+      - SERVICES=dynamodb,s3,events,secretsmanager,stepfunctions,ecs,logs
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - PERSISTENCE=1
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./localstack-data}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  mcp-server-test:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile.test
+    depends_on:
+      localstack:
+        condition: service_healthy
+    environment:
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=us-east-1
+      - NODE_ENV=test
+    volumes:
+      - ./mcp-server:/app
+      - ./mcp-server/node_modules:/app/node_modules
+    command: npm test
+
+networks:
+  default:
+    name: agent-mesh-test
