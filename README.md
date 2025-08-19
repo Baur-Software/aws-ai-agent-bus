@@ -1,6 +1,6 @@
 # AWS AI Agent Bus
 
-A comprehensive agent mesh infrastructure with Model Context Protocol (MCP) server integration, enabling AI assistants to interact with AWS services through standardized interfaces.
+A comprehensive agent mesh infrastructure with Model Context Protocol (MCP) server integration, enabling AI assistants to interact with AWS services through standardized interfaces. See [EXAMPLES.md](EXAMPLES.md) for use cases and integration patterns.
 
 ## Overview
 
