@@ -3,8 +3,8 @@ import { jest } from '@jest/globals';
 // Mock MCP SDK before all other imports
 jest.unstable_mockModule('@modelcontextprotocol/sdk/server/index.js', () => ({
   Server: jest.fn().mockImplementation(() => ({
-    handle: jest.fn(),
-    listen: jest.fn().mockResolvedValue({}),
+    setRequestHandler: jest.fn(),
+    connect: jest.fn().mockResolvedValue({}),
   })),
 }));
 
@@ -57,6 +57,17 @@ jest.unstable_mockModule('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: jest.fn().mockResolvedValue('https://signed-url.example.com'),
 }));
 
+// Mock DynamoDB service
+const mockGetItem = jest.fn();
+const mockPutItem = jest.fn();
+
+jest.unstable_mockModule('../../src/modules/aws/dynamodb.js', () => ({
+  default: {
+    getItem: mockGetItem,
+    putItem: mockPutItem,
+  }
+}));
+
 // Now import after mocking
 const { default: AgentMeshMCPServer } = await import('../../src/modules/mcp/server.js');
 const { default: KVHandler } = await import('../../src/modules/mcp/handlers/kv.js');
@@ -92,19 +103,19 @@ describe('KV Handler (Unit Tests)', () => {
   test('should handle KV get operation with existing item', async () => {
     const mockItem = {
       value: 'test-value',
-      ttl: Math.floor(Date.now() / 1000) + 3600 // 1 hour from now
+      expires_at: Math.floor(Date.now() / 1000) + 3600 // 1 hour from now
     };
     
-    mockDynamoSend.mockResolvedValue({ Item: mockItem });
+    mockGetItem.mockResolvedValue(mockItem);
 
     const result = await KVHandler.get({ key: 'test-key' });
     
-    expect(mockDynamoSend).toHaveBeenCalled();
+    expect(mockGetItem).toHaveBeenCalledWith({ key: 'KV#test-key' });
     expect(result).toEqual({ value: 'test-value' });
   });
 
   test('should handle KV get operation with non-existent item', async () => {
-    mockDynamoSend.mockResolvedValue({ Item: null });
+    mockGetItem.mockResolvedValue(null);
 
     const result = await KVHandler.get({ key: 'non-existent-key' });
     
@@ -112,7 +123,7 @@ describe('KV Handler (Unit Tests)', () => {
   });
 
   test('should handle KV set operation', async () => {
-    mockDynamoSend.mockResolvedValue({});
+    mockPutItem.mockResolvedValue({});
 
     const result = await KVHandler.set({ 
       key: 'test-key', 
@@ -120,7 +131,7 @@ describe('KV Handler (Unit Tests)', () => {
       ttl_hours: 24 
     });
     
-    expect(mockDynamoSend).toHaveBeenCalled();
+    expect(mockPutItem).toHaveBeenCalled();
     expect(result).toEqual({ success: true });
   });
 
@@ -136,14 +147,14 @@ describe('KV Handler (Unit Tests)', () => {
   test('should handle expired items', () => {
     const expiredItem = {
       value: 'test-value',
-      ttl: Math.floor(Date.now() / 1000) - 3600 // 1 hour ago
+      expires_at: Math.floor(Date.now() / 1000) - 3600 // 1 hour ago
     };
     
     expect(KVHandler.isExpired(expiredItem)).toBe(true);
     
     const validItem = {
       value: 'test-value',
-      ttl: Math.floor(Date.now() / 1000) + 3600 // 1 hour from now
+      expires_at: Math.floor(Date.now() / 1000) + 3600 // 1 hour from now
     };
     
     expect(KVHandler.isExpired(validItem)).toBe(false);
