@@ -20,7 +20,8 @@ The server provides two implementations:
 
 ## Prerequisites
 
-- Node.js 18+ 
+- Node.js 18.x LTS or higher (18.x, 20.x LTS recommended)
+- npm 8.0.0 or higher 
 - AWS CLI configured or appropriate IAM permissions
 - AWS resources deployed (DynamoDB table, S3 buckets, EventBridge bus)
 

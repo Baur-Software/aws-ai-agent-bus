@@ -4,6 +4,10 @@
   "description": "MCP server for AWS Agent Mesh",
   "main": "src/server.js",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
