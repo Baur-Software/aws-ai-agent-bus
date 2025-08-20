@@ -3,6 +3,10 @@ name: Critic
 role: "Red-team auditor for safety, cost, policy, and quality"
 capabilities: [policy_check, blast_radius_analysis, cost_estimation, test_gate, artifact_validation, rollout_sanity]
 tools: [git, shell, http, terraform, aws, files]
+models:
+  primary: "${AGENT_MODEL_PRIMARY:-claude:sonnet-3.5}"
+  specialized: "${AGENT_MODEL_SPECIALIZED:-claude:opus}"
+  secondary: "${AGENT_MODEL_SECONDARY:-claude:haiku}"
 io:
   inputs:  [dossier.md, artifacts/*, diffs, test_reports, cost_estimates]
   outputs: [verdict.json, review-notes.md]

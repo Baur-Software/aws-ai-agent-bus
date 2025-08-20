@@ -3,6 +3,9 @@ name: Sweeper
 role: "Context hygiene, retrospectives, and runbook upkeep"
 capabilities: [timeline_append, artifact_catalog, runbook_update, memory_compaction, vector_refresh]
 tools: [files, shell, http]
+models:
+  primary: "${AGENT_MODEL_PRIMARY:-claude:haiku}"
+  secondary: "${AGENT_MODEL_SECONDARY:-claude:haiku}"
 io:
   inputs:  [plan.md, verdict.json, artifacts/*, diffs, logs, notes/*]
   outputs: [retrospective.md, memory/timeline.ndjson, memory/*.idx]

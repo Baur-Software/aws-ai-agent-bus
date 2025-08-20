@@ -11,9 +11,9 @@ capabilities:
   - retrospective
 tools: [git, shell, http, terraform, aws, k8s, files]
 models:
-  planner_primary: "claude:latest"
-  planner_secondary: "ollama:llama3.1"
-  workflow_engine: "dify:flows"
+  planner_primary: "${AGENT_MODEL_PRIMARY:-claude:latest}"
+  planner_secondary: "${AGENT_MODEL_SECONDARY:-ollama:llama3.1}"
+  workflow_engine: "${AGENT_MODEL_WORKFLOW:-dify:flows}"
 io:
   inputs:  [goal, constraints, repo_paths, env, stakeholders]
   outputs: [plan.md, subtask_queue.json, status.md, timeline/*.ndjson]
