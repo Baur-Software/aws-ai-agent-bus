@@ -22,6 +22,7 @@ This project provides a complete solution for running AI agent meshes on AWS inf
 ### MCP Server Integration
 
 The MCP server (`mcp-server/`) provides AI assistants with:
+
 - Key-value storage via DynamoDB
 - Artifact management through S3
 - Event bus integration with EventBridge
@@ -31,6 +32,7 @@ The MCP server (`mcp-server/`) provides AI assistants with:
 ### Agent Orchestration
 
 The `.claude/` directory contains a sophisticated agent system:
+
 - **Conductor**: Goal-driven planner and delegator
 - **Critic**: Safety and verification agent
 - **Specialists**: Framework and domain experts
@@ -81,6 +83,7 @@ cp .env.example .env
 ## Infrastructure Components
 
 ### Small Workspaces
+
 - `kv_store`: DynamoDB table for key-value storage
 - `artifacts_bucket`: S3 bucket for file artifacts
 - `timeline_store`: S3 bucket for timeline events
@@ -88,11 +91,13 @@ cp .env.example .env
 - `secrets`: AWS Secrets Manager integration
 
 ### Medium Workspaces
+
 - `mesh_agents`: ECS-based agent orchestration
 - `workflow`: Step Functions state machines
 - `observability`: CloudWatch metrics and monitoring
 
 ### Large Workspaces (Optional)
+
 - `vector_pg`: Aurora PostgreSQL with pgvector for embeddings
 - Analytics and edge distribution components
 
@@ -120,6 +125,7 @@ AGENT_MESH_EVENT_BUS=agent-mesh-events
 ## Cost Optimization
 
 Start with small workspaces for development:
+
 - DynamoDB on-demand: ~$1-5/month
 - S3 storage: ~$1-3/month  
 - EventBridge: ~$1-2/month

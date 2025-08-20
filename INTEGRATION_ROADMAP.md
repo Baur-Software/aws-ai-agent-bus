@@ -8,7 +8,7 @@ Create a universal agent mesh that seamlessly connects AWS infrastructure with p
 
 ## Architecture Overview
 
-```
+```bash
 ┌─────────────────┐    ┌──────────────────────────────────────┐
 │   Claude Code   │────│         Agent Bus Core              │
 │   (Universal    │    │  ┌─────────────┐ ┌─────────────┐     │
@@ -30,7 +30,8 @@ Create a universal agent mesh that seamlessly connects AWS infrastructure with p
 **Purpose**: Deployment and edge computing management.
 
 **Infrastructure Components**:
-```
+
+```bash
 infra/modules/vercel_integration/
 ├── main.tf                 # Terraform provider setup
 ├── variables.tf           # API keys, project configs
@@ -39,6 +40,7 @@ infra/modules/vercel_integration/
 ```
 
 **MCP Tools**:
+
 ```javascript
 // Deploy to Vercel
 await mcp.call('vercel_deploy', {
@@ -58,7 +60,8 @@ await mcp.call('vercel_deployment_status', {
 **Purpose**: Database and authentication management.
 
 **Infrastructure Components**:
-```
+
+```bash
 infra/modules/supabase_integration/
 ├── main.tf              # Supabase project setup
 ├── variables.tf        # Database configs
@@ -67,6 +70,7 @@ infra/modules/supabase_integration/
 ```
 
 **MCP Tools**:
+
 ```javascript
 // Execute database query
 await mcp.call('supabase_query', {
@@ -87,7 +91,8 @@ await mcp.call('supabase_auth_create_user', {
 **Purpose**: Payment processing and subscription management.
 
 **Infrastructure Components**:
-```
+
+```bash
 infra/modules/stripe_integration/
 ├── main.tf           # Webhook endpoints
 ├── variables.tf     # API keys, webhook secrets
@@ -96,6 +101,7 @@ infra/modules/stripe_integration/
 ```
 
 **MCP Tools**:
+
 ```javascript
 // Create payment intent
 await mcp.call('stripe_create_payment', {
@@ -118,6 +124,7 @@ await mcp.call('stripe_subscription_create', {
 **Purpose**: SMS, voice, and communication workflows.
 
 **MCP Tools**:
+
 ```javascript
 // Send SMS notification
 await mcp.call('twilio_send_sms', {
@@ -137,6 +144,7 @@ await mcp.call('twilio_make_call', {
 **Purpose**: Customer data platform and analytics.
 
 **MCP Tools**:
+
 ```javascript
 // Track user event
 await mcp.call('segment_track', {
@@ -165,6 +173,7 @@ await mcp.call('segment_identify', {
 **Purpose**: Repository management and CI/CD triggers.
 
 **MCP Tools**:
+
 ```javascript
 // Trigger workflow
 await mcp.call('github_dispatch_workflow', {
@@ -186,6 +195,7 @@ await mcp.call('github_create_release', {
 **Purpose**: Container image management and deployment.
 
 **MCP Tools**:
+
 ```javascript
 // Build and push image
 await mcp.call('docker_build_push', {
@@ -213,6 +223,8 @@ claude deploy --platform aws --service my-backend
 claude database migrate --platform supabase --environment prod
 claude payment create --platform stripe --amount 100
 ```
+
+Claude is backed by custom agents smart enough to know which platform to use based on the input parameters. If there are missing configuration parameters, Claude will prompt the user to provide them. A single Claude Code workspace that can orchestrate across all platforms, using the MCP protocol to store and learn at scale. Smart enough to build and deploy virtually anything with the right tools.
 
 ### 2. Cross-Platform Workflows
 
@@ -254,6 +266,7 @@ const deployEcommerce = async () => {
 ### 3. Unified Configuration Management
 
 **CLAUDE.md Configuration**:
+
 ```yaml
 # Platform integrations
 integrations:
@@ -285,6 +298,7 @@ workflows:
 ## Implementation Roadmap
 
 ### Phase 1: Foundation (Months 1-2)
+
 - [ ] Standardize MCP module interface
 - [ ] Create module template generator
 - [ ] Implement Vercel integration
@@ -292,6 +306,7 @@ workflows:
 - [ ] Basic Claude Code workflow support
 
 ### Phase 2: Core Services (Months 3-4)
+
 - [ ] Stripe integration module
 - [ ] Twilio communication module
 - [ ] GitHub CI/CD integration
@@ -299,6 +314,7 @@ workflows:
 - [ ] Cross-platform event routing
 
 ### Phase 3: Analytics & Monitoring (Months 5-6)
+
 - [ ] Segment analytics integration
 - [ ] DataDog/New Relic monitoring
 - [ ] Unified dashboard in Claude Code
@@ -306,6 +322,7 @@ workflows:
 - [ ] Security scanning integration
 
 ### Phase 4: Enterprise Features (Months 7-8)
+
 - [ ] Multi-tenant platform management
 - [ ] Advanced RBAC across platforms
 - [ ] Compliance automation
@@ -315,7 +332,8 @@ workflows:
 ## Module Development Standards
 
 ### 1. Module Structure
-```
+
+```bash
 infra/modules/{platform}_integration/
 ├── README.md                    # Module documentation
 ├── main.tf                     # Core resources
@@ -331,17 +349,20 @@ infra/modules/{platform}_integration/
 ```
 
 ### 2. MCP Tool Naming Convention
-```
+
+```bash
 {platform}_{resource}_{action}
 ```
 
 Examples:
+
 - `vercel_project_deploy`
 - `stripe_payment_create`
 - `supabase_table_query`
 - `twilio_message_send`
 
 ### 3. Error Handling & Logging
+
 ```javascript
 // Standardized error response
 {
@@ -363,18 +384,21 @@ Examples:
 ## Integration Benefits
 
 ### For Developers
+
 - **Single Interface**: Manage entire stack through Claude Code
 - **Consistent APIs**: Standardized MCP tools across platforms
 - **Automated Workflows**: Cross-platform automation via events
 - **Unified Monitoring**: Single pane of glass for all services
 
 ### For Organizations
+
 - **Reduced Complexity**: Fewer tools to manage and learn
 - **Cost Optimization**: Centralized billing and resource management
 - **Improved Security**: Standardized access control and auditing
 - **Faster Deployment**: Automated cross-platform deployments
 
 ### For the Ecosystem
+
 - **Extensible Architecture**: Easy to add new platform modules
 - **Open Source**: Community-driven integration development
 - **Standards-Based**: Built on MCP protocol for interoperability

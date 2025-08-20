@@ -35,6 +35,7 @@ npm run tf:apply -- --var WS=small/event_bus ENV=personal
 ```
 
 **MCP Usage**:
+
 ```javascript
 // Store conversation context
 await mcp.call('mesh_kv_set', {
@@ -60,6 +61,7 @@ await mcp.call('mesh_artifacts_put', {
 **Scenario**: Automated document analysis and extraction pipeline.
 
 **Infrastructure**: Medium workspace (~$50/month)
+
 - Step Functions for workflow orchestration
 - ECS tasks for document processing
 - S3 for document storage
@@ -71,6 +73,7 @@ npm run tf:apply -- --var WS=medium/mesh_agents ENV=production
 ```
 
 **Event-Driven Processing**:
+
 ```javascript
 // Trigger document processing
 await mcp.call('mesh_event_send', {
@@ -92,11 +95,13 @@ await mcp.call('mesh_event_send', {
 **Scenario**: Medical record analysis and patient care coordination.
 
 **Components**:
+
 - Secure document storage (HIPAA-compliant S3)
 - Patient timeline tracking
 - Care team coordination via events
 
 **Example**:
+
 ```javascript
 // Store patient timeline event
 await mcp.call('mesh_kv_set', {
@@ -125,11 +130,13 @@ await mcp.call('mesh_event_send', {
 **Scenario**: Contract analysis and compliance monitoring.
 
 **Components**:
+
 - Document version control
 - Compliance rule engine
 - Audit trail via timeline
 
 **Example**:
+
 ```javascript
 // Store contract version
 await mcp.call('mesh_artifacts_put', {
@@ -155,11 +162,13 @@ await mcp.call('mesh_kv_set', {
 **Scenario**: Trading algorithm backtesting and risk management.
 
 **Components**:
+
 - High-performance Aurora pgvector for market data
 - Real-time event processing
 - Risk calculation workflows
 
 **Example**:
+
 ```javascript
 // Store risk calculation result
 await mcp.call('mesh_kv_set', {
@@ -190,11 +199,13 @@ await mcp.call('mesh_event_send', {
 **Scenario**: Product recommendation and inventory management.
 
 **Components**:
+
 - Customer preference storage
 - Product catalog in S3
 - Purchase event tracking
 
 **Example**:
+
 ```javascript
 // Update customer preferences
 await mcp.call('mesh_kv_set', {
@@ -332,6 +343,7 @@ await mcp.call('mesh_kv_set', {
 ```
 
 **MCP Integration**:
+
 ```javascript
 // Store moderation result
 await mcp.call('mesh_kv_set', {
@@ -387,12 +399,14 @@ await mcp.call('mesh_event_send', {
 **Use Case**: Customer support chatbot with memory.
 
 **Components**:
+
 - Small workspace only
 - DynamoDB on-demand
 - S3 standard tier
 - EventBridge basic
 
 **Configuration**:
+
 ```bash
 # Minimal deployment
 npm run tf:apply -- --var WS=small/kv_store ENV=startup
@@ -409,12 +423,14 @@ AGENT_MESH_ARTIFACTS_BUCKET=agent-mesh-artifacts-startup
 **Use Case**: Multi-tenant SaaS with workflow automation.
 
 **Components**:
+
 - Small + Medium workspaces
 - Step Functions for workflows
 - ECS for processing tasks
 - Aurora Serverless for analytics
 
 **Features**:
+
 - Tenant isolation via key prefixes
 - Automated workflows
 - Real-time analytics
@@ -425,12 +441,14 @@ AGENT_MESH_ARTIFACTS_BUCKET=agent-mesh-artifacts-startup
 **Use Case**: High-volume transaction processing.
 
 **Components**:
+
 - All workspaces (Small + Medium + Large)
 - Aurora pgvector for ML features
 - Advanced monitoring
 - Multi-region deployment
 
 **Features**:
+
 - Vector similarity search
 - Advanced analytics
 - High availability
@@ -507,6 +525,7 @@ await mcp.call('mesh_kv_set', {
 5. **Monitor & Scale**: Add observability workspace for production
 
 For implementation details, see:
+
 - [Infrastructure Setup](README.md#quick-start)
 - [MCP Server Documentation](mcp-server/README.md)
 - [Terraform Modules](infra/)

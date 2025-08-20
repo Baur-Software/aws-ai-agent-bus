@@ -76,12 +76,12 @@ resource "aws_secretsmanager_secret_version" "vercel_config" {
 # Environment variables
 resource "vercel_project_environment_variable" "env_vars" {
   for_each = var.environment_variables
-  
+
   project_id = vercel_project.main.id
   key        = each.key
   value      = each.value
   target     = ["production", "preview"]
-  
+
   depends_on = [vercel_project.main]
 }
 
