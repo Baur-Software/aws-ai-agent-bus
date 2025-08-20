@@ -7,7 +7,7 @@ import { fromIni } from '@aws-sdk/credential-providers';
 // AWS Client Configuration
 const config = {
   region: process.env.AWS_REGION || 'us-west-2',
-  credentials: fromIni({ profile: process.env.AWS_PROFILE || 'baursoftware' }),
+  credentials: process.env.AWS_PROFILE ? fromIni({ profile: process.env.AWS_PROFILE }) : undefined,
   ...(process.env.AWS_ENDPOINT_URL && {
     endpoint: process.env.AWS_ENDPOINT_URL,
     forcePathStyle: true,

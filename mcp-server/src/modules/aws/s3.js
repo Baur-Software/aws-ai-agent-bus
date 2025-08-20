@@ -2,7 +2,7 @@ import { GetObjectCommand, PutObjectCommand, ListObjectsV2Command } from '@aws-s
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3 } from './clients.js';
 
-const BUCKET_NAME = process.env.S3_BUCKET || 'agent-mesh-dev-artifacts-545027c4';
+const BUCKET_NAME = process.env.S3_BUCKET || 'agent-mesh-artifacts';
 
 export class S3Service {
   static async getObject(key) {
