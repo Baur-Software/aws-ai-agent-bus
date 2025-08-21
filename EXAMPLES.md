@@ -5,6 +5,7 @@ A comprehensive guide showcasing practical applications of the AWS AI Agent Bus 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Specialized Agent Examples](#specialized-agent-examples)
 - [Quick Start Examples](#quick-start-examples)
 - [Use Cases by Domain](#use-cases-by-domain)
 - [Integration Patterns](#integration-patterns)
@@ -13,7 +14,199 @@ A comprehensive guide showcasing practical applications of the AWS AI Agent Bus 
 
 ## Overview
 
-The AWS AI Agent Bus provides a complete infrastructure for running AI agent meshes with standardized interfaces. This document demonstrates real-world applications across different scales and domains.
+The AWS AI Agent Bus provides a complete infrastructure for running AI agent meshes with standardized interfaces. The infrastructure modules in `infra/` provide AWS services that support the MCP server, while specialized Claude agents coordinate through the MCP server to orchestrate these services. This document demonstrates real-world applications across different scales and domains.
+
+## Specialized Agent Examples
+
+The AWS AI Agent Bus includes specialized Claude agents that orchestrate AWS services through the MCP server. The underlying infrastructure is provided by Terraform modules, while the agents coordinate to build complete solutions.
+
+### Architecture Foundation
+
+The AWS AI Agent Bus uses a two-layer architecture:
+
+#### MCP Server Infrastructure (`mcp-server/terraform/`)
+Core services that provide standardized interfaces for agent coordination:
+
+- **DynamoDB KV Store**: Key-value storage for agent state and coordination
+- **S3 Artifacts Bucket**: Object storage for files and artifacts  
+- **EventBridge Bus**: Event-driven communication between agents
+- **SQS Message Queue**: Asynchronous task processing
+- **Secrets Manager**: Secure credential storage
+
+#### Claude Agent Infrastructure (`infra/`)
+Specialized infrastructure for running and orchestrating Claude agents:
+
+- **Agent Orchestration**: Step Functions for coordinating conductor, critic, and sweeper agents
+- **Agent Compute**: ECS Fargate tasks for containerized agent execution
+- **Agent ML Features**: Aurora pgvector for vector similarity search and embeddings
+- **Agent Integrations**: Third-party service connections (Stripe, Supabase, Vercel)
+- **Agent Monitoring**: CloudWatch observability for agent performance
+
+### Deployment Strategy
+
+1. **Deploy MCP Server First**:
+   ```bash
+   cd mcp-server/terraform/workspaces/core
+   terraform apply -var="env=dev"
+   ```
+
+2. **Deploy Agent Infrastructure**:
+   ```bash
+   cd infra/workspaces/small/agents  
+   terraform apply -var="env=dev"
+   ```
+
+### Deployment Sizes
+
+Choose your deployment size based on requirements:
+
+#### MCP Server Core (~$5-15/month)
+- Essential services for agent coordination
+- Pay-per-use pricing model
+- Scales automatically with demand
+
+#### Agent Infrastructure Options:
+- **Small** (`infra/workspaces/small/`): Basic agent execution (~$30-100/month)
+- **Medium** (`infra/workspaces/medium/`): Full orchestration with monitoring (~$100-500/month) 
+- **Large** (`infra/workspaces/large/`): ML-enhanced with vector database (~$500-1000+/month)
+- **Integrations** (`infra/workspaces/integrations/`): Third-party service integrations
+
+### Available Specialized Agents
+
+- **CloudFront Distribution Expert**: CDN optimization, security, and global content delivery
+- **CloudWatch Monitoring Expert**: Comprehensive monitoring, logging, and alerting
+- **DynamoDB Database Expert**: NoSQL database design, optimization, and scaling
+- **EKS Kubernetes Expert**: Container orchestration and Kubernetes management
+- **EventBridge Events Expert**: Event-driven architecture and integration patterns
+- **GitHub Integration Expert**: CI/CD workflows and repository management
+- **IAM Security Expert**: Identity and access management, security policies
+- **Lambda Serverless Expert**: Serverless function development and optimization
+- **S3 Storage Expert**: Object storage, data lakes, and content management
+- **Slack Integration Expert**: Team collaboration and notification workflows
+- **SNS Messaging Expert**: Pub/sub messaging and notification delivery
+- **SQS Queue Expert**: Message queuing and asynchronous processing
+- **Stripe Payments Expert**: Payment processing and financial workflows
+
+### Multi-Agent Coordination Example
+
+**Scenario**: E-commerce platform with monitoring, payments, and notifications
+
+```javascript
+// 1. S3 Agent: Set up product catalog storage
+await mcp.call('mesh_artifacts_put', {
+  key: 'products/catalog/electronics.json',
+  content: JSON.stringify(productCatalog),
+  content_type: 'application/json'
+});
+
+// 2. DynamoDB Agent: Store user session data
+await mcp.call('mesh_kv_set', {
+  key: 'session:user123:cart',
+  value: JSON.stringify({
+    items: [{ sku: 'laptop-pro', quantity: 1, price: 1299 }],
+    total: 1299,
+    session_start: '2024-01-15T10:00:00Z'
+  }),
+  ttl_hours: 24
+});
+
+// 3. Stripe Agent: Process payment (coordinated via events)
+await mcp.call('mesh_event_send', {
+  detail_type: 'PaymentRequested',
+  detail: {
+    user_id: 'user123',
+    amount: 1299,
+    currency: 'USD',
+    payment_method: 'card_xyz'
+  },
+  source: 'e-commerce-platform'
+});
+
+// 4. SNS Agent: Send confirmation (triggered by payment success)
+await mcp.call('mesh_event_send', {
+  detail_type: 'OrderConfirmation',
+  detail: {
+    user_id: 'user123',
+    order_id: 'ord-456',
+    notification_channels: ['email', 'sms']
+  },
+  source: 'order-processor'
+});
+
+// 5. CloudWatch Agent: Track metrics and performance
+await mcp.call('mesh_event_send', {
+  detail_type: 'MetricUpdate',
+  detail: {
+    metric_name: 'OrdersProcessed',
+    value: 1,
+    unit: 'Count',
+    dimensions: {
+      Platform: 'Web',
+      PaymentMethod: 'Stripe'
+    }
+  },
+  source: 'metrics-collector'
+});
+```
+
+### Agent Mesh Orchestration
+
+**Pattern**: Conductor agent coordinating specialized agents
+
+```javascript
+// Conductor coordinates multiple specialized agents
+const conductorPlan = {
+  goal: 'Deploy secure e-commerce platform',
+  agents: {
+    iam_security: {
+      task: 'Set up secure IAM roles and policies',
+      dependencies: []
+    },
+    s3_storage: {
+      task: 'Configure product catalog and asset storage',
+      dependencies: ['iam_security']
+    },
+    cloudfront_cdn: {
+      task: 'Set up global CDN with security headers',
+      dependencies: ['s3_storage']
+    },
+    dynamodb_database: {
+      task: 'Design user and order database schemas',
+      dependencies: ['iam_security']
+    },
+    lambda_serverless: {
+      task: 'Implement order processing functions',
+      dependencies: ['dynamodb_database']
+    },
+    stripe_payments: {
+      task: 'Configure payment processing',
+      dependencies: ['lambda_serverless']
+    },
+    cloudwatch_monitoring: {
+      task: 'Set up comprehensive monitoring',
+      dependencies: ['lambda_serverless', 'cloudfront_cdn']
+    }
+  }
+};
+
+// Store orchestration plan
+await mcp.call('mesh_kv_set', {
+  key: 'orchestration:ecommerce-deploy:plan',
+  value: JSON.stringify(conductorPlan),
+  ttl_hours: 48
+});
+
+// Trigger agent coordination
+await mcp.call('mesh_event_send', {
+  detail_type: 'OrchestrationStarted',
+  detail: {
+    plan_id: 'ecommerce-deploy',
+    coordinator: 'conductor-agent',
+    priority: 'high'
+  },
+  source: 'agent-mesh'
+});
+```
 
 ## Quick Start Examples
 
@@ -21,18 +214,28 @@ The AWS AI Agent Bus provides a complete infrastructure for running AI agent mes
 
 **Scenario**: Build a personal AI assistant that remembers conversations and learns preferences.
 
-**Infrastructure**: Small workspace (~$10/month)
+**Architecture**: MCP Server + Small Agent Workspace (~$35-50/month)
 
-- DynamoDB for conversation memory
-- S3 for file attachments
-- EventBridge for notifications
-
+**Step 1: Deploy MCP Server Core**
 ```bash
-# Deploy minimal infrastructure
-npm run tf:apply -- --var WS=small/kv_store ENV=personal
-npm run tf:apply -- --var WS=small/artifacts_bucket ENV=personal
-npm run tf:apply -- --var WS=small/event_bus ENV=personal
+cd mcp-server/terraform/workspaces/core
+terraform init
+terraform apply -var="env=personal"
 ```
+
+**Step 2: Deploy Small Agent Workspace**
+```bash 
+cd infra/workspaces/small/kv_store
+terraform apply -var="env=personal"
+
+cd ../artifacts_bucket  
+terraform apply -var="env=personal"
+
+cd ../event_bus
+terraform apply -var="env=personal"
+```
+
+**Note**: The small workspace uses the existing structure but now connects to the MCP server infrastructure for coordination.
 
 **MCP Usage**:
 
@@ -60,17 +263,30 @@ await mcp.call('mesh_artifacts_put', {
 
 **Scenario**: Automated document analysis and extraction pipeline.
 
-**Infrastructure**: Medium workspace (~$50/month)
+**Architecture**: MCP Server + Medium Agent Workspace (~$150-200/month)
 
-- Step Functions for workflow orchestration
-- ECS tasks for document processing
-- S3 for document storage
-
+**Step 1: Deploy MCP Server Core**
 ```bash
-# Deploy workflow infrastructure
-npm run tf:apply -- --var WS=medium/workflow ENV=production
-npm run tf:apply -- --var WS=medium/mesh_agents ENV=production
+cd mcp-server/terraform/workspaces/core
+terraform apply -var="env=production"
 ```
+
+**Step 2: Deploy Medium Agent Workspace**
+```bash
+# Deploy workflow orchestration
+cd infra/workspaces/medium/workflow
+terraform apply -var="env=production"
+
+# Deploy agent mesh with ECS tasks
+cd ../mesh_agents
+terraform apply -var="env=production"
+
+# Deploy observability
+cd ../observability  
+terraform apply -var="env=production"
+```
+
+**Features**: Full Step Functions orchestration, ECS agent tasks, and comprehensive monitoring
 
 **Event-Driven Processing**:
 
@@ -232,70 +448,200 @@ await mcp.call('mesh_event_send', {
 
 ## Integration Patterns
 
-### 1. Event-Driven Architecture
+### 1. Agent Mesh Event-Driven Architecture
 
-**Pattern**: Microservices communicating via EventBridge events.
+**Pattern**: Specialized agents communicating via EventBridge events with coordination.
 
 ```javascript
-// Service A: Order processing
+// EventBridge Expert: Configure event routing
+await mcp.call('mesh_event_send', {
+  detail_type: 'EventRuleCreated', 
+  detail: {
+    rule_name: 'order-processing-pipeline',
+    event_pattern: {
+      'detail-type': ['OrderCreated'],
+      'source': ['e-commerce-platform']
+    },
+    targets: ['inventory-agent', 'shipping-agent', 'analytics-agent']
+  },
+  source: 'eventbridge-expert'
+});
+
+// Order service triggers the pipeline
 await mcp.call('mesh_event_send', {
   detail_type: 'OrderCreated',
-  detail: { order_id: 'ord-123', customer_id: 'cust-456' }
+  detail: { 
+    order_id: 'ord-123', 
+    customer_id: 'cust-456',
+    items: [{ sku: 'laptop', quantity: 1 }]
+  },
+  source: 'e-commerce-platform'
 });
 
-// Service B: Inventory management (listens for OrderCreated)
-// Service C: Shipping (listens for OrderCreated)
-// Service D: Analytics (listens for all events)
+// SQS Expert: Handle high-volume order processing
+await mcp.call('mesh_event_send', {
+  detail_type: 'QueueMessageReceived',
+  detail: {
+    queue_name: 'order-processing',
+    message_body: { order_id: 'ord-123', priority: 'standard' },
+    processing_agent: 'lambda-expert'
+  },
+  source: 'sqs-expert'
+});
+
+// Lambda Expert: Process the order
+await mcp.call('mesh_event_send', {
+  detail_type: 'OrderProcessed',
+  detail: {
+    order_id: 'ord-123',
+    status: 'confirmed',
+    processing_time_ms: 250,
+    next_steps: ['inventory_check', 'payment_capture']
+  },
+  source: 'lambda-expert'
+});
 ```
 
-### 2. CQRS with Event Sourcing
+### 2. Agent Mesh CQRS with Event Sourcing
 
-**Pattern**: Separate read/write models with event history.
+**Pattern**: Specialized agents managing separate read/write models with event history.
 
 ```javascript
-// Command: Update user profile
+// DynamoDB Expert: Handle write commands
 await mcp.call('mesh_event_send', {
-  detail_type: 'UserProfileUpdated',
-  detail: { user_id: 'user123', field: 'email', new_value: 'new@email.com' }
+  detail_type: 'UserProfileUpdateRequested',
+  detail: { 
+    user_id: 'user123', 
+    field: 'email', 
+    new_value: 'new@email.com',
+    requested_by: 'user-service'
+  },
+  source: 'user-management'
 });
 
-// Query: Get current user state
+// Lambda Expert: Process the command
+await mcp.call('mesh_kv_set', {
+  key: 'user:user123:profile',
+  value: JSON.stringify({
+    user_id: 'user123',
+    email: 'new@email.com',
+    updated_at: '2024-01-15T14:00:00Z'
+  })
+});
+
+// S3 Expert: Store event history for sourcing
+await mcp.call('mesh_artifacts_put', {
+  key: 'events/user/user123/2024-01-15T14:00:00Z-profile-updated.json',
+  content: JSON.stringify({
+    event_type: 'UserProfileUpdated',
+    user_id: 'user123',
+    changes: { email: { old: 'old@email.com', new: 'new@email.com' } },
+    timestamp: '2024-01-15T14:00:00Z',
+    version: 15
+  }),
+  content_type: 'application/json'
+});
+
+// CloudWatch Expert: Track command processing metrics
+await mcp.call('mesh_event_send', {
+  detail_type: 'MetricUpdate',
+  detail: {
+    metric_name: 'UserProfileUpdates',
+    value: 1,
+    unit: 'Count',
+    dimensions: { Service: 'UserManagement', Field: 'email' }
+  },
+  source: 'cloudwatch-expert'
+});
+
+// Query side: Get current user state (read model)
 const profile = await mcp.call('mesh_kv_get', {
   key: 'user:user123:profile'
 });
 
-// Event sourcing: Get user history
-const timeline = await mcp.call('mesh_timeline_get', {
-  prefix: 'user/user123/',
-  max_keys: 50
+// Event sourcing: Reconstruct user history from S3
+const eventHistory = await mcp.call('mesh_artifacts_list', {
+  prefix: 'events/user/user123/'
 });
 ```
 
-### 3. Saga Pattern for Distributed Transactions
+### 3. Agent Mesh Saga Pattern for Distributed Transactions
 
-**Pattern**: Long-running transactions across multiple services.
+**Pattern**: Specialized agents coordinating long-running transactions across services.
 
 ```javascript
-// Start booking saga
+// Lambda Expert: Initiate booking saga
 await mcp.call('mesh_event_send', {
   detail_type: 'BookingRequested',
   detail: {
     saga_id: 'saga-789',
     flight_id: 'fl-123',
     hotel_id: 'ht-456',
-    user_id: 'user123'
-  }
+    user_id: 'user123',
+    orchestrator: 'lambda-booking-saga'
+  },
+  source: 'booking-service'
 });
 
-// Store saga state
+// DynamoDB Expert: Store saga state with TTL
 await mcp.call('mesh_kv_set', {
   key: 'saga:saga-789:state',
   value: JSON.stringify({
-    status: 'flight_booked',
+    status: 'flight_reserved',
     steps_completed: ['reserve_flight'],
     steps_remaining: ['reserve_hotel', 'charge_payment'],
-    rollback_actions: ['cancel_flight']
-  })
+    rollback_actions: ['cancel_flight'],
+    timeout_at: '2024-01-15T16:00:00Z'
+  }),
+  ttl_hours: 2
+});
+
+// Stripe Expert: Handle payment processing
+await mcp.call('mesh_event_send', {
+  detail_type: 'PaymentRequested',
+  detail: {
+    saga_id: 'saga-789',
+    amount: 1200,
+    currency: 'USD',
+    payment_method: 'card_xyz',
+    hold_funds: true  // Authorization only
+  },
+  source: 'stripe-expert'
+});
+
+// SNS Expert: Send status notifications
+await mcp.call('mesh_event_send', {
+  detail_type: 'NotificationRequested',
+  detail: {
+    user_id: 'user123',
+    message: 'Your booking is being processed',
+    channel: 'email',
+    saga_id: 'saga-789'
+  },
+  source: 'sns-expert'
+});
+
+// CloudWatch Expert: Monitor saga timeouts and failures
+await mcp.call('mesh_event_send', {
+  detail_type: 'SagaMetricUpdate',
+  detail: {
+    saga_id: 'saga-789',
+    step: 'payment_processing',
+    duration_ms: 1500,
+    status: 'in_progress'
+  },
+  source: 'cloudwatch-expert'
+});
+
+// SQS Expert: Handle saga compensation (if failure occurs)
+await mcp.call('mesh_event_send', {
+  detail_type: 'SagaCompensationTriggered',
+  detail: {
+    saga_id: 'saga-789',
+    failed_step: 'hotel_reservation',
+    compensation_actions: ['cancel_flight', 'refund_payment']
+  },
+  source: 'sqs-expert'
 });
 ```
 
@@ -394,65 +740,123 @@ await mcp.call('mesh_event_send', {
 
 ## Cost-Effective Deployments
 
-### Startup/Small Business ($10-30/month)
+### Small Deployment ($35-50/month)
 
-**Use Case**: Customer support chatbot with memory.
+**Use Case**: Personal AI assistant, simple automation, development/testing.
 
-**Components**:
+**Architecture**: MCP Server Core + Small Agent Workspace
 
-- Small workspace only
-- DynamoDB on-demand
-- S3 standard tier
-- EventBridge basic
-
-**Configuration**:
-
+**Deployment**:
 ```bash
-# Minimal deployment
-npm run tf:apply -- --var WS=small/kv_store ENV=startup
-npm run tf:apply -- --var WS=small/artifacts_bucket ENV=startup
+# 1. Deploy MCP Server Core (~$5-15/month)
+cd mcp-server/terraform/workspaces/core
+terraform apply -var="env=dev"
 
-# Environment variables
-AGENT_MESH_ENV=startup
-AGENT_MESH_KV_TABLE=agent-mesh-kv-startup
-AGENT_MESH_ARTIFACTS_BUCKET=agent-mesh-artifacts-startup
+# 2. Deploy Small Agent Infrastructure (~$30-35/month) 
+cd infra/workspaces/small/kv_store
+terraform apply -var="env=dev"
+
+cd ../artifacts_bucket  
+terraform apply -var="env=dev"
+
+cd ../event_bus
+terraform apply -var="env=dev"
 ```
 
-### Mid-Scale Business ($100-500/month)
+**Features**:
+- Basic agent coordination
+- Simple key-value storage
+- File artifact management
+- Event-driven communication
 
-**Use Case**: Multi-tenant SaaS with workflow automation.
+### Medium Deployment ($150-300/month)
 
-**Components**:
+**Use Case**: Production workflows, team collaboration, business automation.
 
-- Small + Medium workspaces
-- Step Functions for workflows
-- ECS for processing tasks
-- Aurora Serverless for analytics
+**Architecture**: MCP Server Core + Medium Agent Workspace
+
+**Deployment**:
+```bash
+# 1. Deploy MCP Server Core
+cd mcp-server/terraform/workspaces/core
+terraform apply -var="env=prod"
+
+# 2. Deploy Medium Agent Infrastructure
+cd infra/workspaces/medium/workflow
+terraform apply -var="env=prod"
+
+cd ../mesh_agents
+terraform apply -var="env=prod"
+
+cd ../observability
+terraform apply -var="env=prod"
+```
 
 **Features**:
+- Step Functions orchestration
+- ECS containerized agents
+- Comprehensive monitoring
+- Multi-agent coordination
 
-- Tenant isolation via key prefixes
-- Automated workflows
-- Real-time analytics
-- Event-driven architecture
+### Large Deployment ($500-1000+/month)
 
-### Enterprise ($1000+/month)
+**Use Case**: Enterprise-scale AI operations, ML-enhanced agents, high-volume processing.
 
-**Use Case**: High-volume transaction processing.
+**Architecture**: MCP Server Core + Large Agent Workspace
 
-**Components**:
+**Deployment**:
+```bash
+# 1. Deploy MCP Server Core
+cd mcp-server/terraform/workspaces/core
+terraform apply -var="env=enterprise"
 
-- All workspaces (Small + Medium + Large)
-- Aurora pgvector for ML features
-- Advanced monitoring
-- Multi-region deployment
+# 2. Deploy Large Agent Infrastructure
+cd infra/workspaces/large/vector_pg
+terraform apply -var="env=enterprise"
+
+# 3. Include medium workspace features
+cd ../medium/workflow
+terraform apply -var="env=enterprise"
+
+cd ../mesh_agents  
+terraform apply -var="env=enterprise"
+
+cd ../observability
+terraform apply -var="env=enterprise"
+```
 
 **Features**:
+- Aurora pgvector for vector similarity search
+- ML-enhanced agent capabilities  
+- Semantic search across artifacts
+- Advanced analytics and reporting
+- High-performance agent execution
+- Enterprise-grade security and compliance
 
-- Vector similarity search
-- Advanced analytics
-- High availability
-- Compliance features
+### Integration Deployments (Add-on costs)
+
+**Use Case**: Connect with third-party services like Stripe, Supabase, or Vercel.
+
+**Deployment**:
+```bash
+# Deploy Stripe integration
+cd infra/workspaces/integrations/stripe
+terraform apply -var="env=prod"
+
+# Deploy Supabase integration  
+cd ../supabase
+terraform apply -var="env=prod"
+
+# Deploy Vercel integration
+cd ../vercel
+terraform apply -var="env=prod"
+```
+
+**Features**:
+- Webhook handling for external services
+- Secure credential management
+- Event-driven integration patterns
+- Automated deployment pipelines
 
 ## Advanced Patterns
 

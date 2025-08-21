@@ -1,0 +1,207 @@
+{
+  "Comment": "Agent Mesh Lanes Workflow",
+  "StartAt": "PlanPhase",
+  "States": {
+    "PlanPhase": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ecs:runTask.sync",
+      "Parameters": {
+        "TaskDefinition": "${conductor_task_arn}",
+        "LaunchType": "FARGATE",
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "Subnets": ${subnets},
+            "SecurityGroups": ["${security_group_id}"],
+            "AssignPublicIp": "DISABLED"
+          }
+        },
+        "Overrides": {
+          "ContainerOverrides": [
+            {
+              "Name": "conductor",
+              "Environment": [
+                {
+                  "Name": "PHASE",
+                  "Value": "plan"
+                },
+                {
+                  "Name": "LANE",
+                  "Value": "read_only"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "Next": "LogPlanComplete",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "PlanFailed"
+        }
+      ]
+    },
+    "LogPlanComplete": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:s3:putObject",
+      "Parameters": {
+        "Bucket": "${timeline_bucket}",
+        "Key.$": "$.concat('timeline/', $.now(), '-plan-complete.json')",
+        "Body.$": "$"
+      },
+      "Next": "GenerateSubtasks"
+    },
+    "GenerateSubtasks": {
+      "Type": "Task", 
+      "Resource": "arn:aws:states:::sqs:sendMessage",
+      "Parameters": {
+        "QueueUrl": "${subtasks_queue_url}",
+        "MessageBody.$": "$.taskResult"
+      },
+      "Next": "CriticReview"
+    },
+    "CriticReview": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ecs:runTask.sync",
+      "Parameters": {
+        "TaskDefinition": "${critic_task_arn}",
+        "LaunchType": "FARGATE",
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "Subnets": ${subnets},
+            "SecurityGroups": ["${security_group_id}"],
+            "AssignPublicIp": "DISABLED"
+          }
+        },
+        "Overrides": {
+          "ContainerOverrides": [
+            {
+              "Name": "critic",
+              "Environment": [
+                {
+                  "Name": "PHASE", 
+                  "Value": "review"
+                },
+                {
+                  "Name": "LANE",
+                  "Value": "dry_run"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "Next": "ApprovalGate",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ReviewFailed"
+        }
+      ]
+    },
+    "ApprovalGate": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.critic.approved",
+          "BooleanEquals": true,
+          "Next": "ExecutePhase"
+        }
+      ],
+      "Default": "RequiresApproval"
+    },
+    "RequiresApproval": {
+      "Type": "Wait",
+      "Seconds": 300,
+      "Next": "ApprovalTimeout"
+    },
+    "ExecutePhase": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ecs:runTask.sync", 
+      "Parameters": {
+        "TaskDefinition": "${conductor_task_arn}",
+        "LaunchType": "FARGATE",
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "Subnets": ${subnets},
+            "SecurityGroups": ["${security_group_id}"],
+            "AssignPublicIp": "DISABLED"
+          }
+        },
+        "Overrides": {
+          "ContainerOverrides": [
+            {
+              "Name": "conductor",
+              "Environment": [
+                {
+                  "Name": "PHASE",
+                  "Value": "execute"
+                },
+                {
+                  "Name": "LANE", 
+                  "Value": "execute"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "Next": "SweeperCleanup",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ExecuteFailed"
+        }
+      ]
+    },
+    "SweeperCleanup": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ecs:runTask.sync",
+      "Parameters": {
+        "TaskDefinition": "${sweeper_task_arn}",
+        "LaunchType": "FARGATE", 
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "Subnets": ${subnets},
+            "SecurityGroups": ["${security_group_id}"],
+            "AssignPublicIp": "DISABLED"
+          }
+        },
+        "Overrides": {
+          "ContainerOverrides": [
+            {
+              "Name": "sweeper",
+              "Environment": [
+                {
+                  "Name": "PHASE",
+                  "Value": "cleanup"
+                },
+                {
+                  "Name": "LANE",
+                  "Value": "read_only"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "End": true
+    },
+    "PlanFailed": {
+      "Type": "Fail",
+      "Cause": "Plan phase failed"
+    },
+    "ReviewFailed": {
+      "Type": "Fail", 
+      "Cause": "Critic review failed"
+    },
+    "ExecuteFailed": {
+      "Type": "Fail",
+      "Cause": "Execute phase failed"
+    },
+    "ApprovalTimeout": {
+      "Type": "Fail",
+      "Cause": "Approval timeout reached"
+    }
+  }
+}
