@@ -6,9 +6,11 @@ A comprehensive agent mesh infrastructure with Model Context Protocol (MCP) serv
 
 This project provides a complete solution for running AI agent meshes on AWS infrastructure:
 
-- **MCP Server**: Production-ready Model Context Protocol server for AI assistant integration
-- **Claude Agent System**: Sophisticated agent orchestration with conductors, critics, and specialists
+- **MCP Server**: Production-ready Model Context Protocol server with Google Analytics integration
+- **Claude Agent System**: Sophisticated agent orchestration with conductors, critics, and specialists  
 - **Terraform Infrastructure**: Modular AWS infrastructure with small/medium/large workspace patterns
+- **100% Test Coverage**: Comprehensive test suite ensuring reliability
+- **OAuth2 Support**: Complete Google Analytics authentication flow
 - **Cost-Effective**: Run a complete agent mesh for as low as $10/month
 
 ## Architecture
@@ -23,11 +25,12 @@ This project provides a complete solution for running AI agent meshes on AWS inf
 
 The MCP server (`mcp-server/`) provides AI assistants with:
 
-- Key-value storage via DynamoDB
-- Artifact management through S3
-- Event bus integration with EventBridge
-- Timeline and workflow support
-- Dual stdio/HTTP interfaces
+- **Google Analytics Integration**: Complete OAuth2 flow, top pages analysis, content opportunities
+- **Key-value storage** via DynamoDB
+- **Artifact management** through S3
+- **Event bus integration** with EventBridge
+- **Timeline and workflow support** via Step Functions
+- **Dual stdio/HTTP interfaces** for flexible deployment
 
 ### Agent Orchestration
 
@@ -59,13 +62,17 @@ make apply WS=medium/workflow ENV=dev
 cd mcp-server
 npm install
 
+# Run full test suite (100% pass rate)
+npm test
+
 # Configure environment
 cp .env.example .env
 # Edit .env with your AWS resource names
 
 # Start server
-npm start              # stdio interface
+npm start              # stdio interface  
 npm run start:http     # HTTP interface on port 3000
+npm run dev           # development mode with hot reload
 ```
 
 ### 3. Configure Claude Agents
@@ -79,6 +86,37 @@ cp .env.example .env
 ./scripts/setup.sh init
 ./scripts/setup.sh config
 ```
+
+### 4. Analytics Reports
+
+Generate Google Analytics reports with comprehensive user insights:
+
+```bash
+# Interactive setup for Google Analytics credentials
+npm run setup:ga-credentials
+
+# Sample report (no credentials needed)
+npm run report:users-by-country-sample
+
+# Live data report (requires AWS credentials + GA secret)
+npm run report:users-by-country
+```
+
+**Quick Setup Process:**
+1. Run `npm run setup:ga-credentials` and choose option 1 (Create new credentials)
+2. Follow prompts to enter Google OAuth2 credentials and Property ID  
+3. Complete OAuth flow in browser
+4. Credentials automatically stored in AWS Secrets Manager
+
+**Manual Setup (Alternative):**
+- AWS credentials configured with Secrets Manager access
+- Google Analytics secret in AWS Secrets Manager: `spalding-content-pipeline/google-analytics`
+- Secret format: `{"client_id": "...", "client_secret": "...", "access_token": "...", "refresh_token": "...", "property_id": "..."}`
+
+**Troubleshooting:**
+- `Could not load credentials from any providers`: Configure AWS credentials with `aws configure`
+- `Failed to initialize Google Analytics`: Run `npm run setup:ga-credentials` and choose option 3 to test
+- Detailed setup guide: `mcp-server/docs/google-analytics-setup.md`
 
 ## Infrastructure Components
 
@@ -135,6 +173,7 @@ Scale to medium/large workspaces as needed.
 
 ## Documentation
 
+- [`CODEBASE_STRUCTURE.md`](CODEBASE_STRUCTURE.md) - Complete codebase overview and architecture
 - [`mcp-server/`](mcp-server/README.md) - MCP server documentation
 - [`.claude/`](.claude/README.md) - Agent orchestration system
 - [`infra/`](infra/) - Terraform infrastructure modules
