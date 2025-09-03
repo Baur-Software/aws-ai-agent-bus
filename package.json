@@ -12,7 +12,7 @@
     "setup:ga-credentials": "node mcp-server/scripts/setup-ga-credentials.js",
     "report:users-by-country": "node mcp-server/src/reports/users-by-country.js",
     "report:users-by-country-sample": "node mcp-server/src/reports/users-by-country-sample.js",
-    "tf:fmt": "terraform fmt -recursive infra/",
+    "tf:fmt": "terraform fmt -recursive",
     "tf:init": "cd infra/workspaces/${WS:-small/kv_store} && terraform init",
     "tf:plan": "cd infra/workspaces/${WS:-small/kv_store} && terraform plan -var env=${ENV:-dev}",
     "tf:apply": "cd infra/workspaces/${WS:-small/kv_store} && terraform apply -auto-approve -var env=${ENV:-dev}",

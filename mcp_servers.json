@@ -5,7 +5,7 @@
     "cwd": "mcp-server",
     "env": {
       "AWS_REGION": "us-west-2",
-      "AGENT_MESH_ENV": "prod"
+      "AGENT_MESH_ENV": "dev"
     }
   }
 }
