@@ -48,7 +48,7 @@ gcloud services enable searchconsole.googleapis.com
    - **Application type**: Web application
    - **Name**: Analytics MCP Client
    - **Authorized redirect URIs**: 
-     - `https://www.baursoftware.com` (or your domain)
+     - `https://www.yourdomain.com` (from route53 setup)
      - `http://localhost:3000/auth/callback` (for local testing)
 
 7. Download the JSON credentials file

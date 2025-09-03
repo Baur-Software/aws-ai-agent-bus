@@ -67,7 +67,7 @@ export class GoogleAnalyticsService {
         this.auth = new OAuth2Client(
           credentials.client_id,
           credentials.client_secret,
-          credentials.redirect_uris?.[0] || 'https://www.baursoftware.com'
+          credentials.redirect_uris?.[0] || 'https://www.myapp.com'
         );
         
         // Set credentials if we have tokens
