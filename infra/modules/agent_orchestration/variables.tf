@@ -9,6 +9,18 @@ variable "mcp_server_state_path" {
   default     = "../../../mcp-server/terraform/workspaces/core/terraform.tfstate"
 }
 
+variable "timeline_store_state_path" {
+  description = "Path to the timeline store Terraform state file"
+  type        = string
+  default     = "../../small/timeline_store/terraform.tfstate"
+}
+
+variable "workflow_state_path" {
+  description = "Path to the workflow Terraform state file"
+  type        = string
+  default     = "../../medium/workflow/terraform.tfstate"
+}
+
 variable "conductor_task_arn" {
   description = "ECS task definition ARN for conductor agent"
   type        = string
