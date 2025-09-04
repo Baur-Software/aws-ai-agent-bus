@@ -35,6 +35,7 @@ npm run dev:http          # HTTP dev mode with hot reload
 npm run lint              # JavaScript syntax validation
 
 # Google Analytics reports
+npm run setup:ga-google-cloud    # Complete Google Cloud + GA setup assistant
 npm run setup:ga-credentials     # Interactive GA credentials setup
 npm run report:users-by-country  # Live GA report (requires credentials)
 npm run report:users-by-country-sample  # Sample data report
@@ -82,13 +83,22 @@ export AGENT_MESH_EVENT_BUS=agent-mesh-events
 ## Google Analytics Integration
 
 ### Quick Setup Process
-1. Run `npm run setup:ga-credentials` and choose option 1 (Create new credentials)
-2. Follow prompts to enter Google OAuth2 credentials and Property ID
-3. Complete OAuth flow in browser
-4. Credentials automatically stored in AWS Secrets Manager
+
+**Complete Automated Setup (One Command!)**
+1. **Configure AWS credentials**: `aws sso login --profile your-profile`
+2. **Run the setup assistant**: `npm run setup:ga-google-cloud`
+   - Guides through Google Cloud Console setup
+   - Processes OAuth2 credentials automatically
+   - Tests Google Analytics API connection
+   - Saves credentials to AWS Secrets Manager
+3. **Test with live data**: `npm run report:users-by-country`
+
+**Manual Setup (Alternative)**
+1. Run `npm run setup:ga-credentials` if you already have OAuth2 credentials
+2. Follow prompts to enter credentials and complete OAuth flow
 
 ### Required Credentials Format
-AWS Secrets Manager secret: `spalding-content-pipeline/google-analytics`
+AWS Secrets Manager secret: `agent-mesh-mcp/google-analytics`
 ```json
 {
   "client_id": "...",
@@ -162,3 +172,4 @@ AWS Secrets Manager secret: `spalding-content-pipeline/google-analytics`
 - Configuration: `mcp-config.json`, `.claude/mesh-agent-config.json`
 - CLAUDE.md
 - .claude/**/*
+- Fetch(https://github.com/idosal/mcp-ui)

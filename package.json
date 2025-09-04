@@ -9,7 +9,8 @@
     "dev": "node --watch mcp-server/src/server.js",
     "start:http": "node mcp-server/src/http-server.js",
     "dev:http": "node --watch mcp-server/src/http-server.js",
-    "setup:ga-credentials": "node mcp-server/scripts/setup-ga-credentials.js",
+    "ui:demo": "MCP_UI_ENABLED=true node mcp-server/src/http-server.js",
+    "setup:ga-google-cloud": "node mcp-server/scripts/setup-ga-google-cloud.js",
     "report:users-by-country": "node mcp-server/src/reports/users-by-country.js",
     "report:users-by-country-sample": "node mcp-server/src/reports/users-by-country-sample.js",
     "tf:fmt": "terraform fmt -recursive",
@@ -27,11 +28,14 @@
     "@aws-sdk/client-ecs": "^3.0.0",
     "@aws-sdk/client-rds-data": "^3.0.0",
     "@modelcontextprotocol/sdk": "^1.17.3",
+    "@mcp-ui/server": "^1.0.0",
+    "@mcp-ui/client": "^1.0.0",
     "express": "^4.18.2",
     "cors": "^2.8.5",
     "zod": "^3.22.4",
     "googleapis": "^140.0.0",
-    "google-auth-library": "^9.0.0"
+    "google-auth-library": "^9.0.0",
+    "dotenv": "^16.0.0"
   },
   "keywords": [
     "mcp",
