@@ -1,5 +1,5 @@
 module "supabase_integration" {
-  source = "../../modules/supabase_integration"
+  source = "../../../modules/supabase_integration"
 
   env               = var.env
   project_name      = var.project_name

@@ -1,0 +1,67 @@
+# GitHub Pages configuration
+title: AWS AI Agent Bus
+description: Comprehensive infrastructure and toolset for AI-powered agent systems on AWS
+baseurl: "/aws-ai-agent-bus"
+url: "https://your-username.github.io"
+
+# Theme
+theme: minima
+
+# Navigation
+header_pages:
+  - index.md
+  - mcp-server/setup.md
+  - infra/README.md
+  - agents/README.md
+  - CLAUDE.md
+
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# Markdown settings
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  syntax_highlighter: rouge
+  input: GFM
+  auto_ids: true
+  hard_wrap: false
+  
+# Collections
+collections:
+  agents:
+    output: true
+    permalink: /agents/:name/
+  mcp-server:
+    output: true
+    permalink: /mcp-server/:name/
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+
+# Include
+include:
+  - _pages
+  - assets
+  
+# SEO
+twitter:
+  username: your-twitter
+  card: summary
+  
+author:
+  name: Your Name
+  twitter: your-twitter
+
+# Social links
+github_username: your-username
+
+# Google Analytics (optional)
+# google_analytics: UA-XXXXXXXX-X

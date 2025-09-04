@@ -11,6 +11,7 @@ import KVHandler from './handlers/kv.js';
 import ArtifactsHandler from './handlers/artifacts.js';
 import WorkflowHandler from './handlers/workflow.js';
 import EventsHandler from './handlers/events.js';
+import GoogleAnalyticsHandler from './handlers/google-analytics.js';
 
 export class AgentMeshMCPServer {
   constructor() {
@@ -159,6 +160,84 @@ export class AgentMeshMCPServer {
               },
               required: ['detailType', 'detail']
             }
+          },
+          {
+            name: 'ga.getTopPages',
+            description: 'Get top performing pages from Google Analytics',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                propertyId: {
+                  type: 'string',
+                  description: 'GA4 property ID'
+                },
+                days: {
+                  type: 'number',
+                  description: 'Number of days to analyze (default: 30)',
+                  default: 30
+                }
+              },
+              required: ['propertyId']
+            }
+          },
+          {
+            name: 'ga.getSearchConsoleData',
+            description: 'Get Search Console keyword data',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                siteUrl: {
+                  type: 'string',
+                  description: 'Website URL in Search Console'
+                },
+                days: {
+                  type: 'number',
+                  description: 'Number of days to analyze (default: 30)',
+                  default: 30
+                }
+              },
+              required: ['siteUrl']
+            }
+          },
+          {
+            name: 'ga.analyzeContentOpportunities',
+            description: 'Analyze content opportunities using GA and Search Console data',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                propertyId: {
+                  type: 'string',
+                  description: 'GA4 property ID'
+                },
+                siteUrl: {
+                  type: 'string',
+                  description: 'Website URL in Search Console'
+                }
+              },
+              required: ['propertyId', 'siteUrl']
+            }
+          },
+          {
+            name: 'ga.generateContentCalendar',
+            description: 'Generate monthly content calendar based on analytics insights',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                propertyId: {
+                  type: 'string',
+                  description: 'GA4 property ID'
+                },
+                siteUrl: {
+                  type: 'string',
+                  description: 'Website URL in Search Console'
+                },
+                targetMonth: {
+                  type: 'string',
+                  description: 'Target month (YYYY-MM format, optional)'
+                }
+              },
+              required: ['propertyId', 'siteUrl']
+            }
           }
         ]
       };
@@ -254,6 +333,50 @@ export class AgentMeshMCPServer {
                 {
                   type: 'text',
                   text: JSON.stringify(eventResult, null, 2)
+                }
+              ]
+            };
+
+          case 'ga.getTopPages':
+            const topPagesResult = await GoogleAnalyticsHandler.getTopPages(args);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(topPagesResult, null, 2)
+                }
+              ]
+            };
+
+          case 'ga.getSearchConsoleData':
+            const searchConsoleResult = await GoogleAnalyticsHandler.getSearchConsoleData(args);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(searchConsoleResult, null, 2)
+                }
+              ]
+            };
+
+          case 'ga.analyzeContentOpportunities':
+            const analysisResult = await GoogleAnalyticsHandler.analyzeContentOpportunities(args);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(analysisResult, null, 2)
+                }
+              ]
+            };
+
+          case 'ga.generateContentCalendar':
+            const calendarResult = await GoogleAnalyticsHandler.generateContentCalendar(args);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(calendarResult, null, 2)
                 }
               ]
             };

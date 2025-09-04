@@ -1,5 +1,5 @@
 module "vercel_integration" {
-  source = "../../modules/vercel_integration"
+  source = "../../../modules/vercel_integration"
 
   env          = var.env
   project_name = var.project_name

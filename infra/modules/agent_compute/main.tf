@@ -15,7 +15,7 @@ locals {
 # Data source to get MCP server infrastructure outputs
 data "terraform_remote_state" "mcp_server" {
   count   = var.mcp_server_state_path != "" ? 1 : 0
-  backend = "local"  # Update with your backend configuration
+  backend = "local" # Update with your backend configuration
   config = {
     path = var.mcp_server_state_path
   }
@@ -51,7 +51,7 @@ data "aws_iam_policy_document" "task_role_policy" {
       effect = "Allow"
       actions = [
         "dynamodb:GetItem",
-        "dynamodb:PutItem", 
+        "dynamodb:PutItem",
         "dynamodb:UpdateItem",
         "dynamodb:DeleteItem",
         "dynamodb:Query",
@@ -83,7 +83,7 @@ data "aws_iam_policy_document" "task_role_policy" {
       effect = "Allow"
       actions = [
         "dynamodb:GetItem",
-        "dynamodb:PutItem", 
+        "dynamodb:PutItem",
         "dynamodb:UpdateItem",
         "dynamodb:Query",
         "s3:GetObject",

@@ -16,8 +16,6 @@ terraform {
 }
 
 provider "aws" {
-  profile = "baursoftware"
-
   default_tags {
     tags = {
       ManagedBy = "terraform"

@@ -15,9 +15,25 @@ locals {
 
 # Data source to get MCP server infrastructure outputs
 data "terraform_remote_state" "mcp_server" {
-  backend = "local"  # Update with your backend configuration
+  backend = "local" # Update with your backend configuration
   config = {
     path = var.mcp_server_state_path
+  }
+}
+
+# Data source to get timeline store outputs
+data "terraform_remote_state" "timeline_store" {
+  backend = "local"
+  config = {
+    path = var.timeline_store_state_path
+  }
+}
+
+# Data source to get workflow outputs
+data "terraform_remote_state" "workflow" {
+  backend = "local"
+  config = {
+    path = var.workflow_state_path
   }
 }
 
@@ -68,6 +84,8 @@ data "aws_iam_policy_document" "stepfn_policy" {
       data.terraform_remote_state.mcp_server.outputs.kv_store_table_arn,
       data.terraform_remote_state.mcp_server.outputs.artifacts_bucket_arn,
       "${data.terraform_remote_state.mcp_server.outputs.artifacts_bucket_arn}/*",
+      data.terraform_remote_state.timeline_store.outputs.bucket_arn,
+      "${data.terraform_remote_state.timeline_store.outputs.bucket_arn}/*",
       data.terraform_remote_state.mcp_server.outputs.message_queue_arn,
       data.terraform_remote_state.mcp_server.outputs.event_bus_arn
     ]
@@ -96,6 +114,8 @@ resource "aws_sfn_state_machine" "agent_orchestration" {
     sweeper_task_arn   = var.sweeper_task_arn
     kv_table_name      = data.terraform_remote_state.mcp_server.outputs.kv_store_table_name
     artifacts_bucket   = data.terraform_remote_state.mcp_server.outputs.artifacts_bucket_name
+    timeline_bucket    = data.terraform_remote_state.timeline_store.outputs.bucket_name
+    subtasks_queue_url = data.terraform_remote_state.workflow.outputs.subtasks_queue_url
     event_bus_name     = data.terraform_remote_state.mcp_server.outputs.event_bus_name
     message_queue_url  = data.terraform_remote_state.mcp_server.outputs.message_queue_url
     security_group_id  = var.security_group_id

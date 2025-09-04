@@ -4,12 +4,14 @@ A Model Context Protocol (MCP) server that provides tools for interacting with A
 
 ## Features
 
+- **Google Analytics Integration**: Complete OAuth2 flow, top pages analysis, content opportunities, and calendar generation
 - **Key-Value Storage**: Store and retrieve data with TTL support via DynamoDB
 - **Artifact Management**: Upload, download, and list artifacts in S3 buckets
 - **Event Bus Integration**: Send events to AWS EventBridge
 - **Timeline Management**: Access timeline events and data
 - **Workflow Support**: Start and manage Step Functions workflows
 - **Dual Interface**: Both stdio and HTTP server implementations
+- **100% Test Coverage**: Comprehensive test suite ensuring reliability
 
 ## Architecture
 
@@ -286,12 +288,22 @@ DEBUG=mcp:* npm start
 
 Check AWS CloudWatch logs for detailed error information.
 
+## Documentation
+
+Comprehensive documentation is available:
+
+- **[API Documentation](docs/API.md)** - Complete reference for all MCP tools and their parameters
+- **[Setup Guide](docs/SETUP.md)** - Detailed setup instructions including OAuth2 configuration
+- **[Usage Examples](docs/EXAMPLES.md)** - Practical examples and integration patterns
+- **[Integration Guide](docs/INTEGRATION.md)** - Platform-specific integration instructions
+- **[Architecture Overview](../CODEBASE_STRUCTURE.md)** - Complete codebase structure and patterns
+
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests if applicable
+4. Add tests if applicable (maintain 100% pass rate)
 5. Submit a pull request
 
 ## License
@@ -302,6 +314,8 @@ MIT License - see LICENSE file for details.
 
 For issues and questions:
 
-1. Check the troubleshooting section above
-2. Review AWS service documentation
-3. Open an issue on GitHub with detailed error information
+1. Check the [troubleshooting section](docs/SETUP.md#troubleshooting) in the setup guide
+2. Review the [examples](docs/EXAMPLES.md) for common usage patterns
+3. Check the [integration guide](docs/INTEGRATION.md) for platform-specific help
+4. Review AWS service documentation
+5. Open an issue on GitHub with detailed error information

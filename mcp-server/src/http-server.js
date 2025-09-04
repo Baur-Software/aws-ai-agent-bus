@@ -14,6 +14,7 @@ import KVHandler from './modules/mcp/handlers/kv.js';
 import ArtifactsHandler from './modules/mcp/handlers/artifacts.js';
 import WorkflowHandler from './modules/mcp/handlers/workflow.js';
 import EventsHandler from './modules/mcp/handlers/events.js';
+import GoogleAnalyticsHandler from './modules/mcp/handlers/google-analytics.js';
 
 // Shared tool definitions to avoid duplication
 const TOOL_DEFINITIONS = [
@@ -142,6 +143,84 @@ const TOOL_DEFINITIONS = [
       },
       required: ['detailType', 'detail']
     }
+  },
+  {
+    name: 'ga.getTopPages',
+    description: 'Get top performing pages from Google Analytics',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        propertyId: {
+          type: 'string',
+          description: 'GA4 property ID'
+        },
+        days: {
+          type: 'number',
+          description: 'Number of days to analyze (default: 30)',
+          default: 30
+        }
+      },
+      required: ['propertyId']
+    }
+  },
+  {
+    name: 'ga.getSearchConsoleData',
+    description: 'Get Search Console keyword data',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        siteUrl: {
+          type: 'string',
+          description: 'Website URL in Search Console'
+        },
+        days: {
+          type: 'number',
+          description: 'Number of days to analyze (default: 30)',
+          default: 30
+        }
+      },
+      required: ['siteUrl']
+    }
+  },
+  {
+    name: 'ga.analyzeContentOpportunities',
+    description: 'Analyze content opportunities using GA and Search Console data',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        propertyId: {
+          type: 'string',
+          description: 'GA4 property ID'
+        },
+        siteUrl: {
+          type: 'string',
+          description: 'Website URL in Search Console'
+        }
+      },
+      required: ['propertyId', 'siteUrl']
+    }
+  },
+  {
+    name: 'ga.generateContentCalendar',
+    description: 'Generate monthly content calendar based on analytics insights',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        propertyId: {
+          type: 'string',
+          description: 'GA4 property ID'
+        },
+        siteUrl: {
+          type: 'string',
+          description: 'Website URL in Search Console'
+        },
+        targetMonth: {
+          type: 'string',
+          description: 'Target month (YYYY-MM format, optional)'
+        }
+      },
+      required: ['propertyId', 'siteUrl']
+    }
   }
 ];
 
@@ -204,6 +283,18 @@ class AgentMeshHTTPServer {
           break;
         case 'events.send':
           result = await EventsHandler.send(args);
+          break;
+        case 'ga.getTopPages':
+          result = await GoogleAnalyticsHandler.getTopPages(args);
+          break;
+        case 'ga.getSearchConsoleData':
+          result = await GoogleAnalyticsHandler.getSearchConsoleData(args);
+          break;
+        case 'ga.analyzeContentOpportunities':
+          result = await GoogleAnalyticsHandler.analyzeContentOpportunities(args);
+          break;
+        case 'ga.generateContentCalendar':
+          result = await GoogleAnalyticsHandler.generateContentCalendar(args);
           break;
         default:
           throw new McpError(
