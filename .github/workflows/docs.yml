@@ -33,14 +33,6 @@ jobs:
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v4
-        
-      - name: Install Jekyll dependencies
-        run: |
-          cd docs
-          gem install bundler jekyll
-          bundle init
-          bundle add jekyll minima
-          bundle add jekyll-feed jekyll-sitemap jekyll-seo-tag
           
       - name: Build with Jekyll
         run: |
