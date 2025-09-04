@@ -1,5 +1,5 @@
 module "stripe_integration" {
-  source = "../../modules/stripe_integration"
+  source = "../../../modules/stripe_integration"
 
   env = var.env
 

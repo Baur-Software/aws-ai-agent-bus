@@ -31,13 +31,13 @@ data "aws_subnets" "default" {
 }
 
 module "subtasks_queue" {
-  source = "../../modules/sqs_subtasks"
+  source = "../../../modules/sqs_subtasks"
 
   env = var.env
 }
 
 module "lanes_workflow" {
-  source = "../../modules/stepfn_lanes"
+  source = "../../../modules/stepfn_lanes"
 
   env                  = var.env
   conductor_task_arn   = data.terraform_remote_state.mesh_agents.outputs.conductor_task_arn

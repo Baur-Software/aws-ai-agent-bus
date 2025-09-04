@@ -1,5 +1,5 @@
 module "conductor_agent" {
-  source = "../../modules/ecs_task_agent"
+  source = "../../../modules/ecs_task_agent"
 
   env        = var.env
   agent_name = "conductor"
@@ -7,7 +7,7 @@ module "conductor_agent" {
 }
 
 module "critic_agent" {
-  source = "../../modules/ecs_task_agent"
+  source = "../../../modules/ecs_task_agent"
 
   env        = var.env
   agent_name = "critic"
@@ -15,7 +15,7 @@ module "critic_agent" {
 }
 
 module "sweeper_agent" {
-  source = "../../modules/ecs_task_agent"
+  source = "../../../modules/ecs_task_agent"
 
   env        = var.env
   agent_name = "sweeper"
