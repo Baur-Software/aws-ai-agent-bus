@@ -1,6 +1,9 @@
+import 'dotenv/config';
 import { GoogleAnalyticsService } from '../../../services/google-analytics.js';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import EventsHandler from './events.js';
+
+import { uiService } from '../../../services/ui-service.js';
 
 /**
  * Handler for Google Analytics API operations in the MCP server.
@@ -20,7 +23,7 @@ export class GoogleAnalyticsHandler {
   static gaService = null;
   
   /** @type {SecretsManagerClient} AWS Secrets Manager client for credential retrieval */
-  static secretsClient = new SecretsManagerClient({});
+  static secretsClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-west-2' });
 
   /**
    * Initialize Google Analytics service with credentials from AWS Secrets Manager.
@@ -38,7 +41,7 @@ export class GoogleAnalyticsHandler {
 
     try {
       const command = new GetSecretValueCommand({
-        SecretId: 'spalding-content-pipeline/google-analytics'
+        SecretId: 'agent-mesh-mcp/google-analytics'
       });
       
       const response = await this.secretsClient.send(command);
@@ -56,13 +59,14 @@ export class GoogleAnalyticsHandler {
   /**
    * Get top performing pages from Google Analytics for content analysis.
    * Returns page performance metrics including sessions, pageviews, and engagement data.
+   * Automatically includes interactive UI resource if MCP_UI_ENABLED=true
    * 
    * @static
    * @async
    * @param {Object} params - Parameters for the request
    * @param {string} params.propertyId - GA4 property ID (required)
    * @param {number} [params.days=30] - Number of days to analyze (default: 30)
-   * @returns {Promise<Object>} Response object with success flag, data array, and metadata
+   * @returns {Promise<Object>} Response object with success flag, data array, metadata, and optional UI
    * @throws {Error} If propertyId is missing or API call fails
    * @example
    * const result = await GoogleAnalyticsHandler.getTopPages({
@@ -70,6 +74,7 @@ export class GoogleAnalyticsHandler {
    *   days: 30
    * });
    * console.log(result.data); // Array of top performing pages
+   * console.log(result.ui); // Interactive dashboard UI resource (if enabled)
    */
   static async getTopPages({ propertyId, days = 30 } = {}) {
     if (!propertyId) {
@@ -97,7 +102,7 @@ export class GoogleAnalyticsHandler {
       }
     }
 
-    return {
+    const response = {
       success: true,
       data,
       metadata: {
@@ -106,6 +111,14 @@ export class GoogleAnalyticsHandler {
         retrievedAt: new Date().toISOString()
       }
     };
+
+    // Generate UI resource if service is enabled via environment config
+    const ui = uiService.generateUIResource('users-by-country', data, response.metadata);
+    if (ui) {
+      response.ui = ui;
+    }
+
+    return response;
   }
 
   /**
@@ -316,15 +329,25 @@ export class GoogleAnalyticsHandler {
       }
     }
 
-    return {
+    const response = {
       success: true,
       calendar,
       metadata: {
         generatedAt: new Date().toISOString(),
         targetMonth,
-        basedOnInsights: true
+        basedOnInsights: true,
+        propertyId,
+        siteUrl
       }
     };
+
+    // Generate UI resource if service is enabled via environment config
+    const ui = uiService.generateUIResource('content-calendar', calendar, response.metadata);
+    if (ui) {
+      response.ui = ui;
+    }
+
+    return response;
   }
 
   /**

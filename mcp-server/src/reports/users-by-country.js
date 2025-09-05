@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import 'dotenv/config';
 import { GoogleAnalyticsService } from '../services/google-analytics.js';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 
@@ -10,20 +11,19 @@ async function generateUsersReport() {
   try {
     console.log('Initializing Google Analytics service...');
     
-    // Set AWS region explicitly
-    process.env.AWS_REGION = 'us-east-1';
-    process.env.AWS_DEFAULT_REGION = 'us-east-1';
+    // Use AWS region from environment or default to us-west-2
+    const awsRegion = process.env.AWS_REGION || 'us-west-2';
     
-    // Initialize AWS Secrets Manager with explicit region
+    // Initialize AWS Secrets Manager with configured region
     const secretsClient = new SecretsManagerClient({ 
-      region: 'us-east-1'
+      region: awsRegion
     });
     
-    console.log('Using AWS region: us-east-1');
+    console.log(`Using AWS region: ${awsRegion}`);
     
     // Get credentials from AWS Secrets Manager
     const command = new GetSecretValueCommand({
-      SecretId: 'spalding-content-pipeline/google-analytics'
+      SecretId: 'agent-mesh-mcp/google-analytics'
     });
     
     const response = await secretsClient.send(command);

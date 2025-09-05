@@ -254,7 +254,7 @@ class GACredentialsSetup {
         
         if (queryObject.code) {
           try {
-            const { tokens } = await oauth2Client.getAccessToken(queryObject.code);
+            const { tokens } = await oauth2Client.getToken(queryObject.code);
             res.end('Authorization successful! You can close this window.');
             server.close();
             resolve(tokens);
