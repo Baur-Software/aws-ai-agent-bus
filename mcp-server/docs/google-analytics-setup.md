@@ -133,7 +133,7 @@ node get-tokens.js
 ```bash
 # Create secret with Google Analytics credentials
 aws secretsmanager create-secret \
-    --name "spalding-content-pipeline/google-analytics" \
+    --name "myproject-content-pipeline/google-analytics" \
     --description "Google Analytics API credentials for MCP server" \
     --secret-string '{
       "client_id": "your-client-id.apps.googleusercontent.com",
@@ -149,7 +149,7 @@ aws secretsmanager create-secret \
 ```bash
 # Test secret retrieval
 aws secretsmanager get-secret-value \
-    --secret-id "spalding-content-pipeline/google-analytics" \
+    --secret-id "myproject-content-pipeline/google-analytics" \
     --query SecretString --output text | jq .
 ```
 
@@ -167,7 +167,7 @@ Create an IAM policy for accessing the secret:
                 "secretsmanager:GetSecretValue"
             ],
             "Resource": [
-                "arn:aws:secretsmanager:us-east-1:*:secret:spalding-content-pipeline/google-analytics-*"
+                "arn:aws:secretsmanager:us-east-1:*:secret:myproject-content-pipeline/google-analytics-*"
             ]
         }
     ]
@@ -256,7 +256,7 @@ export AWS_DEFAULT_REGION=us-east-1
 ```bash
 # Solution: Verify secret format and refresh tokens
 aws secretsmanager update-secret \
-    --secret-id "spalding-content-pipeline/google-analytics" \
+    --secret-id "myproject-content-pipeline/google-analytics" \
     --secret-string '{...updated credentials...}'
 ```
 
@@ -275,7 +275,7 @@ Set up automatic secret rotation for security:
 
 ```bash
 aws secretsmanager update-secret \
-    --secret-id "spalding-content-pipeline/google-analytics" \
+    --secret-id "myproject-content-pipeline/google-analytics" \
     --description "Google Analytics API credentials with auto-rotation" \
     --rotation-lambda-arn "arn:aws:lambda:us-east-1:account:function:rotate-ga-credentials" \
     --rotation-rules AutomaticallyAfterDays=90
@@ -287,7 +287,7 @@ For multi-region deployments:
 
 ```bash
 aws secretsmanager replicate-secret-to-regions \
-    --secret-id "spalding-content-pipeline/google-analytics" \
+    --secret-id "myproject-content-pipeline/google-analytics" \
     --add-replica-regions Region=us-west-2,KmsKeyId=alias/aws/secretsmanager \
     --add-replica-regions Region=eu-west-1,KmsKeyId=alias/aws/secretsmanager
 ```
@@ -321,7 +321,7 @@ const client = new SecretsManagerClient({ region: 'us-east-1' });
 async function testSecret() {
   try {
     const response = await client.send(new GetSecretValueCommand({
-      SecretId: 'spalding-content-pipeline/google-analytics'
+      SecretId: 'myproject-content-pipeline/google-analytics'
     }));
     
     const credentials = JSON.parse(response.SecretString);
@@ -347,7 +347,7 @@ import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-sec
 async function validateAccess() {
   const secretsClient = new SecretsManagerClient({ region: 'us-east-1' });
   const response = await secretsClient.send(new GetSecretValueCommand({
-    SecretId: 'spalding-content-pipeline/google-analytics'
+    SecretId: 'myproject-content-pipeline/google-analytics'
   }));
   
   const credentials = JSON.parse(response.SecretString);

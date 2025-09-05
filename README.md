@@ -110,7 +110,7 @@ npm run report:users-by-country
 
 **Manual Setup (Alternative):**
 - AWS credentials configured with Secrets Manager access
-- Google Analytics secret in AWS Secrets Manager: `spalding-content-pipeline/google-analytics`
+- Google Analytics secret in AWS Secrets Manager: `myproject-content-pipeline/google-analytics`
 - Secret format: `{"client_id": "...", "client_secret": "...", "access_token": "...", "refresh_token": "...", "property_id": "..."}`
 
 **Troubleshooting:**

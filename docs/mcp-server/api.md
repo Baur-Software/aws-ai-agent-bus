@@ -354,7 +354,7 @@ Requires OAuth2 setup with service account or web application credentials:
 - Service account: Requires `private_key` and `client_email`
 - OAuth2: Requires `access_token` and `refresh_token`
 
-Credentials are managed through AWS Secrets Manager with key: `spalding-content-pipeline/google-analytics`
+Credentials are managed through AWS Secrets Manager with key: `myproject-content-pipeline/google-analytics`
 
 ## Rate Limits
 

@@ -22,7 +22,7 @@ class GACredentialsSetup {
     this.secretsClient = new SecretsManagerClient({ 
       region: process.env.AWS_REGION || 'us-east-1' 
     });
-    this.secretId = 'spalding-content-pipeline/google-analytics';
+    this.secretId = 'myproject-content-pipeline/google-analytics';
   }
 
   async run() {

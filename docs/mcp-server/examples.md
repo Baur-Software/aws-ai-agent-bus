@@ -528,7 +528,7 @@ Add to your Claude Desktop configuration file:
         "DYNAMODB_TABLE": "agent-mesh-dev-kv",
         "S3_BUCKET": "agent-mesh-dev-artifacts",
         "EVENT_BUS_NAME": "agent-mesh-dev",
-        "GOOGLE_ANALYTICS_SECRET": "spalding-content-pipeline/google-analytics"
+        "GOOGLE_ANALYTICS_SECRET": "myproject-content-pipeline/google-analytics"
       }
     }
   }

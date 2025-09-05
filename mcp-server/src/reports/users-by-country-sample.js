@@ -84,7 +84,7 @@ function generateSampleUsersReport() {
 
   console.log(`\n📊 To generate the actual report with live Google Analytics data:`);
   console.log(`   1. Configure AWS credentials with access to the secrets manager`);
-  console.log(`   2. Ensure the 'spalding-content-pipeline/google-analytics' secret exists`);
+  console.log(`   2. Ensure the 'myproject-content-pipeline/google-analytics' secret exists`);
   console.log(`   3. Run: node generate-users-by-country-report.js`);
 }
 
