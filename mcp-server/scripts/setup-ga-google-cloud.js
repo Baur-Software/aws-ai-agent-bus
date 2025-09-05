@@ -145,7 +145,7 @@ async function testGoogleAnalyticsAccess(credentials) {
       const queryObject = url.parse(req.url, true).query;
       
       if (queryObject.code) {
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end(`
           <html>
             <head>

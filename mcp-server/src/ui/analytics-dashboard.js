@@ -1,4 +1,4 @@
-import { createHtmlResource } from '@mcp-ui/server';
+import { createUIResource } from '@mcp-ui/server';
 
 /**
  * UI Components for Google Analytics Dashboard
@@ -22,11 +22,11 @@ export class AnalyticsDashboard {
       engagement: parseFloat(item.engagementRate.replace('%', ''))
     }));
 
-    return createHtmlResource({
+    return createUIResource({
       uri: `ui://analytics/users-by-country/${metadata.propertyId}`,
       content: {
-        type: 'directHtml',
-        htmlString: `
+        type: 'text/html',
+        text: `
           <!DOCTYPE html>
           <html>
           <head>
@@ -420,11 +420,11 @@ export class AnalyticsDashboard {
       return acc;
     }, {});
 
-    return createHtmlResource({
+    return createUIResource({
       uri: `ui://analytics/content-calendar/${calendar.month}-${calendar.year}`,
       content: {
-        type: 'directHtml',
-        htmlString: `
+        type: 'text/html',
+        text: `
           <!DOCTYPE html>
           <html>
           <head>
