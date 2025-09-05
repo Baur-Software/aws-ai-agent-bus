@@ -68,12 +68,19 @@ jest.unstable_mockModule('../../src/modules/aws/dynamodb.js', () => ({
   }
 }));
 
-// Now import after mocking
-const { default: AgentMeshMCPServer } = await import('../../src/modules/mcp/server.js');
-const { default: KVHandler } = await import('../../src/modules/mcp/handlers/kv.js');
+// Import after mocking - use dynamic imports in beforeAll to avoid teardown issues
+let AgentMeshMCPServer, KVHandler;
 
 describe('MCP Server', () => {
   let server;
+
+  beforeAll(async () => {
+    // Import modules dynamically to avoid teardown issues
+    const serverModule = await import('../../src/modules/mcp/server.js');
+    const kvModule = await import('../../src/modules/mcp/handlers/kv.js');
+    AgentMeshMCPServer = serverModule.default;
+    KVHandler = kvModule.default;
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();

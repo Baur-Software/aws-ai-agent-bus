@@ -33,9 +33,10 @@
     "@aws-sdk/s3-request-presigner": "^3.864.0",
     "@modelcontextprotocol/sdk": "^1.17.3",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
     "express": "^4.18.2",
-    "googleapis": "^140.0.0",
     "google-auth-library": "^9.0.0",
+    "googleapis": "^140.0.0",
     "node-fetch": "^3.3.2",
     "zod": "^3.22.4"
   },
