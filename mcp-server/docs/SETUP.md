@@ -74,7 +74,7 @@ EVENT_BUS_NAME=agent-mesh-dev
 STEP_FUNCTIONS_ROLE_ARN=arn:aws:iam::123456789012:role/StepFunctionsRole
 
 # Google Analytics (optional)
-GOOGLE_ANALYTICS_SECRET=spalding-content-pipeline/google-analytics
+GOOGLE_ANALYTICS_SECRET=myproject-content-pipeline/google-analytics
 
 # Development
 NODE_ENV=development
@@ -193,13 +193,13 @@ Store your Google Analytics credentials in AWS Secrets Manager:
 ```bash
 # Create secret with service account credentials
 aws secretsmanager create-secret \
-  --name "spalding-content-pipeline/google-analytics" \
+  --name "myproject-content-pipeline/google-analytics" \
   --description "Google Analytics API credentials" \
   --secret-string file://google-credentials.json
 
 # Or update existing secret
 aws secretsmanager update-secret \
-  --secret-id "spalding-content-pipeline/google-analytics" \
+  --secret-id "myproject-content-pipeline/google-analytics" \
   --secret-string file://google-credentials.json
 ```
 

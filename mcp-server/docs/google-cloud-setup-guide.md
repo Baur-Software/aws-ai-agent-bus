@@ -141,7 +141,7 @@ Once you have your Google Cloud credentials:
 2. **Option 2: Manual AWS Secrets Manager**
    ```bash
    aws secretsmanager create-secret \
-     --name "spalding-content-pipeline/google-analytics" \
+     --name "myproject-content-pipeline/google-analytics" \
      --description "Google Analytics API credentials" \
      --secret-string '{
        "client_id": "your-client-id",

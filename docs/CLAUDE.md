@@ -88,7 +88,7 @@ export AGENT_MESH_EVENT_BUS=agent-mesh-events
 4. Credentials automatically stored in AWS Secrets Manager
 
 ### Required Credentials Format
-AWS Secrets Manager secret: `spalding-content-pipeline/google-analytics`
+AWS Secrets Manager secret: `myproject-content-pipeline/google-analytics`
 ```json
 {
   "client_id": "...",

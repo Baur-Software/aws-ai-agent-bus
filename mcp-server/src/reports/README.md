@@ -33,7 +33,7 @@ npm run report:users-by-country
 #### Prerequisites:
 
 1. **AWS Credentials**: Must be configured with access to AWS Secrets Manager
-2. **Google Analytics Secret**: Secret named `spalding-content-pipeline/google-analytics` must exist in AWS Secrets Manager
+2. **Google Analytics Secret**: Secret named `myproject-content-pipeline/google-analytics` must exist in AWS Secrets Manager
 3. **Secret Format**:
    ```json
    {
@@ -73,7 +73,7 @@ Summary:
 
 **Error**: `Failed to initialize Google Analytics`  
 - **Solution**: Verify the secret exists and contains valid Google OAuth credentials
-- **Check**: Test secret access with `aws secretsmanager get-secret-value --secret-id spalding-content-pipeline/google-analytics`
+- **Check**: Test secret access with `aws secretsmanager get-secret-value --secret-id myproject-content-pipeline/google-analytics`
 
 #### Development:
 
