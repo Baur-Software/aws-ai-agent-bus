@@ -145,11 +145,15 @@ async function testGoogleAnalyticsAccess(credentials) {
       const queryObject = url.parse(req.url, true).query;
       
       if (queryObject.code) {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end(`
           <html>
+            <head>
+              <meta charset="utf-8">
+              <title>Authorization Successful</title>
+            </head>
             <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-              <h2>✅ Authorization Successful!</h2>
+              <h2>&#x2705; Authorization Successful!</h2>
               <p>You can close this window and return to the terminal.</p>
               <script>window.close();</script>
             </body>
@@ -158,11 +162,15 @@ async function testGoogleAnalyticsAccess(credentials) {
         server.close();
         resolve(queryObject.code);
       } else if (queryObject.error) {
-        res.writeHead(400, { 'Content-Type': 'text/html' });
+        res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end(`
           <html>
+            <head>
+              <meta charset="utf-8">
+              <title>Authorization Failed</title>
+            </head>
             <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-              <h2>❌ Authorization Failed</h2>
+              <h2>&#x274C; Authorization Failed</h2>
               <p>Error: ${queryObject.error}</p>
               <p>Please check the terminal for next steps.</p>
             </body>

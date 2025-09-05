@@ -276,9 +276,7 @@ export class AnalyticsDashboard {
                     }
                   }
                 }
-                },
-      delivery: 'text'
-    });
+              });
 
               // Chat functionality
               function sendChatMessage() {

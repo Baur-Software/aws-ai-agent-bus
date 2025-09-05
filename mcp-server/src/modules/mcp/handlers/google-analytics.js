@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { GoogleAnalyticsService } from '../../../services/google-analytics.js';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import EventsHandler from './events.js';
@@ -22,7 +23,7 @@ export class GoogleAnalyticsHandler {
   static gaService = null;
   
   /** @type {SecretsManagerClient} AWS Secrets Manager client for credential retrieval */
-  static secretsClient = new SecretsManagerClient({});
+  static secretsClient = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-west-2' });
 
   /**
    * Initialize Google Analytics service with credentials from AWS Secrets Manager.

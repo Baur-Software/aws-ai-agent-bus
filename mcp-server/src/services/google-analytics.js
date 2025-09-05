@@ -139,20 +139,22 @@ export class GoogleAnalyticsService {
    * @example
    * const report = await service.runReport('123456789', {
    *   dimensions: [{ name: 'pagePath' }],
-   *   metrics: [{ name: 'sessions' }, { name: 'pageviews' }],
+   *   metrics: [{ name: 'sessions' }, { name: 'screenPageViews' }],
    *   dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }]
    * });
    */
   async runReport(propertyId, reportRequest) {
     try {
+      // Ensure property ID is numeric only (strip any prefix like 'properties/')
+      const numericPropertyId = propertyId.toString().replace(/^properties\//, '').replace(/[^\d]/g, '');
+      
       const defaultRequest = {
-        property: `properties/${propertyId}`,
         dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
         ...reportRequest
       };
 
       const response = await this.analytics.properties.runReport({
-        property: `properties/${propertyId}`,
+        property: `properties/${numericPropertyId}`,
         requestBody: defaultRequest
       });
 
@@ -173,7 +175,7 @@ export class GoogleAnalyticsService {
    * @throws {Error} If report request fails or property access is denied
    * @example
    * const topPages = await service.getTopPages('123456789', 30);
-   * console.log(topPages[0]); // { pagePath: '/blog/post', sessions: 1500, pageviews: 2100, ... }
+   * console.log(topPages[0]); // { pagePath: '/blog/post', sessions: 1500, screenPageViews: 2100, ... }
    */
   async getTopPages(propertyId, days = 30) {
     const reportRequest = {
@@ -183,7 +185,7 @@ export class GoogleAnalyticsService {
       ],
       metrics: [
         { name: 'sessions' },
-        { name: 'pageviews' },
+        { name: 'screenPageViews' },
         { name: 'averageSessionDuration' },
         { name: 'bounceRate' }
       ],
