@@ -16,30 +16,24 @@
     "lint": "echo 'Linting JavaScript files...' && node -c src/server.js && node -c src/http-server.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "test:unit": "jest --testPathPattern=test/unit",
-    "test:integration": "jest --testPathPattern=test/integration",
-    "test:startup": "timeout 3s node src/http-server.js > /dev/null 2>&1 || echo 'Server startup test passed'",
-    "test:localstack": "docker-compose -f ../docker-compose.test.yml up --build --abort-on-container-exit"
+    "test:integration": "jest --testPathPattern=test/integration"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.0.0",
-    "@aws-sdk/client-ecs": "^3.0.0",
     "@aws-sdk/client-eventbridge": "^3.0.0",
-    "@aws-sdk/client-rds-data": "^3.0.0",
     "@aws-sdk/client-s3": "^3.0.0",
     "@aws-sdk/client-secrets-manager": "^3.0.0",
     "@aws-sdk/client-sfn": "^3.0.0",
     "@aws-sdk/credential-providers": "^3.864.0",
-    "@aws-sdk/lib-dynamodb": "^3.0.0",
     "@aws-sdk/s3-request-presigner": "^3.864.0",
-    "@mcp-ui/server": "^5.10.0",
+    "@aws-sdk/util-dynamodb": "^3.0.0",
     "@modelcontextprotocol/sdk": "^1.17.3",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^4.18.2",
     "google-auth-library": "^9.0.0",
     "googleapis": "^140.0.0",
-    "node-fetch": "^3.3.2",
-    "zod": "^3.22.4"
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
     "@babel/core": "^7.28.3",

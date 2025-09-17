@@ -1,0 +1,22 @@
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "tools/call",
+  "params": {
+    "name": "event-monitoring.send",
+    "arguments": {
+      "detailType": "user.login",
+      "detail": {
+        "userId": "user123",
+        "timestamp": "2025-09-10T23:05:00Z",
+        "ip": "192.168.1.100",
+        "userAgent": "Mozilla/5.0..."
+      },
+      "source": "agent-mesh-auth",
+      "priority": "medium",
+      "tags": ["authentication", "security"],
+      "alerting": true,
+      "userId": "user123"
+    }
+  }
+}

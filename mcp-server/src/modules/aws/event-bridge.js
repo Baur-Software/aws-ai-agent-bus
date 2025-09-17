@@ -1,28 +1,17 @@
-import { PutEventsCommand } from '@aws-sdk/client-eventbridge';
-import { eventBridge } from './clients.js';
+import {
+  EventBridgeClient,
+  PutEventsCommand
+} from '@aws-sdk/client-eventbridge';
 
-const EVENT_BUS_NAME = process.env.EVENT_BUS_NAME || 'agent-mesh-dev';
+const region = process.env.AWS_REGION || 'us-west-2';
+const eventBridgeClient = new EventBridgeClient({ region });
 
-export class EventBridgeService {
-  static async sendEvent(detailType, detail, source = 'mcp-server') {
+export default {
+  async putEvents(events) {
     const command = new PutEventsCommand({
-      Entries: [
-        {
-          EventBusName: EVENT_BUS_NAME,
-          Source: source,
-          DetailType: detailType,
-          Detail: JSON.stringify(detail),
-          Time: new Date(),
-        },
-      ],
+      Entries: events
     });
-    
-    const response = await eventBridge.send(command);
-    return {
-      eventId: response.Entries?.[0]?.EventId,
-      success: response.FailedEntryCount === 0,
-    };
-  }
-}
 
-export default EventBridgeService;
+    return await eventBridgeClient.send(command);
+  }
+};

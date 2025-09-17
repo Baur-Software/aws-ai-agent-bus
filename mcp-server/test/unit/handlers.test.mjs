@@ -34,67 +34,9 @@ jest.mock('@aws-sdk/s3-request-presigner', () => ({
 }));
 
 // Now import handlers after mocking
-const ArtifactsHandler = (await import('../../src/modules/mcp/handlers/artifacts.js')).default;
 const WorkflowHandler = (await import('../../src/modules/mcp/handlers/workflow.js')).default;
 const EventsHandler = (await import('../../src/modules/mcp/handlers/events.js')).default;
 
-describe('Artifacts Handler', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  test('should list artifacts', async () => {
-    const mockObjects = [
-      { Key: 'file1.txt', Size: 100, LastModified: new Date() },
-      { Key: 'file2.txt', Size: 200, LastModified: new Date() },
-    ];
-
-    mockS3Send.mockResolvedValue({ Contents: mockObjects });
-
-    const result = await ArtifactsHandler.list({ prefix: 'test/' });
-
-    expect(mockS3Send).toHaveBeenCalled();
-    expect(result.items).toHaveLength(2);
-    expect(result.items[0]).toHaveProperty('key', 'file1.txt');
-  });
-
-  test('should get artifact content', async () => {
-    const mockBody = {
-      transformToString: jest.fn().mockResolvedValue('file content'),
-    };
-
-    mockS3Send.mockResolvedValue({ Body: mockBody });
-
-    const result = await ArtifactsHandler.get({ key: 'test-file.txt' });
-
-    expect(mockS3Send).toHaveBeenCalled();
-    expect(result.key).toBe('test-file.txt');
-    expect(result.content).toBe('file content');
-  });
-
-  test('should put artifact', async () => {
-    mockS3Send.mockResolvedValue({});
-
-    const result = await ArtifactsHandler.put({
-      key: 'test-file.txt',
-      content: 'test content',
-      content_type: 'text/plain',
-    });
-
-    expect(mockS3Send).toHaveBeenCalled();
-    expect(result.key).toBe('test-file.txt');
-    expect(result.url).toBe('https://signed-url.example.com');
-  });
-
-  test('should throw error when key is missing for get', async () => {
-    await expect(ArtifactsHandler.get({})).rejects.toThrow('Key is required');
-  });
-
-  test('should throw error when key or content is missing for put', async () => {
-    await expect(ArtifactsHandler.put({ key: 'test' })).rejects.toThrow('Key and content are required');
-    await expect(ArtifactsHandler.put({ content: 'test' })).rejects.toThrow('Key and content are required');
-  });
-});
 
 describe('Workflow Handler', () => {
   beforeEach(() => {

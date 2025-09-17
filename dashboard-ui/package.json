@@ -1,0 +1,57 @@
+{
+  "name": "aws-ai-agent-bus-dashboard",
+  "version": "1.0.0",
+  "description": "Modern SolidJS dashboard for AWS AI Agent Bus MCP server",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest --watch",
+    "test:workflow": "vitest run --reporter=verbose src/components/__tests__/WorkflowManager.test.tsx src/components/__tests__/WorkflowVersioning.test.tsx src/components/__tests__/AutoSave.test.tsx src/components/__tests__/AgentModelConfiguration.test.tsx",
+    "lint": "echo 'No linter configured yet'",
+    "typecheck": "tsc --noEmit",
+    "test:ci": "vitest run --coverage --reporter=junit --reporter=json --outputFile.junit=test-results.xml --outputFile.json=test-results.json"
+  },
+  "dependencies": {
+    "@mcp-ui/client": "^5.9.0",
+    "@mcp-ui/server": "^5.10.0",
+    "@solidjs/meta": "^0.29.4",
+    "@solidjs/router": "^0.14.7",
+    "lucide-solid": "^0.542.0",
+    "solid-flow": "^1.0.4",
+    "solid-js": "^1.9.9"
+  },
+  "devDependencies": {
+    "@solidjs/testing-library": "^0.8.10",
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.16",
+    "@testing-library/jest-dom": "^6.8.0",
+    "@types/node": "^24.3.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/ui": "^3.2.4",
+    "dotenv": "^17.2.2",
+    "jsdom": "^26.1.0",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.5",
+    "vite-plugin-solid": "^2.11.8",
+    "vitest": "^3.2.4"
+  },
+  "keywords": [
+    "solidjs",
+    "dashboard",
+    "mcp",
+    "aws",
+    "agent-mesh",
+    "ui",
+    "workflow-builder",
+    "testing"
+  ],
+  "author": "",
+  "license": "MIT"
+}

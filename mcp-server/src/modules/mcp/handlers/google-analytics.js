@@ -3,7 +3,6 @@ import { GoogleAnalyticsService } from '../../../services/google-analytics.js';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import EventsHandler from './events.js';
 
-import { uiService } from '../../../services/ui-service.js';
 
 /**
  * Handler for Google Analytics API operations in the MCP server.
@@ -59,7 +58,6 @@ export class GoogleAnalyticsHandler {
   /**
    * Get top performing pages from Google Analytics for content analysis.
    * Returns page performance metrics including sessions, pageviews, and engagement data.
-   * Automatically includes interactive UI resource if MCP_UI_ENABLED=true
    * 
    * @static
    * @async
@@ -112,11 +110,6 @@ export class GoogleAnalyticsHandler {
       }
     };
 
-    // Generate UI resource if service is enabled via environment config
-    const ui = uiService.generateUIResource('users-by-country', data, response.metadata);
-    if (ui) {
-      response.ui = ui;
-    }
 
     return response;
   }
@@ -341,11 +334,6 @@ export class GoogleAnalyticsHandler {
       }
     };
 
-    // Generate UI resource if service is enabled via environment config
-    const ui = uiService.generateUIResource('content-calendar', calendar, response.metadata);
-    if (ui) {
-      response.ui = ui;
-    }
 
     return response;
   }

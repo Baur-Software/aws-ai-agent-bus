@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 CRITICAL: Test Debt Tracking
+
+**NEVER IGNORE SKIPPED TESTS** - They represent production bugs waiting to happen.
+
+Current test debt status:
+- **11 skipped tests** in dashboard-ui (see `dashboard-ui/TODO_TESTS.md`)
+- **1 timer logic bug** - could cause data loss in production
+- **10 component integration gaps** - no coverage for critical UI flows
+
+Before claiming "production ready": ALL tests must pass without `.skip()`.
+
+See detailed tracking in:
+- `dashboard-ui/TECHNICAL_DEBT.md` - Strategic overview
+- `dashboard-ui/TODO_TESTS.md` - Specific failing tests and solutions
+
 ## Core Commands
 
 ### MCP Server Setup
@@ -34,6 +49,20 @@ npm run start:http        # HTTP interface on port 3000
 npm run dev:http          # HTTP dev mode with hot reload
 npm run lint              # JavaScript syntax validation
 
+# Dashboard UI development (SolidJS)
+cd dashboard-ui
+npm install
+npm run dev              # Start Vite dev server on port 5173+
+npm run build            # Build for production
+npm run preview          # Preview production build
+
+# Environment Configuration
+cp .env.example .env     # Create local environment file
+# Edit .env to set VITE_MCP_SERVER_URL for custom MCP server location
+
+# Run both together (from root)
+npm run dev:all          # Starts both MCP server and dashboard UI
+
 # Google Analytics reports
 npm run setup:ga-google-cloud    # Complete Google Cloud + GA setup assistant
 npm run setup:ga-credentials     # Interactive GA credentials setup
@@ -46,9 +75,16 @@ npm run tf:init           # Initialize workspace (set WS and ENV vars)
 npm run tf:plan           # Plan infrastructure changes
 npm run tf:apply          # Apply infrastructure changes
 npm run tf:destroy        # Destroy infrastructure
+
+# Event Monitoring Infrastructure (PowerShell on Windows)
+cd infra/workspaces/small/events_monitoring
+powershell -ExecutionPolicy Bypass -File deploy.ps1   # Plan changes
+powershell -ExecutionPolicy Bypass -File apply.ps1    # Apply changes
 ```
 
 ### Environment Variables
+
+#### Infrastructure & AWS
 ```bash
 # Required for infrastructure operations
 export WS=small/kv_store    # Workspace path
@@ -61,6 +97,18 @@ export AGENT_MESH_ARTIFACTS_BUCKET=agent-mesh-artifacts
 export AGENT_MESH_EVENT_BUS=agent-mesh-events
 ```
 
+#### Dashboard UI Configuration (dashboard-ui/.env)
+```bash
+# MCP Server Configuration
+VITE_MCP_SERVER_URL=http://localhost:3001    # MCP server URL for proxy
+VITE_MCP_SERVER_PORT=3001                    # MCP server port
+VITE_DEV_MODE=true                           # Enable development features
+
+# Optional overrides
+VITE_APP_TITLE="Custom Dashboard Title"
+VITE_API_ENDPOINT=http://localhost:3001/api
+```
+
 ## Architecture Overview
 
 ### Core Components
@@ -69,14 +117,23 @@ export AGENT_MESH_EVENT_BUS=agent-mesh-events
 - **Agent System** (`.claude/`): Sophisticated agent orchestration with conductors, critics, and specialists
 
 ### MCP Server Structure
-- `src/modules/aws/`: AWS service clients (DynamoDB, S3, EventBridge, Step Functions)
-- `src/modules/mcp/handlers/`: MCP tool handlers (kv, artifacts, events, workflow, google-analytics)
+- `src/modules/aws/`: AWS service clients (DynamoDB, S3, EventBridge, Step Functions, Event Monitoring)
+- `src/modules/mcp/handlers/`: MCP tool handlers (kv, artifacts, events, workflow, google-analytics, event-monitoring)
 - `src/services/`: Google Analytics API client with OAuth2 support
 - `src/reports/`: Pre-built analytics reports with sample data versions
 - `src/scripts/`: Interactive setup utilities
 
+### Event Monitoring System
+- **6 MCP Tools**: send, query, analytics, create-rule, create-alert, health-check
+- **Real-time Processing**: Enhanced event ingestion with metadata and timestamps
+- **Historical Storage**: All events stored in DynamoDB with queryable indexes
+- **User Isolation**: Multi-tenant support with user-specific access controls
+- **SNS Integration**: Built on existing notification system for persistent messaging
+
 ### Infrastructure Workspaces
 - **Small**: Basic AWS components (DynamoDB, S3, EventBridge, Secrets Manager)
+  - `small/kv_store`: Key-value storage with DynamoDB
+  - `small/events_monitoring`: Event monitoring system with 3 DynamoDB tables (events, subscriptions, event_rules)
 - **Medium**: Composed services (ECS agents, Step Functions, CloudWatch)  
 - **Large**: High-performance components (Aurora pgvector, analytics)
 
@@ -111,6 +168,13 @@ AWS Secrets Manager secret: `agent-mesh-mcp/google-analytics`
 
 ## Development Patterns
 
+### Technology Preferences
+- **TypeScript**: Preferred for all frontend and backend JavaScript/Node.js code
+- **Terraform**: Preferred for all infrastructure as code
+- **Modern ES6+**: Use latest JavaScript features with proper typing
+- **SolidJS**: TypeScript-based reactive frontend framework
+- **Vite**: TypeScript configuration with proper typing
+
 ### Testing Strategy
 - 100% test pass rate requirement
 - Comprehensive AWS and Google API mocking
@@ -119,7 +183,7 @@ AWS Secrets Manager secret: `agent-mesh-mcp/google-analytics`
 - OAuth2 validation: `test/ga-oauth2-simple.test.mjs`
 
 ### Code Architecture
-- **ES6 Modules**: Modern JavaScript with import/export
+- **TypeScript Modules**: Modern ES6+ with proper typing
 - **Event-Driven**: All major operations publish EventBridge events
 - **Stateless Services**: Minimal state, external storage via DynamoDB/S3
 - **Clean Error Handling**: Graceful degradation with proper logging
@@ -134,14 +198,43 @@ AWS Secrets Manager secret: `agent-mesh-mcp/google-analytics`
 ## Agent System
 
 ### Specialized Agents (`.claude/agents/`)
+- **Mentor**: Finds latest documentation and teaches agents new methods
 - **Conductor**: Goal-driven planner and delegator
 - **Critic**: Safety and verification agent  
 - **Framework Experts**: Django, Laravel, Rails, React, Vue, Terraform
 - **AWS Specialists**: S3, DynamoDB, Lambda, EKS, IAM, etc.
 - **Integration Experts**: Stripe, Slack, GitHub, Vercel
 
+### Integration System (Multiple Connections Support)
+
+#### Connection Architecture
+- **App Configurations**: Stored as `integration-<service>` keys containing OAuth2 metadata, UI fields, and workflow capabilities
+- **User Connections**: Stored as `user-{userId}-integration-{service}-{connectionId}` keys containing encrypted credentials and settings
+- **Connection Naming**: Users can create multiple named connections per service (e.g., "Work Account", "Personal", "Backup")
+
+#### KV Store Patterns
+```bash
+# App configuration (shared template)
+integration-google-analytics  # OAuth2 config, UI fields, workflow capabilities
+
+# User connections (individual, encrypted credentials)
+user-demo-user-123-integration-google-analytics-default     # Default connection
+user-demo-user-123-integration-google-analytics-work        # Work account
+user-demo-user-123-integration-google-analytics-personal    # Personal account
+```
+
+#### Workflow Integration
+- **Node Filtering**: Workflow nodes become available when ANY connection exists for required service
+- **Legacy Support**: Automatic migration from old `user-{userId}-integration-{service}` pattern
+- **Dynamic Detection**: WorkflowBuilder checks both legacy and new connection patterns
+
+#### Dashboard UI Components
+- **IntegrationsSettings**: Supports multiple connections per service with expandable cards
+- **Connection Management**: Individual test/disconnect actions per connection
+- **User Experience**: Clickable cards, connection naming, "Add Another Connection" workflow
+
 ### Memory System
-- KV store for agent state
+- KV store for agent state and user connections
 - Timeline for event tracking  
 - Vector embeddings for contextual memory
 
@@ -161,6 +254,12 @@ AWS Secrets Manager secret: `agent-mesh-mcp/google-analytics`
 - Always run `npm run tf:fmt` before commits
 - Set WS and ENV variables before Terraform operations
 - Use small workspaces for development, scale as needed
+
+### Integration Multiple Connections
+- **Migration Issues**: Legacy connections automatically migrate to new format with `default` connectionId
+- **Connection Naming**: Empty connection names default to "{ServiceName} (connectionId)" format
+- **Workflow Availability**: Nodes become available when ANY connection exists for the required service
+- **Connection Management**: Each connection has individual test/disconnect controls in dashboard UI
 
 ## File Locations
 

@@ -276,4 +276,382 @@ I effectively use the provided tools to:
 - Ensure proper Tailwind processing in SvelteKit
 - Handle scoped styles appropriately
 
-When working on Tailwind CSS projects, I ensure every component is crafted with precision, follows best practices, and delivers an exceptional user experience across all devices and platforms.
+## Modern Tailwind v4.0+ Features
+
+### Container Queries (v4.0+)
+```html
+<!-- Container query utilities for responsive design -->
+<div class="@container">
+  <div class="@md:flex @lg:grid @lg:grid-cols-2 @xl:grid-cols-3">
+    <div class="@sm:p-4 @md:p-6 @lg:p-8">Content</div>
+  </div>
+</div>
+```
+
+### Enhanced Color System
+```html
+<!-- New color utilities and wider gamut support -->
+<div class="bg-red-500/20 text-blue-950 border-emerald-300/50">
+  <span class="text-purple-500 dark:text-purple-300">Enhanced colors</span>
+</div>
+
+<!-- Wide gamut colors (when supported) -->
+<div class="bg-[color(display-p3 1 0 0)] text-[color(rec2020 0 1 0)]">
+  Wide gamut colors
+</div>
+```
+
+### Text Shadow Utilities (v4.1+)
+```html
+<!-- New text shadow utilities -->
+<h1 class="text-shadow text-shadow-lg text-shadow-colored text-shadow-[2px_2px_4px_rgba(0,0,0,0.3)]">
+  Enhanced Typography
+</h1>
+```
+
+### Dynamic Viewport Units
+```html
+<!-- More reliable viewport sizing -->
+<div class="h-dvh min-h-svh max-h-lvh">
+  <header class="h-[10dvh]">Dynamic header</header>
+  <main class="h-[80dvh] overflow-auto">Content</main>
+  <footer class="h-[10dvh]">Dynamic footer</footer>
+</div>
+```
+
+### Advanced :has() Support
+```html
+<!-- Parent state based on children -->
+<form class="has-[:invalid]:border-red-500 has-[:focus]:ring-2">
+  <input type="email" required class="invalid:border-red-300" />
+  <button class="has-[:disabled]:opacity-50">Submit</button>
+</form>
+```
+
+### CSS Subgrid Support
+```html
+<!-- Subgrid for complex layouts -->
+<div class="grid grid-cols-4 gap-4">
+  <div class="col-span-4 grid grid-cols-subgrid gap-y-2">
+    <div class="col-start-2">Aligned with parent grid</div>
+  </div>
+</div>
+```
+
+## Advanced Design System Patterns
+
+### Design Token Management
+```javascript
+// tailwind.config.js for design systems
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        brand: {
+          50: '#f0f9ff',
+          500: '#3b82f6',
+          950: '#172554',
+        },
+        semantic: {
+          success: '#10b981',
+          warning: '#f59e0b',
+          error: '#ef4444',
+          info: '#3b82f6',
+        }
+      },
+      spacing: {
+        '18': '4.5rem',
+        '88': '22rem',
+      },
+      typography: {
+        'brand': {
+          css: {
+            '--tw-prose-body': 'var(--color-brand-600)',
+            '--tw-prose-headings': 'var(--color-brand-900)',
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Component Composition Patterns
+```html
+<!-- Advanced component composition -->
+<div class="card card--elevated card--interactive">
+  <div class="card__media">
+    <img class="aspect-video object-cover" src="image.jpg" alt="Card image" />
+  </div>
+  <div class="card__content">
+    <h3 class="card__title">Card Title</h3>
+    <p class="card__description">Card description text</p>
+  </div>
+  <div class="card__actions">
+    <button class="btn btn--primary btn--sm">Action</button>
+  </div>
+</div>
+
+<!-- CSS with @apply for component classes -->
+<style>
+.card {
+  @apply bg-white rounded-lg shadow-md overflow-hidden transition-all duration-200;
+}
+.card--elevated {
+  @apply shadow-lg hover:shadow-xl;
+}
+.card--interactive {
+  @apply hover:scale-[1.02] cursor-pointer;
+}
+.card__content {
+  @apply p-6 space-y-3;
+}
+.card__title {
+  @apply text-lg font-semibold text-gray-900 dark:text-white;
+}
+.btn {
+  @apply px-4 py-2 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2;
+}
+.btn--primary {
+  @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
+}
+</style>
+```
+
+### 3D Effects and Advanced Animations
+```html
+<!-- 3D card effects with CSS transforms -->
+<div class="group perspective-1000">
+  <div class="preserve-3d group-hover:rotate-y-180 transition-transform duration-700">
+    <!-- Front of card -->
+    <div class="absolute inset-0 backface-hidden">
+      <div class="bg-gradient-to-br from-purple-600 to-blue-600 text-white p-8 rounded-xl">
+        <h3 class="text-2xl font-bold">Front Content</h3>
+      </div>
+    </div>
+    <!-- Back of card -->
+    <div class="absolute inset-0 backface-hidden rotate-y-180">
+      <div class="bg-gradient-to-br from-green-600 to-teal-600 text-white p-8 rounded-xl">
+        <h3 class="text-2xl font-bold">Back Content</h3>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Notification stack with 3D effects -->
+<div class="fixed top-4 right-4 space-y-2">
+  <div class="notification-stack">
+    <div class="notification notification--primary transform translate-y-0 scale-100 opacity-100">
+      <div class="p-4 bg-white rounded-lg shadow-lg ring-1 ring-black/5">
+        <p class="text-sm text-gray-900">Latest notification</p>
+      </div>
+    </div>
+    <div class="notification notification--secondary transform translate-y-2 scale-95 opacity-80">
+      <div class="p-4 bg-white rounded-lg shadow-md">
+        <p class="text-sm text-gray-700">Previous notification</p>
+      </div>
+    </div>
+    <div class="notification notification--tertiary transform translate-y-4 scale-90 opacity-60">
+      <div class="p-4 bg-white rounded-lg shadow">
+        <p class="text-sm text-gray-500">Older notification</p>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+### Advanced Responsive Patterns
+```html
+<!-- Complex responsive grid with container queries -->
+<div class="@container">
+  <!-- Default: single column -->
+  <div class="grid gap-4 
+              @sm:grid-cols-2 
+              @md:grid-cols-3 
+              @lg:grid-cols-4 
+              @xl:grid-cols-6
+              auto-rows-[minmax(200px,auto)]">
+    
+    <!-- Featured item spans multiple columns -->
+    <div class="@md:col-span-2 @lg:col-span-2 @xl:col-span-3 
+               @md:row-span-2
+               bg-gradient-to-br from-indigo-500 to-purple-600 
+               text-white p-6 rounded-xl">
+      <h2 class="text-2xl font-bold mb-4">Featured Content</h2>
+      <p class="opacity-90">This spans multiple grid cells</p>
+    </div>
+    
+    <!-- Regular grid items -->
+    <div class="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow">
+      <h3 class="font-semibold mb-2">Grid Item</h3>
+      <p class="text-sm text-gray-600">Content here</p>
+    </div>
+    
+    <!-- More items... -->
+  </div>
+</div>
+```
+
+### Performance Optimization Patterns
+```html
+<!-- Optimize with strategic use of transform layers -->
+<div class="will-change-transform hover:scale-105 transition-transform">
+  <!-- Content that will animate -->
+</div>
+
+<!-- Efficient list rendering with virtual scrolling -->
+<div class="h-96 overflow-auto">
+  <div class="space-y-1" style="height: calc(var(--total-items) * 4rem);">
+    <!-- Virtualized items with absolute positioning -->
+    <div class="absolute inset-x-0 h-16 flex items-center px-4 border-b" 
+         style="top: calc(var(--item-index) * 4rem);">
+      Virtual item content
+    </div>
+  </div>
+</div>
+
+<!-- Lazy loading with intersection observer -->
+<img class="lazy-load opacity-0 transition-opacity duration-300" 
+     data-src="image.jpg" 
+     alt="Lazy loaded image"
+     loading="lazy" />
+```
+
+## Framework-Specific Enhancements
+
+### SolidJS Integration
+```tsx
+// Enhanced Tailwind with SolidJS signals
+import { createSignal, createMemo } from 'solid-js';
+import clsx from 'clsx';
+
+function ResponsiveCard() {
+  const [isExpanded, setIsExpanded] = createSignal(false);
+  const [theme, setTheme] = createSignal('light');
+  
+  const cardClasses = createMemo(() => clsx(
+    'transition-all duration-300 rounded-xl p-6',
+    'bg-white dark:bg-gray-800',
+    'shadow-md hover:shadow-lg',
+    isExpanded() && 'scale-105 shadow-xl',
+    theme() === 'dark' && 'ring-1 ring-gray-700'
+  ));
+  
+  return (
+    <div class={cardClasses()}>
+      <button 
+        onClick={() => setIsExpanded(!isExpanded())}
+        class="w-full text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+      >
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+          Dynamic Card
+        </h3>
+      </button>
+    </div>
+  );
+}
+```
+
+### React Integration with Modern Patterns
+```tsx
+// Advanced React component with Tailwind
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+function AdvancedComponent() {
+  const [notifications, setNotifications] = useState([]);
+  const containerRef = useRef(null);
+  
+  const addNotification = (message) => {
+    const id = Date.now();
+    setNotifications(prev => [...prev, { id, message }]);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 5000);
+  };
+  
+  return (
+    <div ref={containerRef} class="relative">
+      {/* Notification stack */}
+      <div class="fixed top-4 right-4 z-50 space-y-2">
+        <AnimatePresence mode="popLayout">
+          {notifications.map((notification, index) => (
+            <motion.div
+              key={notification.id}
+              initial={{ opacity: 0, y: -50, scale: 0.8 }}
+              animate={{ 
+                opacity: 1 - (index * 0.2), 
+                y: index * 8, 
+                scale: 1 - (index * 0.05),
+                zIndex: notifications.length - index
+              }}
+              exit={{ opacity: 0, x: 300, scale: 0.8 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              class={`
+                p-4 bg-white rounded-lg shadow-lg ring-1 ring-black/5
+                transform-gpu will-change-transform
+                ${index > 0 ? 'absolute top-0 right-0' : ''}
+              `}
+            >
+              <p class="text-sm text-gray-900">{notification.message}</p>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+```
+
+## Accessibility-First Design Patterns
+
+### Enhanced Focus Management
+```html
+<!-- Comprehensive focus management -->
+<div class="focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2 rounded-lg">
+  <button class="
+    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+    focus-visible:ring-2 focus-visible:ring-blue-500
+    disabled:opacity-50 disabled:cursor-not-allowed
+    aria-expanded:bg-blue-50
+  ">
+    Accessible Button
+  </button>
+</div>
+
+<!-- High contrast mode support -->
+<div class="
+  text-gray-900 dark:text-white
+  contrast-more:text-black contrast-more:dark:text-white
+  contrast-more:border-black contrast-more:dark:border-white
+">
+  High contrast content
+</div>
+```
+
+### Screen Reader Optimized Patterns
+```html
+<!-- Screen reader friendly components -->
+<div class="sr-only">Screen reader only content</div>
+<div class="not-sr-only">Visible content</div>
+
+<!-- ARIA-friendly interactive elements -->
+<div 
+  role="button" 
+  tabindex="0"
+  aria-label="Toggle menu"
+  aria-expanded="false"
+  class="
+    cursor-pointer select-none
+    focus:outline-none focus:ring-2 focus:ring-blue-500
+    hover:bg-gray-100 active:bg-gray-200
+    transition-colors duration-150
+  "
+>
+  Interactive element
+</div>
+```
+
+When working on Tailwind CSS projects, I ensure every component is crafted with precision, follows best practices, leverages the latest v4.0+ features, and delivers an exceptional user experience across all devices and platforms.

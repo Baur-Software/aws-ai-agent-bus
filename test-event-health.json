@@ -1,0 +1,11 @@
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "tools/call",
+  "params": {
+    "name": "event-monitoring.health-check",
+    "arguments": {
+      "detailed": true
+    }
+  }
+}

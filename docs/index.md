@@ -65,34 +65,38 @@ act                       # GitHub Actions locally
 
 ## 📋 Architecture
 
+- [**Architecture Diagram (PDF)**](architecture-diagram.pdf) - Primary system architecture diagram
+- [**Detailed Architecture Documentation**](architecture-diagram.md) - Comprehensive component descriptions
+
 ```mermaid
 graph TB
-    subgraph "Agent Layer"
-        C[Conductor Agent]
-        R[Critic Agent] 
-        S[Specialist Agents]
+    subgraph "🚀 Enhanced LLM Experience"
+        ENHANCE[Better than basic LLM<br/>📊 Persistent context<br/>🔗 AWS integrations<br/>📈 Analytics & monitoring]
     end
-    
-    subgraph "MCP Server"
-        M[MCP Protocol]
-        A[AWS Services]
-        G[Google Analytics]
+
+    subgraph "🛡️ Responsible AI Governance"
+        GOVERN[Enterprise-ready controls<br/>🔍 Event monitoring<br/>📋 Workflow validation<br/>🎯 Agent specialization]
     end
-    
-    subgraph "Infrastructure"
-        SM[Small Workspaces]
-        MD[Medium Workspaces]
-        LG[Large Workspaces]
+
+    subgraph "🔌 MCP Enhancement"
+        MCP[Enhanced MCP Server<br/>💾 Persistent Memory<br/>⚡ Event Processing<br/>🔄 Workflow Orchestration]
     end
-    
-    C --> M
-    R --> M
-    S --> M
-    M --> A
-    M --> G
-    A --> SM
-    A --> MD
-    A --> LG
+
+    subgraph "☁️ AWS Infrastructure"
+        AWS[Production-Ready<br/>📡 EventBridge<br/>💾 DynamoDB<br/>📦 S3<br/>🔐 Secrets Manager]
+    end
+
+    ENHANCE --> MCP
+    GOVERN --> MCP
+    MCP --> AWS
+
+    classDef valueProps fill:#4caf50,stroke:#2e7d32,stroke-width:3px,color:#fff
+    classDef mcpLayer fill:#2196f3,stroke:#1565c0,stroke-width:2px,color:#fff
+    classDef infrastructure fill:#9c27b0,stroke:#6a1b9a,stroke-width:2px,color:#fff
+
+    class ENHANCE,GOVERN valueProps
+    class MCP mcpLayer
+    class AWS infrastructure
 ```
 
 ## 🔧 Environment Setup

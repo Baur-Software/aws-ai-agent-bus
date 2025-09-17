@@ -1,32 +1,28 @@
-import { StartExecutionCommand, DescribeExecutionCommand } from '@aws-sdk/client-sfn';
-import { stepFunctions } from './clients.js';
+import {
+  SFNClient,
+  StartExecutionCommand,
+  DescribeExecutionCommand
+} from '@aws-sdk/client-sfn';
 
-const STATE_MACHINE_ARN = process.env.STATE_MACHINE_ARN || 'arn:aws:states:us-west-2:123456789012:stateMachine:AgentWorkflow';
+const region = process.env.AWS_REGION || 'us-west-2';
+const sfnClient = new SFNClient({ region });
 
-export class StepFunctionsService {
-  static async startExecution(name, input = {}) {
+export default {
+  async startExecution(stateMachineArn, input, name) {
     const command = new StartExecutionCommand({
-      stateMachineArn: STATE_MACHINE_ARN,
-      name: `${name}-${Date.now()}`,
+      stateMachineArn,
       input: JSON.stringify(input),
+      name
     });
-    
-    const { executionArn } = await stepFunctions.send(command);
-    return this.describeExecution(executionArn);
-  }
 
-  static async describeExecution(executionArn) {
+    return await sfnClient.send(command);
+  },
+
+  async describeExecution(executionArn) {
     const command = new DescribeExecutionCommand({
-      executionArn,
+      executionArn
     });
-    
-    const execution = await stepFunctions.send(command);
-    return {
-      ...execution,
-      input: execution.input && typeof execution.input === 'string' ? JSON.parse(execution.input) : execution.input,
-      output: execution.output && typeof execution.output === 'string' ? JSON.parse(execution.output) : execution.output,
-    };
-  }
-}
 
-export default StepFunctionsService;
+    return await sfnClient.send(command);
+  }
+};

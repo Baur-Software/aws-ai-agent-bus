@@ -8,3 +8,4 @@ export { default as EventsHandler } from './events.js';
 export { GoogleAnalyticsHandler } from './google-analytics.js';
 export { default as KVHandler } from './kv.js';
 export { default as WorkflowHandler } from './workflow.js';
+export { notificationTools, handleNotificationTool } from './notifications.js';

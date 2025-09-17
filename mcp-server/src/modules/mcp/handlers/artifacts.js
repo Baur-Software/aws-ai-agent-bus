@@ -1,102 +1,198 @@
 import S3Service from '../../aws/s3.js';
+import EventsHandler from './events.js';
 
 /**
- * Handler for artifact storage and retrieval using S3.
- * Manages file uploads, downloads, and listing with signed URL generation.
- * 
+ * Handler for artifact storage operations using S3.
+ * Provides secure file storage and retrieval for unstructured data.
+ *
  * @class ArtifactsHandler
  * @example
- * // Upload a text file
+ * // Store a file
  * const result = await ArtifactsHandler.put({
- *   key: 'documents/report.txt',
- *   content: 'Report content here',
- *   content_type: 'text/plain'
+ *   key: 'documents/report.pdf',
+ *   content: fileBuffer,
+ *   content_type: 'application/pdf'
  * });
- * console.log(result.url); // Signed URL for access
+ *
+ * // Retrieve a file
+ * const file = await ArtifactsHandler.get({ key: 'documents/report.pdf' });
+ * console.log(file.content);
  */
 export class ArtifactsHandler {
   /**
-   * List artifacts in S3 bucket with optional prefix filtering.
-   * Returns metadata for all matching objects including size and modification time.
-   * 
+   * List artifacts with optional prefix filter.
+   *
    * @static
    * @async
-   * @param {Object} [params={}] - Parameters for the request
-   * @param {string} [params.prefix=''] - Prefix to filter objects (optional)
-   * @returns {Promise<Object>} Object containing array of artifact items
+   * @param {Object} params - Parameters for the request
+   * @param {string} [params.prefix=''] - Prefix to filter artifacts
+   * @returns {Promise<Object>} Object containing array of artifacts and metadata
    * @example
-   * // List all artifacts
-   * const all = await ArtifactsHandler.list();
-   * 
-   * // List artifacts in specific folder
-   * const reports = await ArtifactsHandler.list({ prefix: 'reports/' });
-   * console.log(reports.items); // Array of S3 objects
+   * const result = await ArtifactsHandler.list({ prefix: 'documents/' });
+   * console.log(result.items); // Array of artifact metadata
    */
   static async list({ prefix = '' } = {}) {
-    const objects = await S3Service.listObjects(prefix);
-    return { items: objects };
+    try {
+      const result = await S3Service.listObjects(prefix);
+
+      const items = result.objects.map(obj => ({
+        key: obj.Key,
+        size: obj.Size,
+        lastModified: obj.LastModified,
+        etag: obj.ETag
+      }));
+
+      // Publish list event
+      try {
+        await EventsHandler.send({
+          detailType: 'Artifacts.List',
+          detail: {
+            prefix: prefix,
+            count: items.length,
+            totalSize: items.reduce((sum, item) => sum + (item.size || 0), 0)
+          },
+          source: 'mcp-server'
+        });
+      } catch (eventError) {
+        console.warn('Failed to publish artifacts list event:', eventError);
+      }
+
+      return {
+        items,
+        count: items.length,
+        prefix
+      };
+    } catch (error) {
+      console.error('Artifacts list error:', error);
+      if (error.message.includes('bucket')) {
+        return {
+          items: [],
+          count: 0,
+          warning: 'S3 bucket not accessible - insufficient permissions'
+        };
+      }
+      throw error;
+    }
   }
 
   /**
-   * Retrieve an artifact's content from S3.
-   * Downloads the object and returns its content as a string.
-   * 
+   * Retrieve an artifact by key.
+   *
    * @static
    * @async
-   * @param {Object} [params={}] - Parameters for the request
-   * @param {string} params.key - S3 object key to retrieve (required)
-   * @returns {Promise<Object>} Object containing key and content
-   * @throws {Error} If key parameter is missing or object doesn't exist
+   * @param {Object} params - Parameters for the request
+   * @param {string} params.key - The key of the artifact to retrieve (required)
+   * @returns {Promise<Object>} Object containing the artifact content and metadata
+   * @throws {Error} If key parameter is missing
    * @example
-   * const artifact = await ArtifactsHandler.get({ key: 'documents/report.txt' });
+   * const artifact = await ArtifactsHandler.get({ key: 'documents/report.pdf' });
    * console.log(artifact.content); // File content as string
+   * console.log(artifact.contentType); // MIME type
    */
-  static async get({ key } = {}) {
+  static async get({ key }) {
     if (!key) {
       throw new Error('Key is required');
     }
 
-    const object = await S3Service.getObject(key);
-    return {
-      key,
-      content: await object.transformToString(),
-    };
+    try {
+      const result = await S3Service.getObject(key);
+
+      // Publish get event
+      try {
+        await EventsHandler.send({
+          detailType: 'Artifacts.Get',
+          detail: {
+            key: key,
+            size: result.size || 0,
+            contentType: result.contentType
+          },
+          source: 'mcp-server'
+        });
+      } catch (eventError) {
+        console.warn('Failed to publish artifacts get event:', eventError);
+      }
+
+      return {
+        key,
+        content: result.content,
+        contentType: result.contentType,
+        size: result.size,
+        lastModified: result.lastModified
+      };
+    } catch (error) {
+      console.error('Artifacts get error:', error);
+      if (error.message.includes('bucket') || error.message.includes('NoSuchKey')) {
+        return {
+          key,
+          content: null,
+          warning: error.message.includes('bucket') ?
+            'S3 bucket not accessible - insufficient permissions' :
+            'Artifact not found'
+        };
+      }
+      throw error;
+    }
   }
 
   /**
-   * Store an artifact in S3 bucket.
-   * Uploads content with specified MIME type and generates a signed URL for access.
-   * 
+   * Store an artifact.
+   *
    * @static
    * @async
-   * @param {Object} [params={}] - Parameters for the request
-   * @param {string} params.key - S3 object key for storage (required)
-   * @param {string|Buffer} params.content - Content to store (required)
-   * @param {string} [params.content_type='text/plain'] - MIME type for the content
-   * @returns {Promise<Object>} Object containing key, signed URL, and content type
+   * @param {Object} params - Parameters for the request
+   * @param {string} params.key - The key to store the artifact under (required)
+   * @param {string|Buffer} params.content - The content to store (required)
+   * @param {string} [params.content_type='text/plain'] - The MIME type of the content
+   * @returns {Promise<Object>} Object containing the stored artifact metadata and access URL
    * @throws {Error} If key or content parameters are missing
    * @example
-   * // Upload text content
    * const result = await ArtifactsHandler.put({
-   *   key: 'data/output.json',
-   *   content: JSON.stringify(data),
+   *   key: 'configs/app.json',
+   *   content: '{"version": "1.0"}',
    *   content_type: 'application/json'
    * });
-   * console.log(result.url); // Signed URL for downloading
+   * console.log(result.url); // Signed URL for access
    */
-  static async put({ key, content, content_type = 'text/plain' } = {}) {
-    if (!key || !content) {
+  static async put({ key, content, content_type = 'text/plain' }) {
+    if (!key || content === undefined || content === null) {
       throw new Error('Key and content are required');
     }
 
-    await S3Service.putObject(key, content, content_type);
-    const url = await S3Service.getSignedUrl(key);
-    
-    return {
-      key,
-      url,
-      content_type,
-    };
+    try {
+      const result = await S3Service.putObject(key, content, content_type);
+
+      // Publish put event
+      try {
+        await EventsHandler.send({
+          detailType: 'Artifacts.Put',
+          detail: {
+            key: key,
+            size: typeof content === 'string' ? content.length : content.byteLength || 0,
+            contentType: content_type
+          },
+          source: 'mcp-server'
+        });
+      } catch (eventError) {
+        console.warn('Failed to publish artifacts put event:', eventError);
+      }
+
+      return {
+        key,
+        url: result.signedUrl,
+        contentType: content_type,
+        size: typeof content === 'string' ? content.length : content.byteLength || 0
+      };
+    } catch (error) {
+      console.error('Artifacts put error:', error);
+      if (error.message.includes('bucket')) {
+        return {
+          key,
+          url: null,
+          warning: 'S3 bucket not accessible - insufficient permissions'
+        };
+      }
+      throw error;
+    }
   }
 }
 

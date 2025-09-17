@@ -7,11 +7,12 @@ import {
   McpError
 } from '@modelcontextprotocol/sdk/types.js';
 
-import KVHandler from './handlers/kv.js';
-import ArtifactsHandler from './handlers/artifacts.js';
 import WorkflowHandler from './handlers/workflow.js';
 import EventsHandler from './handlers/events.js';
 import GoogleAnalyticsHandler from './handlers/google-analytics.js';
+import AgentDelegationHandler from './handlers/agent-delegation.js';
+import KVHandler from './handlers/kv.js';
+import ArtifactsHandler from './handlers/artifacts.js';
 
 export class AgentMeshMCPServer {
   constructor() {
@@ -37,11 +38,14 @@ export class AgentMeshMCPServer {
         tools: [
           {
             name: 'kv.get',
-            description: 'Get a value by key from the key-value store',
+            description: 'Get a value from the key-value store',
             inputSchema: {
               type: 'object',
               properties: {
-                key: { type: 'string', description: 'The key to retrieve' }
+                key: {
+                  type: 'string',
+                  description: 'The key to retrieve'
+                }
               },
               required: ['key']
             }
@@ -52,10 +56,16 @@ export class AgentMeshMCPServer {
             inputSchema: {
               type: 'object',
               properties: {
-                key: { type: 'string', description: 'The key to set' },
-                value: { type: 'string', description: 'The value to store' },
-                ttl_hours: { 
-                  type: 'number', 
+                key: {
+                  type: 'string',
+                  description: 'The key to set'
+                },
+                value: {
+                  type: 'string',
+                  description: 'The value to store'
+                },
+                ttl_hours: {
+                  type: 'number',
                   description: 'Time to live in hours (default: 24)',
                   default: 24
                 }
@@ -69,8 +79,8 @@ export class AgentMeshMCPServer {
             inputSchema: {
               type: 'object',
               properties: {
-                prefix: { 
-                  type: 'string', 
+                prefix: {
+                  type: 'string',
                   description: 'Optional prefix to filter artifacts',
                   default: ''
                 }
@@ -83,7 +93,10 @@ export class AgentMeshMCPServer {
             inputSchema: {
               type: 'object',
               properties: {
-                key: { type: 'string', description: 'The artifact key to retrieve' }
+                key: {
+                  type: 'string',
+                  description: 'The artifact key to retrieve'
+                }
               },
               required: ['key']
             }
@@ -94,10 +107,16 @@ export class AgentMeshMCPServer {
             inputSchema: {
               type: 'object',
               properties: {
-                key: { type: 'string', description: 'The artifact key' },
-                content: { type: 'string', description: 'The artifact content' },
-                content_type: { 
-                  type: 'string', 
+                key: {
+                  type: 'string',
+                  description: 'The artifact key'
+                },
+                content: {
+                  type: 'string',
+                  description: 'The artifact content'
+                },
+                content_type: {
+                  type: 'string',
                   description: 'The content type',
                   default: 'text/plain'
                 }
@@ -238,6 +257,86 @@ export class AgentMeshMCPServer {
               },
               required: ['propertyId', 'siteUrl']
             }
+          },
+          {
+            name: 'agent.processRequest',
+            description: 'Process request through agent governance (Conductor → Critic → Specialists)',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                userId: {
+                  type: 'string',
+                  description: 'User identifier'
+                },
+                sessionId: {
+                  type: 'string',
+                  description: 'Session identifier'
+                },
+                request: {
+                  type: 'string',
+                  description: 'The request to process'
+                },
+                context: {
+                  type: 'object',
+                  description: 'Additional context for the request',
+                  default: {}
+                }
+              },
+              required: ['userId', 'sessionId', 'request']
+            }
+          },
+          {
+            name: 'agent.delegateToAgent',
+            description: 'Delegate directly to a specific agent',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                agentType: {
+                  type: 'string',
+                  description: 'The agent type to delegate to'
+                },
+                prompt: {
+                  type: 'string',
+                  description: 'The prompt for the agent'
+                },
+                userId: {
+                  type: 'string',
+                  description: 'User identifier'
+                },
+                sessionId: {
+                  type: 'string',
+                  description: 'Session identifier'
+                },
+                context: {
+                  type: 'object',
+                  description: 'Additional context',
+                  default: {}
+                }
+              },
+              required: ['agentType', 'prompt', 'userId', 'sessionId']
+            }
+          },
+          {
+            name: 'agent.listAvailableAgents',
+            description: 'List available agents from .claude/agents directory',
+            inputSchema: {
+              type: 'object',
+              properties: {}
+            }
+          },
+          {
+            name: 'agent.getTaskStatus',
+            description: 'Get the status of a delegated task',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                taskId: {
+                  type: 'string',
+                  description: 'The task ID to check'
+                }
+              },
+              required: ['taskId']
+            }
           }
         ]
       };
@@ -250,56 +349,56 @@ export class AgentMeshMCPServer {
       try {
         switch (name) {
           case 'kv.get':
-            const getResult = await KVHandler.get(args);
+            const kvGetResult = await KVHandler.get(args);
             return {
               content: [
                 {
                   type: 'text',
-                  text: JSON.stringify(getResult, null, 2)
+                  text: JSON.stringify(kvGetResult, null, 2)
                 }
               ]
             };
 
           case 'kv.set':
-            const setResult = await KVHandler.set(args);
+            const kvSetResult = await KVHandler.set(args);
             return {
               content: [
                 {
                   type: 'text',
-                  text: JSON.stringify(setResult, null, 2)
+                  text: JSON.stringify(kvSetResult, null, 2)
                 }
               ]
             };
 
           case 'artifacts.list':
-            const listResult = await ArtifactsHandler.list(args);
+            const artifactsListResult = await ArtifactsHandler.list(args);
             return {
               content: [
                 {
                   type: 'text',
-                  text: JSON.stringify(listResult, null, 2)
+                  text: JSON.stringify(artifactsListResult, null, 2)
                 }
               ]
             };
 
           case 'artifacts.get':
-            const artifactGetResult = await ArtifactsHandler.get(args);
+            const artifactsGetResult = await ArtifactsHandler.get(args);
             return {
               content: [
                 {
                   type: 'text',
-                  text: JSON.stringify(artifactGetResult, null, 2)
+                  text: JSON.stringify(artifactsGetResult, null, 2)
                 }
               ]
             };
 
           case 'artifacts.put':
-            const artifactPutResult = await ArtifactsHandler.put(args);
+            const artifactsPutResult = await ArtifactsHandler.put(args);
             return {
               content: [
                 {
                   type: 'text',
-                  text: JSON.stringify(artifactPutResult, null, 2)
+                  text: JSON.stringify(artifactsPutResult, null, 2)
                 }
               ]
             };
@@ -377,6 +476,50 @@ export class AgentMeshMCPServer {
                 {
                   type: 'text',
                   text: JSON.stringify(calendarResult, null, 2)
+                }
+              ]
+            };
+
+          case 'agent.processRequest':
+            const processResult = await AgentDelegationHandler.processRequest(args);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(processResult, null, 2)
+                }
+              ]
+            };
+
+          case 'agent.delegateToAgent':
+            const delegateResult = await AgentDelegationHandler.delegateToAgent(args);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(delegateResult, null, 2)
+                }
+              ]
+            };
+
+          case 'agent.listAvailableAgents':
+            const agentsList = await AgentDelegationHandler.listAvailableAgents();
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify({ agents: agentsList }, null, 2)
+                }
+              ]
+            };
+
+          case 'agent.getTaskStatus':
+            const taskStatus = await AgentDelegationHandler.getTaskStatus(args.taskId);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(taskStatus, null, 2)
                 }
               ]
             };

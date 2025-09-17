@@ -1,42 +1,38 @@
 {
-  "name": "agent-mesh-mcp",
+  "name": "aws-ai-agent-bus",
   "version": "1.0.0",
-  "description": "MCP server for AWS Agent Mesh",
+  "description": "AWS AI Agent Bus - MCP server with modern dashboard",
   "main": "mcp-server/src/server.js",
   "type": "module",
+  "workspaces": [
+    "mcp-server",
+    "dashboard-ui"
+  ],
   "scripts": {
-    "start": "node mcp-server/src/server.js",
-    "dev": "node --watch mcp-server/src/server.js",
-    "start:http": "node mcp-server/src/http-server.js",
-    "dev:http": "node --watch mcp-server/src/http-server.js",
-    "ui:demo": "cross-env MCP_UI_ENABLED=true node mcp-server/src/http-server.js",
-    "setup:ga-google-cloud": "node mcp-server/scripts/setup-ga-google-cloud.js",
-    "report:users-by-country": "node mcp-server/src/reports/users-by-country.js",
-    "report:users-by-country-sample": "node mcp-server/src/reports/users-by-country-sample.js",
+    "start": "npm run start --workspace=mcp-server",
+    "dev": "npm run dev --workspace=mcp-server",
+    "start:http": "npm run start:http --workspace=mcp-server",
+    "dev:http": "npm run dev:http --workspace=mcp-server",
+    "test": "npm run test --workspace=mcp-server",
+    "lint": "npm run lint --workspace=mcp-server",
+    "ui:dev": "npm run dev --workspace=dashboard-ui",
+    "ui:build": "npm run build --workspace=dashboard-ui",
+    "ui:preview": "npm run preview --workspace=dashboard-ui",
+    "dev:all": "concurrently \"npm run dev:http\" \"npm run ui:dev\"",
+    "build:all": "npm run ui:build && echo 'All builds complete'",
+    "install:all": "npm install --workspaces",
+    "setup:ga-google-cloud": "npm run setup:ga-google-cloud --workspace=mcp-server",
+    "report:users-by-country": "npm run report:users-by-country --workspace=mcp-server",
+    "report:users-by-country-sample": "npm run report:users-by-country-sample --workspace=mcp-server",
     "tf:fmt": "terraform fmt -recursive",
     "tf:init": "cd infra/workspaces/${WS:-small/kv_store} && terraform init",
     "tf:plan": "cd infra/workspaces/${WS:-small/kv_store} && terraform plan -var env=${ENV:-dev}",
     "tf:apply": "cd infra/workspaces/${WS:-small/kv_store} && terraform apply -auto-approve -var env=${ENV:-dev}",
-    "tf:destroy": "cd infra/workspaces/${WS:-small/kv_store} && terraform destroy -auto-approve -var env=${ENV:-dev}"
-  },
-  "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.0.0",
-    "@aws-sdk/client-ecs": "^3.0.0",
-    "@aws-sdk/client-eventbridge": "^3.0.0",
-    "@aws-sdk/client-rds-data": "^3.0.0",
-    "@aws-sdk/client-s3": "^3.0.0",
-    "@aws-sdk/client-secrets-manager": "^3.0.0",
-    "@aws-sdk/client-sfn": "^3.0.0",
-    "@mcp-ui/client": "^1.0.0",
-    "@mcp-ui/server": "^1.0.0",
-    "@modelcontextprotocol/sdk": "^1.17.3",
-    "cors": "^2.8.5",
-    "cross-env": "^7.0.3",
-    "dotenv": "^16.0.0",
-    "express": "^4.18.2",
-    "google-auth-library": "^9.0.0",
-    "googleapis": "^140.0.0",
-    "zod": "^3.22.4"
+    "tf:destroy": "cd infra/workspaces/${WS:-small/kv_store} && terraform destroy -auto-approve -var env=${ENV:-dev}",
+    "check:test-debt": "node scripts/pre-commit-check.js",
+    "install:hooks": "bash scripts/install-hooks.sh",
+    "ui:test": "npm run test --workspace=dashboard-ui",
+    "test:all": "npm run test --workspace=mcp-server && npm run test --workspace=dashboard-ui && npm run check:test-debt"
   },
   "keywords": [
     "mcp",
@@ -58,5 +54,8 @@
   "bugs": {
     "url": "https://github.com/Baur-Software/aws-ai-agent-bus/issues"
   },
-  "homepage": "https://github.com/Baur-Software/aws-ai-agent-bus/tree/main/mcp-server#readme"
+  "homepage": "https://github.com/Baur-Software/aws-ai-agent-bus/tree/main/mcp-server#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
 }

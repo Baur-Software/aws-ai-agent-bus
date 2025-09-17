@@ -1,0 +1,159 @@
+{
+  "version": "1.0",
+  "created": "2025-01-15T10:30:00Z",
+  "name": "GA to Trello Content Pipeline",
+  "description": "Automated workflow that pulls Google Analytics data, stores it in AWS, generates content calendar, and creates Trello tasks",
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "trigger",
+      "x": 50,
+      "y": 50,
+      "inputs": [],
+      "outputs": ["output"],
+      "config": {
+        "name": "GA to Trello Pipeline",
+        "description": "Triggers the complete content automation pipeline"
+      }
+    },
+    {
+      "id": "ga-top-pages-1",
+      "type": "ga-top-pages",
+      "x": 50,
+      "y": 150,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "days": 30,
+        "propertyId": "GA_PROPERTY_ID",
+        "description": "Fetch top performing pages from Google Analytics"
+      }
+    },
+    {
+      "id": "kv-set-1",
+      "type": "kv-set",
+      "x": 50,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "key": "ga-data",
+        "ttl": 24,
+        "description": "Store GA data in AWS KV store for 24 hours"
+      }
+    },
+    {
+      "id": "ga-calendar-1",
+      "type": "ga-calendar",
+      "x": 50,
+      "y": 350,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "propertyId": "GA_PROPERTY_ID",
+        "siteUrl": "https://example.com",
+        "targetMonth": "2024-12",
+        "description": "Generate content calendar based on GA insights"
+      }
+    },
+    {
+      "id": "task-prioritizer-1",
+      "type": "task-prioritizer",
+      "x": 50,
+      "y": 450,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "criteria": "impact",
+        "description": "Prioritize content tasks by business impact"
+      }
+    },
+    {
+      "id": "trello-get-boards-1",
+      "type": "trello-get-boards",
+      "x": 350,
+      "y": 350,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "description": "Fetch available Trello boards for task creation"
+      }
+    },
+    {
+      "id": "trello-create-card-1",
+      "type": "trello-create-card",
+      "x": 350,
+      "y": 450,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "title": "Content Calendar Task",
+        "description": "Generated from GA data analysis and content opportunities",
+        "listId": "DEFAULT_LIST_ID",
+        "labels": ["content", "seo", "analytics"]
+      }
+    },
+    {
+      "id": "output-1",
+      "type": "output",
+      "x": 350,
+      "y": 550,
+      "inputs": ["input"],
+      "outputs": [],
+      "config": {
+        "format": "summary",
+        "description": "Final workflow results and execution summary"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "trigger-1",
+      "to": "ga-top-pages-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "ga-top-pages-1",
+      "to": "kv-set-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "kv-set-1",
+      "to": "ga-calendar-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "ga-calendar-1",
+      "to": "task-prioritizer-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "task-prioritizer-1",
+      "to": "trello-get-boards-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "trello-get-boards-1",
+      "to": "trello-create-card-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "trello-create-card-1",
+      "to": "output-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    }
+  ],
+  "metadata": {
+    "author": "AWS AI Agent Bus",
+    "tags": ["google-analytics", "trello", "content-marketing", "automation", "aws"],
+    "schedule": "daily",
+    "estimatedDuration": "2-3 minutes"
+  }
+}
