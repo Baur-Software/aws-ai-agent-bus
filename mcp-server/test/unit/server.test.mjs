@@ -1,15 +1,23 @@
 import { jest } from '@jest/globals';
 
 // Mock MCP SDK before all other imports
+const mockSetRequestHandler = jest.fn();
 jest.unstable_mockModule('@modelcontextprotocol/sdk/server/index.js', () => ({
   Server: jest.fn().mockImplementation(() => ({
-    setRequestHandler: jest.fn(),
+    setRequestHandler: mockSetRequestHandler,
     connect: jest.fn().mockResolvedValue({}),
   })),
 }));
 
 jest.unstable_mockModule('@modelcontextprotocol/sdk/server/stdio.js', () => ({
   StdioServerTransport: jest.fn(),
+}));
+
+jest.unstable_mockModule('@modelcontextprotocol/sdk/types.js', () => ({
+  CallToolRequestSchema: { name: 'callTool' },
+  ListToolsRequestSchema: { name: 'listTools' },
+  ErrorCode: {},
+  McpError: jest.fn(),
 }));
 
 // Mock AWS SDK
@@ -22,6 +30,10 @@ jest.unstable_mockModule('@aws-sdk/client-dynamodb', () => ({
   GetItemCommand: jest.fn(),
   PutItemCommand: jest.fn(),
   QueryCommand: jest.fn(),
+  ScanCommand: jest.fn(),
+  CreateTableCommand: jest.fn(),
+  DescribeTableCommand: jest.fn(),
+  waitUntilTableExists: jest.fn(),
 }));
 
 jest.unstable_mockModule('@aws-sdk/client-s3', () => ({
@@ -31,6 +43,12 @@ jest.unstable_mockModule('@aws-sdk/client-s3', () => ({
   GetObjectCommand: jest.fn(),
   PutObjectCommand: jest.fn(),
   ListObjectsV2Command: jest.fn(),
+  HeadBucketCommand: jest.fn(),
+  CreateBucketCommand: jest.fn(),
+}));
+
+jest.unstable_mockModule('@aws-sdk/s3-request-presigner', () => ({
+  getSignedUrl: jest.fn(),
 }));
 
 jest.unstable_mockModule('@aws-sdk/client-sfn', () => ({
@@ -121,7 +139,7 @@ Test agent implementation.`),
   });
 
   test('should support agent.processRequest tool', async () => {
-    const tools = await server.server.setRequestHandler.mock.calls
+    const tools = await mockSetRequestHandler.mock.calls
       .find(call => call[0].name === 'listTools')[1]();
 
     const agentTool = tools.tools.find(tool => tool.name === 'agent.processRequest');
@@ -133,7 +151,7 @@ Test agent implementation.`),
   });
 
   test('should support agent.delegateToAgent tool', async () => {
-    const tools = await server.server.setRequestHandler.mock.calls
+    const tools = await mockSetRequestHandler.mock.calls
       .find(call => call[0].name === 'listTools')[1]();
 
     const delegateTool = tools.tools.find(tool => tool.name === 'agent.delegateToAgent');
@@ -144,7 +162,7 @@ Test agent implementation.`),
   });
 
   test('should support agent.listAvailableAgents tool', async () => {
-    const tools = await server.server.setRequestHandler.mock.calls
+    const tools = await mockSetRequestHandler.mock.calls
       .find(call => call[0].name === 'listTools')[1]();
 
     const listTool = tools.tools.find(tool => tool.name === 'agent.listAvailableAgents');
@@ -153,7 +171,7 @@ Test agent implementation.`),
   });
 
   test('should support agent.getTaskStatus tool', async () => {
-    const tools = await server.server.setRequestHandler.mock.calls
+    const tools = await mockSetRequestHandler.mock.calls
       .find(call => call[0].name === 'listTools')[1]();
 
     const statusTool = tools.tools.find(tool => tool.name === 'agent.getTaskStatus');
@@ -174,7 +192,7 @@ Test agent implementation.`),
 
     jest.spyOn(AgentDelegationHandler, 'processRequest').mockResolvedValue(mockProcessResult);
 
-    const callHandler = server.server.setRequestHandler.mock.calls
+    const callHandler = mockSetRequestHandler.mock.calls
       .find(call => call[0].name === 'callTool')[1];
 
     const result = await callHandler({
@@ -210,7 +228,7 @@ Test agent implementation.`),
 
     jest.spyOn(AgentDelegationHandler, 'delegateToAgent').mockResolvedValue(mockDelegateResult);
 
-    const callHandler = server.server.setRequestHandler.mock.calls
+    const callHandler = mockSetRequestHandler.mock.calls
       .find(call => call[0].name === 'callTool')[1];
 
     const result = await callHandler({
@@ -242,7 +260,7 @@ Test agent implementation.`),
 
     jest.spyOn(AgentDelegationHandler, 'listAvailableAgents').mockResolvedValue(mockAgentsList);
 
-    const callHandler = server.server.setRequestHandler.mock.calls
+    const callHandler = mockSetRequestHandler.mock.calls
       .find(call => call[0].name === 'callTool')[1];
 
     const result = await callHandler({
@@ -268,7 +286,7 @@ Test agent implementation.`),
 
     jest.spyOn(AgentDelegationHandler, 'getTaskStatus').mockResolvedValue(mockTaskStatus);
 
-    const callHandler = server.server.setRequestHandler.mock.calls
+    const callHandler = mockSetRequestHandler.mock.calls
       .find(call => call[0].name === 'callTool')[1];
 
     const result = await callHandler({
@@ -290,7 +308,7 @@ Test agent implementation.`),
       new Error('Agent not found')
     );
 
-    const callHandler = server.server.setRequestHandler.mock.calls
+    const callHandler = mockSetRequestHandler.mock.calls
       .find(call => call[0].name === 'callTool')[1];
 
     const result = await callHandler({

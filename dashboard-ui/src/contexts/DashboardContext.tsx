@@ -208,7 +208,7 @@ export function DashboardProvider(props: DashboardProviderProps) {
   const [error, setError] = createSignal<string | null>(null);
 
   // Helper function for safe API calls
-  const executeCall = async <T>(fn: () => Promise<T>): Promise<T> => {
+  const executeCall = async <T extends unknown>(fn: () => Promise<T>): Promise<T> => {
     setLoading(true);
     setError(null);
 
