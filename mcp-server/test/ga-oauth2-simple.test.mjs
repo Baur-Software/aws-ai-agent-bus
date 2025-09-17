@@ -5,8 +5,8 @@ describe('Google Analytics OAuth2 Integration', () => {
   const mockOAuth2Credentials = {
     "client_id": "1077763346413-s7u1tgi1e0rgcf60ip1qome4pl401tso.apps.googleusercontent.com",
     "client_secret": "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",
-    "project_id": "baursoftware-1756252326734",
-    "redirect_uris": ["https://www.baursoftware.com"],
+    "project_id": "example-project-123456789",
+    "redirect_uris": ["https://example.com"],
     "access_token": "mock_access_token_for_testing",
     "refresh_token": "mock_refresh_token_for_testing"
   };
