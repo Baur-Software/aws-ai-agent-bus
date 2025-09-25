@@ -2,11 +2,9 @@ import { A } from '@solidjs/router';
 import { Show, createSignal, For } from 'solid-js';
 import { useMCP } from '../contexts/MCPContext';
 import { useSidebar } from '../contexts/SidebarContext';
+import ConnectionStatus from './ui/ConnectionStatus';
 import {
   X,
-  RefreshCw,
-  Wifi,
-  WifiOff,
   Bot
 } from 'lucide-solid';
 
@@ -97,44 +95,15 @@ function Sidebar(props: SidebarProps) {
 
       {/* Footer */}
       <div class="p-4 border-t border-slate-200 dark:border-slate-700">
-        <div class={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
-          isConnected() 
-            ? 'bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800' 
-            : 'bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800'
-        }`}>
-          <div class="flex items-center gap-2">
-            {isConnected() ? (
-              <Wifi class={`w-4 h-4 ${isConnected() ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} />
-            ) : (
-              <WifiOff class={`w-4 h-4 ${isConnected() ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} />
-            )}
-            <div class={`w-2 h-2 rounded-full ${isConnected() ? 'bg-green-500' : 'bg-red-500'} ${isConnected() ? 'animate-pulse' : ''}`} />
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class={`text-sm font-medium ${isConnected() ? 'text-green-900 dark:text-green-100' : 'text-red-900 dark:text-red-100'}`}>
-              {isConnected() ? 'MCP Connected' : 'MCP Disconnected'}
-            </div>
-            <Show when={serverVersion()}>
-              <div class={`text-xs ${isConnected() ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
-                v{serverVersion()}
-              </div>
-            </Show>
-            <Show when={!isConnected()}>
-              <div class="text-xs text-red-700 dark:text-red-300">
-                Check server status
-              </div>
-            </Show>
-          </div>
-          <button
-            onClick={handleRefresh}
-            class={`p-1.5 rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 ${
-              isRefreshing() ? 'animate-spin' : ''
-            }`}
-            title="Refresh connection status"
-          >
-            <RefreshCw class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-          </button>
-        </div>
+        <ConnectionStatus
+          variant="styled"
+          showIcon={true}
+          showVersion={true}
+          animate={true}
+          showRefresh={true}
+          onRefresh={handleRefresh}
+          isRefreshing={isRefreshing()}
+        />
       </div>
     </aside>
   );

@@ -1,4 +1,4 @@
-import DynamoDBService from '../../aws/dynamodb.js';
+import DynamoDBService from '../aws/dynamodb.js';
 import EventsHandler from './events.js';
 
 /**

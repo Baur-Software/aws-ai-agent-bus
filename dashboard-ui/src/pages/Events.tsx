@@ -1,6 +1,6 @@
 import { createSignal, createEffect, onMount, For, Show } from 'solid-js';
 import { useOrganization } from '../contexts/OrganizationContext';
-import { useMCP } from '../contexts/MCPContext';
+import { useDashboardServer } from '../contexts/DashboardServerContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { usePageHeader } from '../contexts/HeaderContext';
 import {
@@ -47,7 +47,7 @@ export default function Events() {
   usePageHeader('Event Bus', 'Monitor and manage organizational event streams');
 
   const { currentOrganization, user } = useOrganization();
-  const { executeTool } = useMCP();
+  const { executeTool } = useDashboardServer();
   const { success, error } = useNotifications();
 
   // State management

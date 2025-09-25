@@ -1,6 +1,6 @@
 import { createSignal, createEffect, For, Show } from 'solid-js';
 import { useLocation } from '@solidjs/router';
-import { useMCP } from '../contexts/MCPContext';
+import { useDashboardServer } from '../contexts/DashboardServerContext';
 import { useNotifications } from '../contexts/NotificationContext';
 
 function ChatPanel(props) {
@@ -9,7 +9,7 @@ function ChatPanel(props) {
   const [inputText, setInputText] = createSignal('');
   const [isProcessing, setIsProcessing] = createSignal(false);
 
-  const { executeTool } = useMCP();
+  const { executeTool } = useDashboardServer();
   const { success, error } = useNotifications();
 
   // Get context-aware initial message
@@ -104,9 +104,9 @@ function ChatPanel(props) {
       // Analytics requests
       if (lower.includes('analytics') || lower.includes('users') || lower.includes('traffic')) {
         if (lower.includes('top pages')) {
-          const result = await executeTool('ga.getTopPages', { 
-            propertyId: 'demo-property', 
-            days: extractDays(message) || 30 
+          const result = await executeTool('mcp__aws__ga_getTopPages', {
+            propertyId: 'demo-property',
+            days: extractDays(message) || 30
           });
           return `📊 Here's your top pages analytics data:\n\n${formatAnalyticsResult(result)}`;
         } else {
@@ -117,7 +117,7 @@ function ChatPanel(props) {
       // Content calendar requests
       if (lower.includes('calendar') || lower.includes('content')) {
         if (lower.includes('generate')) {
-          const result = await executeTool('ga.generateContentCalendar', {
+          const result = await executeTool('mcp__aws__ga_generateContentCalendar', {
             propertyId: 'demo-property',
             siteUrl: 'https://example.com'
           });

@@ -1,5 +1,5 @@
 import { createContext, useContext, createSignal, createEffect, JSX } from 'solid-js';
-import { useMCP } from './MCPContext';
+import { useDashboardServer } from './DashboardServerContext';
 import {
   Home,
   BarChart3,
@@ -85,7 +85,7 @@ interface SidebarProviderProps {
 }
 
 export function SidebarProvider(props: SidebarProviderProps) {
-  const { kvStore, isConnected } = useMCP();
+  const { kvStore, isConnected } = useDashboardServer();
   const [preferences, setPreferences] = createSignal<SidebarPreferences>(defaultPreferences);
   const [connectedIntegrations, setConnectedIntegrations] = createSignal<Set<string>>(new Set());
   const [availableInfrastructure, setAvailableInfrastructure] = createSignal<Set<string>>(new Set());

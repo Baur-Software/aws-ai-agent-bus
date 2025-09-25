@@ -1,10 +1,10 @@
 import { createSignal, Show } from 'solid-js';
-import { useMCP } from '../contexts/MCPContext';
+import { useDashboardServer } from '../contexts/DashboardServerContext';
 import { usePageHeader } from '../contexts/HeaderContext';
 
 function Analytics() {
   const [loading, setLoading] = createSignal(false);
-  const { analytics } = useMCP();
+  const { analytics } = useDashboardServer();
   
   // Set page-specific header
   usePageHeader('Analytics', 'Google Analytics insights and reports');

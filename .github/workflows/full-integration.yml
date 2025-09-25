@@ -1,0 +1,260 @@
+name: Full Integration Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-all:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: ['mcp-rust', 'dashboard-server', 'dashboard-ui']
+        version: ['20'] # Node version for JS components, ignored for Rust
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup toolchain
+      run: |
+        if [ "${{ matrix.component }}" = "mcp-rust" ]; then
+          # Install Rust
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source $HOME/.cargo/env
+        else
+          # Install Node.js for JS components
+          curl -fsSL https://deb.nodesource.com/setup_${{ matrix.version }}.x | sudo -E bash -
+          sudo apt-get install -y nodejs
+        fi
+
+    - name: Install dependencies (${{ matrix.component }})
+      run: |
+        cd ${{ matrix.component }}
+        if [ "${{ matrix.component }}" = "mcp-rust" ]; then
+          source $HOME/.cargo/env
+          cargo build
+        elif [ "${{ matrix.component }}" = "dashboard-server" ]; then
+          # Use Bun for dashboard-server
+          curl -fsSL https://bun.sh/install | bash
+          export PATH="$HOME/.bun/bin:$PATH"
+          bun install --frozen-lockfile
+        else
+          npm ci
+        fi
+
+    - name: Run tests (${{ matrix.component }})
+      run: |
+        cd ${{ matrix.component }}
+        if [ "${{ matrix.component }}" = "mcp-rust" ]; then
+          source $HOME/.cargo/env
+          cargo test
+        elif [ "${{ matrix.component }}" = "dashboard-server" ]; then
+          export PATH="$HOME/.bun/bin:$PATH"
+          bun test --timeout 30000
+        elif [ "${{ matrix.component }}" = "dashboard-ui" ]; then
+          npm run test:ci
+        fi
+      env:
+        NODE_ENV: test
+        ENABLE_DEV_AUTH: true
+
+  terraform-all:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ~1.5
+
+    - name: Terraform Format Check
+      run: terraform fmt -check -recursive infra/
+
+    - name: Validate All Terraform
+      run: |
+        # Validate modules
+        for dir in infra/modules/*/; do
+          echo "Validating module: $dir"
+          cd "$dir"
+          terraform init -backend=false
+          terraform validate
+          cd "$GITHUB_WORKSPACE"
+        done
+
+        # Validate workspaces
+        for dir in infra/workspaces/*/; do
+          if [ -f "$dir/main.tf" ]; then
+            echo "Validating workspace: $dir"
+            cd "$dir"
+            terraform init -backend=false
+            terraform validate
+            cd "$GITHUB_WORKSPACE"
+          fi
+        done
+
+        # Validate nested workspaces
+        for dir in infra/workspaces/*/*/; do
+          if [ -f "$dir/main.tf" ]; then
+            echo "Validating nested workspace: $dir"
+            cd "$dir"
+            terraform init -backend=false
+            terraform validate
+            cd "$GITHUB_WORKSPACE"
+          fi
+        done
+
+  build-all:
+    runs-on: ubuntu-latest
+    needs: test-all
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Setup Bun
+      run: |
+        curl -fsSL https://bun.sh/install | bash
+        export PATH="$HOME/.bun/bin:$PATH"
+        bun --version
+
+    - name: Build MCP Server
+      run: |
+        cd mcp-server
+        npm ci
+        echo "✅ MCP Server dependencies installed"
+
+    - name: Build Dashboard Server
+      run: |
+        cd dashboard-server
+        export PATH="$HOME/.bun/bin:$PATH"
+        bun install --frozen-lockfile
+        bun run build
+        echo "✅ Dashboard Server built"
+
+    - name: Build Dashboard UI
+      run: |
+        cd dashboard-ui
+        npm ci
+        npm run build
+        echo "✅ Dashboard UI built"
+
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: [test-all, build-all]
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Setup Bun
+      run: |
+        curl -fsSL https://bun.sh/install | bash
+        export PATH="$HOME/.bun/bin:$PATH"
+
+    - name: Install all dependencies
+      run: |
+        # MCP Server
+        cd mcp-server && npm ci && cd ..
+
+        # Dashboard Server
+        cd dashboard-server
+        export PATH="$HOME/.bun/bin:$PATH"
+        bun install --frozen-lockfile
+        cd ..
+
+        # Dashboard UI
+        cd dashboard-ui && npm ci && npm run build && cd ..
+
+    - name: Start services and test integration
+      run: |
+        export PATH="$HOME/.bun/bin:$PATH"
+
+        # Start MCP Server in HTTP mode for testing
+        cd mcp-server
+        timeout 30s npm run dev:http &
+        MCP_PID=$!
+        cd ..
+
+        # Start Dashboard Server
+        cd dashboard-server
+        timeout 30s bun run start &
+        DASHBOARD_PID=$!
+        cd ..
+
+        # Start Dashboard UI preview
+        cd dashboard-ui
+        timeout 30s npm run preview &
+        UI_PID=$!
+        cd ..
+
+        # Wait for services to start
+        sleep 10
+
+        # Test services
+        echo "Testing MCP Server health..."
+        curl -f http://localhost:3000/health || echo "MCP Server test failed"
+
+        echo "Testing Dashboard Server health..."
+        curl -f http://localhost:3001/health || echo "Dashboard Server test failed"
+
+        echo "Testing Dashboard UI..."
+        curl -f http://localhost:4173/ || echo "Dashboard UI test failed"
+
+        # Cleanup
+        kill $MCP_PID $DASHBOARD_PID $UI_PID 2>/dev/null || true
+        echo "✅ Integration test completed"
+      env:
+        NODE_ENV: test
+        ENABLE_DEV_AUTH: true
+
+  security-full:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Comprehensive security scan
+      run: |
+        echo "Running comprehensive security scan..."
+
+        # Check for sensitive data across entire project
+        if find . -type f \( -name "*.js" -o -name "*.ts" -o -name "*.json" -o -name "*.md" \) \
+          -not -path "./.git/*" \
+          -not -path "./node_modules/*" \
+          -not -path "./.terraform/*" \
+          -not -path "./.claude/*" \
+          -exec grep -l "baursoftware\|545027c4\|09c21e37" {} + 2>/dev/null; then
+          echo "❌ Found hardcoded sensitive data"
+          exit 1
+        fi
+
+        # Check for AWS credentials
+        if find . -type f \( -name "*.js" -o -name "*.ts" -o -name "*.json" \) \
+          -not -path "./node_modules/*" \
+          -exec grep -l -E "aws_access_key_id.*=.*[A-Z0-9]{20}|aws_secret_access_key.*=.*[A-Za-z0-9/+=]{40}" {} + 2>/dev/null; then
+          echo "❌ Found potential AWS credentials"
+          exit 1
+        fi
+
+        # Check for hardcoded localhost in production code
+        if find . -name "*.ts" -o -name "*.js" \
+          -not -path "./node_modules/*" \
+          -not -path "./**/*.test.*" \
+          -not -path "./**/*.spec.*" \
+          -not -path "./.github/*" \
+          -exec grep -l "localhost:[0-9]" {} + 2>/dev/null; then
+          echo "⚠️  Warning: Found hardcoded localhost URLs"
+        fi
+
+        echo "✅ Security scan completed"

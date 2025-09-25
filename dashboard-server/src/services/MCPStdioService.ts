@@ -12,6 +12,13 @@ export interface MCPTool {
   inputSchema?: any;
 }
 
+export interface MCPServerConfig {
+  command: string;
+  args: string[];
+  cwd?: string;
+  env?: Record<string, string>;
+}
+
 /**
  * Local development MCP service using stdio transport
  * More secure and faster than EventBridge for local dev
@@ -19,7 +26,6 @@ export interface MCPTool {
 export class MCPStdioService {
   private client: Client | null = null;
   private transport: StdioClientTransport | null = null;
-  private process: ChildProcess | null = null;
   private logger: Logger;
   private connected = false;
 
@@ -30,40 +36,43 @@ export class MCPStdioService {
   /**
    * Connect to MCP server via stdio
    */
-  async connect(): Promise<void> {
+  async connect(config?: MCPServerConfig): Promise<void> {
     if (this.connected) {
       return;
     }
 
     try {
-      // Get ES module equivalent of __dirname
-      const __filename = fileURLToPath(import.meta.url);
-      const __dirname = dirname(__filename);
+      let command: string;
+      let args: string[];
+      let cwd: string;
+      let env: Record<string, string>;
 
-      // Path to MCP server relative to dashboard-server
-      const mcpServerPath = path.resolve(__dirname, '../../../mcp-server');
-      const serverScript = path.join(mcpServerPath, 'src/server.js');
+      if (config) {
+        // Use provided configuration
+        command = config.command;
+        args = config.args;
+        cwd = config.cwd || process.cwd();
+        env = { ...process.env, ...config.env };
+      } else {
+        // Default configuration (original MCP server)
+        const projectRoot = process.cwd();
+        const mcpServerPath = path.resolve(projectRoot, '../mcp-server');
+        const serverScript = path.join(mcpServerPath, 'src/server.js');
 
-      this.logger.info(`Starting MCP server at: ${serverScript}`);
-
-      // Spawn the MCP server process
-      this.process = spawn('node', [serverScript], {
-        cwd: mcpServerPath,
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: {
-          ...process.env,
-          NODE_ENV: 'development'
-        }
-      });
-
-      if (!this.process.stdin || !this.process.stdout) {
-        throw new Error('Failed to create MCP server process with stdio');
+        command = 'node';
+        args = [serverScript];
+        cwd = mcpServerPath;
+        env = { ...process.env, NODE_ENV: 'development' };
       }
 
-      // Create stdio transport
+      this.logger.info(`Starting MCP server: ${command} ${args.join(' ')}`);
+      this.logger.info(`Working directory: ${cwd}`);
+
+      // Create stdio transport - let the SDK handle process spawning
       this.transport = new StdioClientTransport({
-        stdin: this.process.stdin,
-        stdout: this.process.stdout
+        command,
+        args,
+        env
       });
 
       // Create MCP client
@@ -77,21 +86,7 @@ export class MCPStdioService {
         }
       );
 
-      // Handle process errors
-      this.process.on('error', (error) => {
-        this.logger.error('MCP server process error:', error);
-        this.connected = false;
-      });
-
-      this.process.on('exit', (code, signal) => {
-        this.logger.warn(`MCP server process exited with code ${code}, signal ${signal}`);
-        this.connected = false;
-      });
-
-      // Handle stderr for debugging
-      this.process.stderr?.on('data', (data) => {
-        this.logger.debug('MCP server stderr:', data.toString());
-      });
+      // The SDK will handle process management
 
       // Connect client to transport
       await this.client.connect(this.transport);
@@ -127,11 +122,6 @@ export class MCPStdioService {
         this.logger.warn('Error closing MCP transport:', error);
       }
       this.transport = null;
-    }
-
-    if (this.process) {
-      this.process.kill();
-      this.process = null;
     }
 
     this.logger.info('Disconnected from MCP server');

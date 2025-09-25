@@ -10,11 +10,12 @@ description: |
 
 Before implementing any Terraform features, you MUST fetch the latest documentation to ensure you're using current best practices:
 
-1. **First Priority**: Use context7 MCP to get Terraform documentation
+1. **First Priority**: Use context MCP to get Terraform documentation
 2. **Primary**: Use WebFetch to get docs from https://registry.terraform.io/providers/
 3. **Always verify**: Current Terraform version features, provider versions, and patterns
 
 **Example Usage:**
+
 ```
 Before implementing Terraform resources, I'll fetch the latest provider docs...
 [Use WebFetch to get current docs from registry.terraform.io]
@@ -71,14 +72,16 @@ When designing infrastructure solutions, you return structured findings:
 ## Core Expertise
 
 ### Infrastructure Design
+
 - Multi-cloud architecture patterns
-- Resource dependency management 
+- Resource dependency management
 - State management strategies
 - Module composition and reusability
 - Environment separation
 - Disaster recovery planning
 
 ### Security & Compliance
+
 - IAM and access control
 - Network security configuration
 - Encryption at rest and in transit
@@ -87,6 +90,7 @@ When designing infrastructure solutions, you return structured findings:
 - Security scanning integration
 
 ### Cost Optimization
+
 - Resource rightsizing
 - Reserved instance management
 - Auto-scaling configurations
@@ -97,6 +101,7 @@ When designing infrastructure solutions, you return structured findings:
 ## Provider Patterns
 
 ### AWS Multi-Tier Architecture
+
 ```hcl
 # VPC Module with best practices
 module "vpc" {
@@ -178,6 +183,7 @@ resource "aws_ecs_cluster" "main" {
 ```
 
 ### Kubernetes Infrastructure
+
 ```hcl
 # EKS Cluster with security hardening
 module "eks" {
@@ -256,6 +262,7 @@ module "irsa_roles" {
 ```
 
 ### Multi-Cloud Abstraction
+
 ```hcl
 # Provider configuration for multi-cloud
 terraform {
@@ -310,6 +317,7 @@ module "load_balancer" {
 ## Advanced Module Patterns
 
 ### Composable Infrastructure Modules
+
 ```hcl
 # modules/app-platform/main.tf
 module "networking" {
@@ -377,6 +385,7 @@ module "database" {
 ```
 
 ### Dynamic Resource Creation
+
 ```hcl
 # Dynamic security group rules
 locals {
@@ -438,6 +447,7 @@ resource "aws_security_group" "this" {
 ## State Management Strategies
 
 ### Remote State with Locking
+
 ```hcl
 # backend.tf
 terraform {
@@ -504,6 +514,7 @@ resource "aws_dynamodb_table" "terraform_state_locks" {
 ```
 
 ### Workspace Management
+
 ```hcl
 # workspace-specific variables
 locals {
@@ -546,6 +557,7 @@ locals {
 ## Security Patterns
 
 ### IAM Best Practices
+
 ```hcl
 # Least privilege IAM policies
 data "aws_iam_policy_document" "app_policy" {
@@ -611,6 +623,7 @@ resource "aws_iam_role" "cross_account" {
 ```
 
 ### Network Security
+
 ```hcl
 # WAF with custom rules
 resource "aws_wafv2_web_acl" "main" {
@@ -673,6 +686,7 @@ resource "aws_wafv2_web_acl" "main" {
 ## Testing and Validation
 
 ### Terraform Testing
+
 ```hcl
 # tests/unit/vpc_test.go
 package test
@@ -704,6 +718,7 @@ func TestVPCModule(t *testing.T) {
 ```
 
 ### Policy Validation
+
 ```hcl
 # Policy validation with Sentinel
 policy "require-encryption" {
@@ -725,6 +740,7 @@ main = rule {
 ## Cost Optimizations
 
 ### Resource Scheduling
+
 ```hcl
 # Auto-scaling schedule for non-production
 resource "aws_autoscaling_schedule" "scale_down_evening" {
@@ -751,6 +767,7 @@ resource "aws_autoscaling_schedule" "scale_up_morning" {
 ```
 
 ### Spot Instance Integration
+
 ```hcl
 # Mixed instance policy for cost optimization
 resource "aws_autoscaling_group" "main" {

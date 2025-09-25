@@ -1,4 +1,5 @@
 import { createContext, useContext, createSignal, createResource, onMount, JSX } from 'solid-js';
+import { useDashboardServer } from './DashboardServerContext';
 
 export interface Organization {
   id: string;
@@ -101,15 +102,61 @@ export function OrganizationProvider(props: OrganizationProviderProps) {
   const [error, setError] = createSignal<string | null>(null);
   const [currentOrgId, setCurrentOrgId] = createSignal<string | null>(null);
 
-  // Load user data
+  const dashboardServer = useDashboardServer();
+
+  // Load user data from dashboard server
   const [user] = createResource(async () => {
     try {
       setLoading(true);
-      const userData = await OrganizationService.getCurrentUser();
+
+      // Wait for dashboard server connection
+      if (!dashboardServer.isConnected()) {
+        await new Promise(resolve => {
+          const checkConnection = () => {
+            if (dashboardServer.isConnected()) {
+              resolve(true);
+            } else {
+              setTimeout(checkConnection, 100);
+            }
+          };
+          checkConnection();
+        });
+      }
+
+      // Fetch user data from dashboard server
+      const response = await fetch('http://localhost:3001/api/auth/me', {
+        headers: {
+          'X-User-Id': 'user-demo-123'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch user data: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const userData = {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.name,
+        avatar: data.user.avatar,
+        organizations: data.organizations.map((org: any) => ({
+          id: org.id,
+          name: org.name,
+          slug: org.slug,
+          description: org.description,
+          memberCount: org.memberCount,
+          role: org.ownerId === data.user.id ? 'owner' : 'member',
+          createdAt: org.createdAt
+        })),
+        currentOrganizationId: data.user.currentOrganizationId
+      };
+
       setCurrentOrgId(userData.currentOrganizationId || userData.organizations[0]?.id || null);
       return userData;
     } catch (err) {
       setError('Failed to load user data');
+      console.error('Organization context error:', err);
       return null;
     } finally {
       setLoading(false);
@@ -124,15 +171,25 @@ export function OrganizationProvider(props: OrganizationProviderProps) {
   };
 
   // Actions
-  const switchOrganization = (orgId: string) => {
+  const switchOrganization = async (orgId: string) => {
     const org = organizations().find(o => o.id === orgId);
     if (org) {
-      setCurrentOrgId(orgId);
-      // Update URL to reflect organization change
-      const currentPath = window.location.pathname;
-      const newPath = `/${org.slug}${currentPath.replace(/^\/[^/]+/, '') || '/workflows'}`;
-      window.history.pushState({}, '', newPath);
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      try {
+        const success = await dashboardServer.switchOrganization(orgId);
+        if (success) {
+          setCurrentOrgId(orgId);
+          // Update URL to reflect organization change
+          const currentPath = window.location.pathname;
+          const newPath = `/${org.slug}${currentPath.replace(/^\/[^/]+/, '') || '/workflows'}`;
+          window.history.pushState({}, '', newPath);
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        } else {
+          setError('Failed to switch organization');
+        }
+      } catch (err) {
+        setError('Failed to switch organization');
+        console.error('Switch organization error:', err);
+      }
     }
   };
 
@@ -140,14 +197,13 @@ export function OrganizationProvider(props: OrganizationProviderProps) {
     try {
       setLoading(true);
       setError(null);
-      const newOrg = await OrganizationService.createOrganization(name, description);
+      const newOrg = await dashboardServer.createOrganization(name, description);
 
-      // Update user data to include new organization
-      const currentUser = user();
-      if (currentUser) {
-        currentUser.organizations.push(newOrg);
-        switchOrganization(newOrg.id);
-      }
+      // Reload user data to include new organization
+      user.refetch();
+
+      // Switch to the new organization
+      await switchOrganization(newOrg.id);
 
       return newOrg;
     } catch (err) {

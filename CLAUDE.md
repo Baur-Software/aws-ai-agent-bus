@@ -21,33 +21,34 @@ See detailed tracking in:
 
 ### MCP Server Setup
 ```bash
-# Configure Claude Code to use this MCP server
+# Configure Claude Code to use the Rust MCP server
+# This enables Claude Code to directly use MCP tools while developing!
 # Add to Claude Code settings or mcp_servers.json:
 {
   "agent-mesh": {
-    "command": "node",
-    "args": ["src/server.js"],
-    "cwd": "mcp-server",
+    "command": "use_aws_mcp",
     "env": {
       "AWS_REGION": "us-west-2"
     }
   }
 }
+
+# Claude Code can then use tools like:
+# - mcp__aws__kv_get/set for KV storage
+# - mcp__aws__artifacts_get/put for file storage
+# - mcp__aws__events_send for EventBridge
+# - mcp__aws__workflow_start for Step Functions
+# - mcp__aws__agent_* for agent operations
 ```
 
 ### Development
 ```bash
-# MCP Server development
-cd mcp-server
-npm install
-npm test                    # Run full test suite (100% pass rate)
-npm run test:unit          # Unit tests only  
-npm run test:integration   # Integration tests only
-npm start                  # Start MCP server on stdio (default for MCP clients)
-npm run dev               # Development mode with hot reload
-npm run start:http        # HTTP interface on port 3000
-npm run dev:http          # HTTP dev mode with hot reload
-npm run lint              # JavaScript syntax validation
+# MCP Server development (Rust implementation)
+cd mcp-rust
+cargo build                 # Build Rust MCP server
+cargo test                  # Run full test suite
+cargo run                   # Start MCP server on stdio (default for MCP clients)
+cargo install --path .     # Install use_aws_mcp binary globally
 
 # Dashboard UI development (SolidJS)
 cd dashboard-ui
@@ -112,16 +113,17 @@ VITE_API_ENDPOINT=http://localhost:3001/api
 ## Architecture Overview
 
 ### Core Components
-- **MCP Server** (`mcp-server/src/`): Model Context Protocol server providing AI assistants with AWS service access
+- **MCP Server** (`mcp-rust/`): Rust-based Model Context Protocol server providing AI assistants with AWS service access
+- **Dashboard Server** (`dashboard-server/`): WebSocket API gateway for the SolidJS dashboard UI
+- **Dashboard UI** (`dashboard-ui/`): SolidJS-based frontend for workflow management and real-time monitoring
 - **Infrastructure** (`infra/`): Terraform modules organized into small/medium/large workspaces
 - **Agent System** (`.claude/`): Sophisticated agent orchestration with conductors, critics, and specialists
 
-### MCP Server Structure
-- `src/modules/aws/`: AWS service clients (DynamoDB, S3, EventBridge, Step Functions, Event Monitoring)
-- `src/modules/mcp/handlers/`: MCP tool handlers (kv, artifacts, events, workflow, google-analytics, event-monitoring)
-- `src/services/`: Google Analytics API client with OAuth2 support
-- `src/reports/`: Pre-built analytics reports with sample data versions
-- `src/scripts/`: Interactive setup utilities
+### MCP Server Structure (Rust)
+- `src/`: Rust implementation of MCP server with AWS integrations
+- Features: KV storage, artifacts, events, workflows, analytics
+- Performance-optimized with async/await and tokio runtime
+- Type-safe AWS SDK integration
 
 ### Event Monitoring System
 - **6 MCP Tools**: send, query, analytics, create-rule, create-alert, health-check
@@ -272,3 +274,8 @@ user-demo-user-123-integration-google-analytics-personal    # Personal account
 - CLAUDE.md
 - .claude/**/*
 - Fetch(https://github.com/idosal/mcp-ui)
+- yes we need to have composable patterns that make this code base maintainable
+- isolates the MCP server as a stdio-only backend service, with dashboard-server as the sole API gateway for the UI
+- isolates the MCP server as a stdio-only backend service, with dashboard-server as the sole websocket based API gateway for the UI
+- dashboard server doesn't fn do crud api's.
+- always use events and pubsub never use rest

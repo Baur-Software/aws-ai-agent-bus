@@ -76,7 +76,7 @@ export class WorkflowEngine {
           result = await this.mcpClient.callTool('kv.set', {
             key: node.config?.key || 'workflow-result',
             value: context.data?.previousResult || 'workflow executed',
-            ttl_hours: node.config?.ttl || 24
+            ttl_hours: node.config?.ttl_hours || 24
           });
           break;
 

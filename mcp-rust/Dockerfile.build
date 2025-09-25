@@ -1,0 +1,21 @@
+FROM rust:latest
+
+# Install CMake and NASM
+RUN apt-get update && apt-get install -y cmake nasm
+
+WORKDIR /app
+
+# Copy Cargo file first for better caching
+COPY Cargo.toml ./
+
+# Copy actual source code
+COPY src ./src
+
+# Set environment variables to disable assembly optimizations in crypto crates
+ENV AWS_LC_SYS_NO_ASM=1
+ENV RUSTFLAGS="-C target-cpu=generic"
+
+# Build the actual binary (debug build to work with NO_ASM)
+RUN cargo build
+
+# The binary will be at /app/target/debug/mcp-multi-tenant

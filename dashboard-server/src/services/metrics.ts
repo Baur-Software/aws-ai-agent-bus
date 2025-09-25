@@ -131,22 +131,52 @@ export class MetricsAggregator {
   }
 
   async getRecentActivity(): Promise<ActivityEvent[]> {
-    // This would query EventBridge or DynamoDB for recent events
-    // For now, return mock data
-    return [
-      {
-        id: Date.now(),
-        action: 'KV Store Updated',
-        type: 'info',
-        timestamp: new Date().toISOString()
-      },
-      {
-        id: Date.now() - 1000,
-        action: 'Artifact Uploaded',
-        type: 'success',
-        timestamp: new Date(Date.now() - 60000).toISOString()
+    try {
+      // Query the events table for recent activity
+      const command = new QueryCommand({
+        TableName: process.env.AGENT_MESH_EVENTS_TABLE || 'agent-mesh-dev-events',
+        IndexName: 'TimestampIndex',
+        KeyConditionExpression: '#ts > :since',
+        ExpressionAttributeNames: {
+          '#ts': 'timestamp'
+        },
+        ExpressionAttributeValues: {
+          ':since': { S: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() } // Last 24 hours
+        },
+        ScanIndexForward: false, // Most recent first
+        Limit: 50
+      });
+
+      const result = await this.dynamodb.send(command);
+
+      if (result.Items) {
+        return result.Items.map((item, index) => {
+          const unmarshalled = unmarshall(item);
+          return {
+            id: Date.now() - index, // Generate unique ID
+            action: unmarshalled.detailType || 'Unknown Event',
+            type: this.getActivityType(unmarshalled.detailType),
+            timestamp: unmarshalled.timestamp || new Date().toISOString()
+          };
+        });
       }
-    ];
+
+      return [];
+    } catch (error) {
+      console.warn('Could not fetch recent activity from events table:', error);
+      // Return empty array instead of mock data when events table is unavailable
+      return [];
+    }
+  }
+
+  private getActivityType(detailType: string): string {
+    if (!detailType) return 'info';
+
+    const type = detailType.toLowerCase();
+    if (type.includes('error') || type.includes('failed')) return 'error';
+    if (type.includes('success') || type.includes('completed') || type.includes('uploaded')) return 'success';
+    if (type.includes('warning') || type.includes('expired')) return 'warning';
+    return 'info';
   }
 
   private isExpired(item: DynamoDBItem): boolean {

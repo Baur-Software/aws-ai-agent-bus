@@ -1,6 +1,6 @@
 import { createContext, useContext, createSignal, For, JSX } from 'solid-js';
 import { Portal } from 'solid-js/web';
-import { useMCP } from './MCPContext';
+import { useDashboardServer } from './DashboardServerContext';
 
 export type NotificationType = 'success' | 'error' | 'warning' | 'info';
 export type NotificationPosition = 'top' | 'bottom' | 'left' | 'right' | 'center' | 'attached';
@@ -48,7 +48,7 @@ interface NotificationProviderProps {
 
 export function NotificationProvider(props: NotificationProviderProps) {
   const [notifications, setNotifications] = createSignal<Notification[]>([]);
-  const { executeTool } = useMCP();
+  const { executeTool } = useDashboardServer();
 
   const addNotification = (notification: Partial<Notification>): string => {
     const id = Date.now().toString();

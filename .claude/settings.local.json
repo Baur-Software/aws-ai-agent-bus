@@ -5,7 +5,9 @@
       "WebSearch",
       "Bash(npm install)",
       "Bash(npm test:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Read(//c/Users/Todd/Pictures/Screenshots/**)"
     ],
     "deny": [],
     "ask": []

@@ -203,8 +203,8 @@ export default function WorkflowSettings(props: WorkflowSettingsProps) {
       {/* Header */}
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="text-2xl font-bold text-gray-900">Workflow Settings</h2>
-          <p class="text-gray-600">Configure your workflow preferences and manage data</p>
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Workflow Settings</h2>
+          <p class="text-gray-600 dark:text-gray-400">Configure your workflow preferences and manage data</p>
         </div>
         
         <div class="flex items-center gap-3">
@@ -234,8 +234,8 @@ export default function WorkflowSettings(props: WorkflowSettingsProps) {
       </div>
 
       {/* Statistics */}
-      <div class="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <BarChart3 class="w-5 h-5" />
           Workflow Statistics
         </h3>
@@ -263,8 +263,8 @@ export default function WorkflowSettings(props: WorkflowSettingsProps) {
       </div>
 
       {/* Auto-Save Settings */}
-      <div class="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <Clock class="w-5 h-5" />
           Auto-Save Settings
         </h3>
@@ -305,8 +305,8 @@ export default function WorkflowSettings(props: WorkflowSettingsProps) {
       </div>
 
       {/* Execution Settings */}
-      <div class="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <Settings class="w-5 h-5" />
           Execution Settings
         </h3>
@@ -364,8 +364,8 @@ export default function WorkflowSettings(props: WorkflowSettingsProps) {
       </div>
 
       {/* Notification Settings */}
-      <div class="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <Bell class="w-5 h-5" />
           Notification Settings
         </h3>
@@ -411,8 +411,8 @@ export default function WorkflowSettings(props: WorkflowSettingsProps) {
       </div>
 
       {/* Default Values */}
-      <div class="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <FileText class="w-5 h-5" />
           Default Values
         </h3>
@@ -447,8 +447,8 @@ export default function WorkflowSettings(props: WorkflowSettingsProps) {
       </div>
 
       {/* Editor Settings */}
-      <div class="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <Eye class="w-5 h-5" />
           Editor Settings
         </h3>
@@ -515,8 +515,8 @@ export default function WorkflowSettings(props: WorkflowSettingsProps) {
       </div>
 
       {/* Data Management */}
-      <div class="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <Database class="w-5 h-5" />
           Data Management
         </h3>
@@ -551,8 +551,8 @@ export default function WorkflowSettings(props: WorkflowSettingsProps) {
       </div>
 
       {/* Import/Export */}
-      <div class="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <Folder class="w-5 h-5" />
           Import/Export
         </h3>
@@ -565,7 +565,7 @@ export default function WorkflowSettings(props: WorkflowSettingsProps) {
             </div>
             <button
               onClick={handleExportAll}
-              class="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 text-sm"
+              class="flex items-center gap-2 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
             >
               <Download class="w-4 h-4" />
               Export
@@ -577,7 +577,7 @@ export default function WorkflowSettings(props: WorkflowSettingsProps) {
               <label class="text-sm font-medium text-gray-700">Import Workflows</label>
               <p class="text-sm text-gray-500">Import workflows from JSON file</p>
             </div>
-            <label class="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 text-sm cursor-pointer">
+            <label class="flex items-center gap-2 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-sm cursor-pointer">
               <Upload class="w-4 h-4" />
               Import
               <input

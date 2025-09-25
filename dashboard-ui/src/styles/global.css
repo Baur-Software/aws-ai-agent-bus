@@ -80,6 +80,29 @@
   --border-primary: var(--gray-700);
   --border-secondary: var(--gray-600);
   --shadow-primary: 0 4px 6px rgba(0, 0, 0, 0.3);
+
+  /* Z-Index Layer System */
+  /* Background layers: 0-99 */
+  --z-canvas-background: 1;
+  --z-workflow-nodes: 2;
+
+  /* Interactive layers: 100-299 */
+  --z-connections: 3;
+  --z-node-details: 10;
+  --z-floating-panels: 20;
+
+  /* Overlay layers: 300-699 */
+  --z-dropdowns: 300;
+  --z-modals: 400;
+  --z-overlays: 500;
+
+  /* Critical layers: 700-999 */
+  --z-tooltips: 700;
+  --z-notifications: 800;
+  --z-connection-toolbar: 900;
+
+  /* Emergency layer: 1000 */
+  --z-emergency: 1000;
 }
 
 /* ===== RESET & BASE STYLES ===== */

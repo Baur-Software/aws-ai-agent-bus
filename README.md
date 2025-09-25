@@ -1,175 +1,183 @@
-# AWS AI Agent Bus
+# AI Agent Bus
 
-A comprehensive agent mesh infrastructure with Model Context Protocol (MCP) server integration, enabling AI assistants to interact with AWS services through standardized interfaces. See [EXAMPLES.md](EXAMPLES.md) for use cases and integration patterns.
+**Multi-tenant business process automation platform with live workflow execution, human-in-the-loop operations, and AI-powered agent generation.**
 
-## Overview
+An intelligent workflow platform that combines automated processes with human decision points, featuring real-time execution monitoring and automatic integration discovery through MCP servers.
 
-This project provides a complete solution for running AI agent meshes on AWS infrastructure:
+## What This Project Includes
 
-- **MCP Server**: Production-ready Model Context Protocol server with Google Analytics integration
-- **Claude Agent System**: Sophisticated agent orchestration with conductors, critics, and specialists  
-- **Terraform Infrastructure**: Modular AWS infrastructure with small/medium/large workspace patterns
-- **100% Test Coverage**: Comprehensive test suite ensuring reliability
-- **OAuth2 Support**: Complete Google Analytics authentication flow
-- **Cost-Effective**: Run a complete agent mesh for as low as $10/month
+A comprehensive workflow automation platform:
+
+- **Live Workflow Registry**: Real-time execution state with visual node updates
+- **Human-in-the-Loop Nodes**: People as first-class workflow participants with smart notifications
+- **Auto-Generated AI Agents**: Automatic specialist agent creation from connected MCP servers
+- **Multi-Tenant Agent Storage**: Organization and user-scoped agent management with S3/IAM security
+- **Integration Discovery**: Connect apps and auto-populate workflow capabilities
+- **Visual Canvas**: Drag-and-drop interface for designing mixed human/automated processes
+
+**Current Capabilities:**
+
+- **Multi-Tenant Agent System**: Organization and user-scoped AI agents with S3 path-based security
+- **Live Workflow Execution**: Real-time node state updates via event streams
+- **Human Workflow Nodes**: People as workflow participants with customizable notification preferences
+- **MCP Integration Discovery**: Auto-populate workflow nodes from connected MCP servers
+- **Specialist Agent Auto-Generation**: Create specialized agents from MCP server capabilities
+- **Visual Canvas Design**: Drag-and-drop interface for mixed human/automated processes
+- **Versioned Agent Storage**: Full CRUD operations with S3 versioning and DynamoDB metadata
 
 ## Architecture
 
-### Infrastructure Workspaces
+### Core Components
 
-- **Small workspaces**: Fine-grained, cost-effective components (DynamoDB, S3, EventBridge)
-- **Medium workspaces**: Domain stacks composing small workspaces (ECS agents, Step Functions)  
-- **Large workspaces**: Optional, high-performance components (Aurora pgvector, analytics)
+- **Dashboard UI** (SolidJS): Visual workflow designer with live execution monitoring
+- **Dashboard Server** (Node.js): WebSocket-based pub/sub backend with multi-tenant agent management
+- **MCP Server** (Node.js): Model Context Protocol server providing AI context and tool execution
+- **Internal MCP Registry**: Versioned registry of connected MCP servers with fork support
+- **Multi-Tenant Agent Storage**: S3/DynamoDB-backed agent system with path-based security
+- **Live Workflow Engine**: Real-time execution state management with event streaming
+- **Human Notification System**: Multi-channel notifications (Slack, email, SMS) for human workflow nodes
 
-### MCP Server Integration
+### Data Architecture
 
-The MCP server (`mcp-server/`) provides AI assistants with:
+**Agent Storage**:
+```
+S3: agents/
+├── public/system/              # Bootstrap agents from .claude/agents
+├── public/community/           # Community-shared agents
+├── organizations/{orgId}/
+│   ├── shared/                # Org-wide agents
+│   ├── generated/{mcpId}/     # Auto-generated from MCP servers
+│   └── users/{userId}/        # User private agents within org
+└── users/{userId}/            # Individual user agents
+```
 
-- **Google Analytics Integration**: Complete OAuth2 flow, top pages analysis, content opportunities
-- **Key-value storage** via DynamoDB
-- **Artifact management** through S3
-- **Event bus integration** with EventBridge
-- **Timeline and workflow support** via Step Functions
-- **Dual stdio/HTTP interfaces** for flexible deployment
+**Multi-Tenant Context**:
+- **Organizations**: Multiple users, shared resources, admin controls
+- **Users**: Individual workspaces, private agents, personal integrations
+- **MCP Tenant Isolation**: Each user/org has isolated MCP server context
 
-### Agent Orchestration
+### Technical Stack
 
-The `.claude/` directory contains a sophisticated agent system:
-
-- **Conductor**: Goal-driven planner and delegator
-- **Critic**: Safety and verification agent
-- **Specialists**: Framework and domain experts
-- **Memory System**: KV store, timeline, and vector embeddings
+- Frontend: SolidJS with TypeScript
+- Backend: Node.js MCP server with stdio/HTTP interfaces
+- Infrastructure: AWS (DynamoDB, S3, EventBridge, Step Functions)
+- AI Integration: OpenAI/Claude via MCP protocol
 
 ## Quick Start
 
-### 1. Deploy Infrastructure
+### 1. Clone and Setup
 
 ```bash
-# Deploy core components
-make init WS=small/kv_store ENV=dev
-make apply WS=small/kv_store ENV=dev
-make apply WS=small/artifacts_bucket ENV=dev
-make apply WS=small/event_bus ENV=dev
+git clone https://github.com/your-org/aws-ai-agent-bus
+cd aws-ai-agent-bus
 
-# Deploy workflow orchestration
-make apply WS=medium/workflow ENV=dev
-```
-
-### 2. Setup MCP Server
-
-```bash
-cd mcp-server
+# Start the dashboard UI
+cd dashboard-ui
 npm install
+npm run dev
 
-# Run full test suite (100% pass rate)
-npm test
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your AWS resource names
-
-# Start server
-npm start              # stdio interface  
-npm run start:http     # HTTP interface on port 3000
-npm run dev           # development mode with hot reload
+# Start the MCP server (separate terminal)
+cd ../mcp-server
+npm install
+npm start
 ```
 
-### 3. Configure Claude Agents
+### 2. Try the Interface
+
+Open http://localhost:5173 to access:
+
+1. **Visual Canvas**: Design workflows with drag-and-drop
+2. **Business Templates**: Pre-built process flows
+3. **Chat Assistant**: Get AI suggestions (currently mock responses)
+4. **Process Library**: Browse and manage your workflows
+
+### 3. Deploy Infrastructure (Optional)
 
 ```bash
-cd .claude
-cp .env.example .env
-# Edit .env with your configuration
-
-# Initialize agent system
-./scripts/setup.sh init
-./scripts/setup.sh config
+# Deploy AWS components for MCP server
+export WS=small/kv_store ENV=dev
+npm run tf:init
+npm run tf:apply
 ```
 
-### 4. Analytics Reports
+## Use Cases
 
-Generate Google Analytics reports with comprehensive user insights:
+### **Human-in-the-Loop Operations**
 
-```bash
-# Interactive setup for Google Analytics credentials
-npm run setup:ga-credentials
-
-# Sample report (no credentials needed)
-npm run report:users-by-country-sample
-
-# Live data report (requires AWS credentials + GA secret)
-npm run report:users-by-country
+**Financial Approval Workflows**:
 ```
-
-**Quick Setup Process:**
-1. Run `npm run setup:ga-credentials` and choose option 1 (Create new credentials)
-2. Follow prompts to enter Google OAuth2 credentials and Property ID  
-3. Complete OAuth flow in browser
-4. Credentials automatically stored in AWS Secrets Manager
-
-**Manual Setup (Alternative):**
-- AWS credentials configured with Secrets Manager access
-- Google Analytics secret in AWS Secrets Manager: `myproject-content-pipeline/google-analytics`
-- Secret format: `{"client_id": "...", "client_secret": "...", "access_token": "...", "refresh_token": "...", "property_id": "..."}`
-
-**Troubleshooting:**
-- `Could not load credentials from any providers`: Configure AWS credentials with `aws configure`
-- `Failed to initialize Google Analytics`: Run `npm run setup:ga-credentials` and choose option 3 to test
-- Detailed setup guide: `mcp-server/docs/google-analytics-setup.md`
-
-## Infrastructure Components
-
-### Small Workspaces
-
-- `kv_store`: DynamoDB table for key-value storage
-- `artifacts_bucket`: S3 bucket for file artifacts
-- `timeline_store`: S3 bucket for timeline events
-- `event_bus`: EventBridge custom bus for events
-- `secrets`: AWS Secrets Manager integration
-
-### Medium Workspaces
-
-- `mesh_agents`: ECS-based agent orchestration
-- `workflow`: Step Functions state machines
-- `observability`: CloudWatch metrics and monitoring
-
-### Large Workspaces (Optional)
-
-- `vector_pg`: Aurora PostgreSQL with pgvector for embeddings
-- Analytics and edge distribution components
-
-## Configuration
-
-All components use environment-driven configuration:
-
-```bash
-# AWS Configuration
-AWS_PROFILE=your-aws-profile
-AWS_REGION=us-west-2
-
-# Agent Mesh Resources
-AGENT_MESH_KV_TABLE=agent-mesh-kv
-AGENT_MESH_ARTIFACTS_BUCKET=agent-mesh-artifacts
-AGENT_MESH_EVENT_BUS=agent-mesh-events
+API Request → Data Validation → Human Approval → Payment Processing → Notification
+    🤖             🤖               👤                🤖               🤖
 ```
+- Finance manager gets Slack notification for payments >$10k
+- Mobile-friendly approval with full context
+- Automatic escalation if no response within 2 hours
 
-## Development Lanes
+**Customer Onboarding with Review**:
+```
+Form Submission → Data Enrichment → Compliance Check → Manual Review → Account Creation
+      🤖               🤖               🤖             👤              🤖
+```
+- Compliance officer reviews flagged applications
+- Customizable notification preferences per person
+- Real-time workflow state visible to all stakeholders
 
-- `read_only`: Safe queries and exploration (default)
-- `dry_run`: Planning and staging changes
-- `execute`: Production operations with approval gates
+### **Auto-Generated Integration Workflows**
 
-## Cost Optimization
+**Connect Stripe → Instant Specialized Agents**:
+1. User connects Stripe MCP server to tenant context
+2. System auto-generates: `stripe-payments-expert`, `stripe-webhooks-specialist`, `stripe-subscriptions-manager`
+3. Workflow nodes populate with Stripe capabilities
+4. Pre-built payment processing workflows become available
 
-Start with small workspaces for development:
+**GitHub Integration → Development Workflows**:
+1. Connect GitHub MCP server
+2. Auto-generate: `github-pr-manager`, `github-deployment-specialist`, `github-issue-tracker`
+3. CI/CD workflow templates with human review gates
+4. Automatic agent updates when MCP server versions change
 
-- DynamoDB on-demand: ~$1-5/month
-- S3 storage: ~$1-3/month  
-- EventBridge: ~$1-2/month
-- Total: ~$10/month for basic agent mesh
+### **Multi-Tenant Agent Management**
 
-Scale to medium/large workspaces as needed.
+**Organization-Level Sharing**:
+- `acme-corp` creates custom `salesforce-lead-qualifier` agent
+- Available to all `acme-corp` users in workflow designer
+- Version controlled with change logs
+
+**Personal Agent Development**:
+- Individual users create private specialized agents
+- Fork organization agents for personal customization
+- Markdown editor with live preview and templates
+
+## Project Status
+
+**✅ Implemented:**
+
+- **Multi-Tenant Agent Storage**: S3/DynamoDB with path-based security and versioning
+- **Agent CRUD Operations**: Full create, read, update, delete with AWS SDK integration
+- **S3 Security Architecture**: IAM policies supporting user/org/public agent isolation
+- **Frontmatter Parsing**: Markdown agent definitions with YAML metadata extraction
+- **Version Management**: Automatic versioning for agent updates with changelog support
+
+**🚧 In Development:**
+
+- **Feature Flag Authentication**: Dev user injection (`user-demo-123`/`acme`) for immediate testing
+- **WebSocket Agent Operations**: Pub/sub message handlers for real-time agent management
+- **Internal MCP Registry**: Versioned registry with fork support and tenant context
+- **Auto-Agent Generation**: Specialist agent creation from connected MCP server capabilities
+- **Live Workflow Execution**: Real-time node state updates with event streaming
+- **Human Workflow Nodes**: People as workflow participants with smart notifications
+
+**🎯 Planned:**
+
+- **Markdown Agent Editor**: Universal editor with templates, live preview, syntax highlighting
+- **MCP Server Discovery**: Integration with mcpservers.org for app connection workflows
+- **Mobile Notifications**: Multi-channel human node notifications (Slack, SMS, email)
+- **Production Authentication**: AWS Cognito integration with JWT-based user context
+- **Workflow Marketplace**: Published workflow sharing and discovery
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines and setup instructions.
 
 ## Documentation
 

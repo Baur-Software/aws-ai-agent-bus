@@ -1,0 +1,220 @@
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
+use thiserror::Error;
+use tokio::sync::RwLock;
+use uuid::Uuid;
+
+#[derive(Error, Debug)]
+pub enum TenantError {
+    #[error("Tenant not found: {0}")]
+    NotFound(String),
+    #[error("Unauthorized access for tenant: {0}")]
+    Unauthorized(String),
+    #[error("Tenant configuration error: {0}")]
+    ConfigError(String),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TenantContext {
+    pub tenant_id: String,
+    pub user_id: String,
+    pub organization_id: String,
+    pub role: UserRole,
+    pub permissions: Vec<Permission>,
+    pub aws_region: String,
+    pub resource_limits: ResourceLimits,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum UserRole {
+    Admin,
+    User,
+    Viewer,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum Permission {
+    ReadKV,
+    WriteKV,
+    DeleteKV,
+    ListArtifacts,
+    GetArtifacts,
+    PutArtifacts,
+    SendEvents,
+    ExecuteWorkflows,
+    ManageUsers,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourceLimits {
+    pub max_kv_size: u64,         // Maximum KV storage in bytes
+    pub max_artifacts: u32,       // Maximum number of artifacts
+    pub requests_per_minute: u32, // Rate limiting
+    pub max_concurrent_requests: u32,
+}
+
+impl Default for ResourceLimits {
+    fn default() -> Self {
+        Self {
+            max_kv_size: 100_000_000, // 100MB
+            max_artifacts: 1000,
+            requests_per_minute: 100,
+            max_concurrent_requests: 10,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct TenantSession {
+    pub context: TenantContext,
+    pub session_id: Uuid,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub last_activity: Arc<RwLock<chrono::DateTime<chrono::Utc>>>,
+    pub request_count: Arc<RwLock<u32>>,
+    pub active_requests: Arc<RwLock<u32>>,
+}
+
+impl TenantSession {
+    pub fn new(context: TenantContext) -> Self {
+        let now = chrono::Utc::now();
+        Self {
+            context,
+            session_id: Uuid::new_v4(),
+            created_at: now,
+            last_activity: Arc::new(RwLock::new(now)),
+            request_count: Arc::new(RwLock::new(0)),
+            active_requests: Arc::new(RwLock::new(0)),
+        }
+    }
+
+    pub async fn update_activity(&self) {
+        let mut last_activity = self.last_activity.write().await;
+        *last_activity = chrono::Utc::now();
+    }
+
+    pub async fn increment_request_count(&self) -> u32 {
+        let mut count = self.request_count.write().await;
+        *count += 1;
+        *count
+    }
+
+    pub async fn increment_active_requests(&self) -> u32 {
+        let mut active = self.active_requests.write().await;
+        *active += 1;
+        *active
+    }
+
+    pub async fn decrement_active_requests(&self) {
+        let mut active = self.active_requests.write().await;
+        if *active > 0 {
+            *active -= 1;
+        }
+    }
+
+    pub async fn check_rate_limit(&self) -> bool {
+        let count = *self.request_count.read().await;
+        let active = *self.active_requests.read().await;
+
+        // Simple rate limiting - in production, this would be more sophisticated
+        count < self.context.resource_limits.requests_per_minute
+            && active < self.context.resource_limits.max_concurrent_requests
+    }
+
+    pub fn has_permission(&self, permission: &Permission) -> bool {
+        match self.context.role {
+            UserRole::Admin => true,
+            _ => self.context.permissions.contains(permission),
+        }
+    }
+}
+
+pub struct TenantManager {
+    sessions: Arc<RwLock<HashMap<String, Arc<TenantSession>>>>,
+    // In production, this would integrate with a database
+    tenant_configs: Arc<RwLock<HashMap<String, TenantContext>>>,
+}
+
+impl TenantManager {
+    pub async fn new() -> anyhow::Result<Self> {
+        let mut tenant_configs = HashMap::new();
+
+        // Create a default demo tenant for development
+        let demo_context = TenantContext {
+            tenant_id: "demo-tenant".to_string(),
+            user_id: "user-demo-123".to_string(),
+            organization_id: "org-demo-456".to_string(),
+            role: UserRole::Admin,
+            permissions: vec![
+                Permission::ReadKV,
+                Permission::WriteKV,
+                Permission::DeleteKV,
+                Permission::ListArtifacts,
+                Permission::GetArtifacts,
+                Permission::PutArtifacts,
+                Permission::SendEvents,
+                Permission::ExecuteWorkflows,
+            ],
+            aws_region: "us-west-2".to_string(),
+            resource_limits: ResourceLimits::default(),
+        };
+
+        tenant_configs.insert("demo-tenant".to_string(), demo_context);
+
+        Ok(Self {
+            sessions: Arc::new(RwLock::new(HashMap::new())),
+            tenant_configs: Arc::new(RwLock::new(tenant_configs)),
+        })
+    }
+
+    pub async fn create_session(&self, tenant_id: &str) -> Result<Arc<TenantSession>, TenantError> {
+        let configs = self.tenant_configs.read().await;
+        let context = configs
+            .get(tenant_id)
+            .ok_or_else(|| TenantError::NotFound(tenant_id.to_string()))?
+            .clone();
+        drop(configs);
+
+        let session = Arc::new(TenantSession::new(context));
+        let session_key = format!("{}:{}", tenant_id, session.session_id);
+
+        let mut sessions = self.sessions.write().await;
+        sessions.insert(session_key, session.clone());
+
+        Ok(session)
+    }
+
+    pub async fn get_session(&self, session_key: &str) -> Option<Arc<TenantSession>> {
+        let sessions = self.sessions.read().await;
+        sessions.get(session_key).cloned()
+    }
+
+    pub async fn cleanup_expired_sessions(&self) {
+        let mut sessions = self.sessions.write().await;
+        let now = chrono::Utc::now();
+        let timeout = chrono::Duration::minutes(30); // 30-minute timeout
+
+        sessions.retain(|_, session| {
+            let last_activity =
+                futures::executor::block_on(async { *session.last_activity.read().await });
+            now.signed_duration_since(last_activity) < timeout
+        });
+    }
+
+    pub async fn validate_tenant_access(
+        &self,
+        tenant_id: &str,
+        user_id: &str,
+    ) -> Result<(), TenantError> {
+        let configs = self.tenant_configs.read().await;
+        let context = configs
+            .get(tenant_id)
+            .ok_or_else(|| TenantError::NotFound(tenant_id.to_string()))?;
+
+        if context.user_id != user_id {
+            return Err(TenantError::Unauthorized(tenant_id.to_string()));
+        }
+
+        Ok(())
+    }
+}

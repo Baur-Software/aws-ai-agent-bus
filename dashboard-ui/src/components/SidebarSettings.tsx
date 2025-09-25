@@ -5,8 +5,15 @@ import { useNotifications } from '../contexts/NotificationContext';
 import { Eye, EyeOff, ArrowLeft, Plug, Server, CheckCircle } from 'lucide-solid';
 import { A } from '@solidjs/router';
 
-function SidebarSettings() {
-  usePageHeader('Sidebar Settings', 'Customize your navigation menu');
+interface SidebarSettingsProps {
+  isOverlay?: boolean;
+}
+
+function SidebarSettings({ isOverlay = false }: SidebarSettingsProps) {
+  // Set page-specific header (only when not in overlay)
+  if (!isOverlay) {
+    usePageHeader('Sidebar Settings', 'Customize your navigation menu');
+  }
 
   const {
     sections,
@@ -48,16 +55,18 @@ function SidebarSettings() {
 
   return (
     <div class="max-w-4xl mx-auto space-y-8">
-      {/* Header */}
-      <div class="flex items-center gap-4">
-        <A href="/settings" class="p-2 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-          <ArrowLeft class="w-5 h-5" />
-        </A>
-        <div>
-          <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Sidebar Configuration</h1>
-          <p class="text-slate-600 dark:text-slate-400 mt-1">Control which navigation items appear in your sidebar</p>
+      {/* Header - only show when not in overlay mode */}
+      <Show when={!isOverlay}>
+        <div class="flex items-center gap-4">
+          <A href="/settings" class="p-2 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <ArrowLeft class="w-5 h-5" />
+          </A>
+          <div>
+            <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Sidebar Configuration</h1>
+            <p class="text-slate-600 dark:text-slate-400 mt-1">Control which navigation items appear in your sidebar</p>
+          </div>
         </div>
-      </div>
+      </Show>
 
       {/* Status Overview */}
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">

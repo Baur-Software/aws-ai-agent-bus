@@ -1,0 +1,237 @@
+name: Dashboard Server CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'dashboard-server/**'
+      - '.github/workflows/dashboard-server-ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'dashboard-server/**'
+      - '.github/workflows/dashboard-server-ci.yml'
+
+defaults:
+  run:
+    working-directory: ./dashboard-server
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        bun-version: ['1.1.0', 'latest']  # Test multiple Bun versions
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Bun ${{ matrix.bun-version }}
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: ${{ matrix.bun-version }}
+
+    - name: Verify Bun installation
+      run: |
+        bun --version
+        which bun
+
+    - name: Install dependencies
+      run: bun install --frozen-lockfile
+
+    - name: TypeScript type checking
+      run: bun run typecheck
+
+    - name: Run linter (if configured)
+      run: |
+        if [ -f "eslint.config.js" ] || [ -f ".eslintrc.js" ] || [ -f ".eslintrc.json" ]; then
+          echo "Running ESLint..."
+          bun run lint || echo "Lint script not found, skipping"
+        else
+          echo "No ESLint configuration found, skipping linting"
+        fi
+
+    - name: Run tests
+      run: |
+        echo "Running Bun tests..."
+        bun test --timeout 30000
+      env:
+        NODE_ENV: test
+        ENABLE_DEV_AUTH: true
+
+    - name: Test server startup
+      run: |
+        echo "Testing server startup..."
+        timeout 10s bun run start &
+        SERVER_PID=$!
+        sleep 5
+
+        # Test if server is responding
+        if curl -f http://localhost:3001/health; then
+          echo "✅ Server health check passed"
+        else
+          echo "❌ Server health check failed"
+          exit 1
+        fi
+
+        # Kill the server
+        kill $SERVER_PID || true
+        wait $SERVER_PID 2>/dev/null || true
+        echo "Server startup test completed"
+      env:
+        ENABLE_DEV_AUTH: true
+        NODE_ENV: test
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: 'latest'
+
+    - name: Install dependencies
+      run: bun install --frozen-lockfile
+
+    - name: Check for sensitive data
+      run: |
+        echo "Checking for sensitive data..."
+
+        # Check for hardcoded secrets
+        if grep -r "baursoftware" src/ 2>/dev/null || grep -r "545027c4\|09c21e37" src/ 2>/dev/null; then
+          echo "❌ Sensitive data found in source code"
+          exit 1
+        fi
+
+        # Check for hardcoded AWS credentials
+        if grep -r -E "aws_access_key_id.*=.*[A-Z0-9]{20}" src/ 2>/dev/null; then
+          echo "❌ Potential AWS access key found"
+          exit 1
+        fi
+
+        if grep -r -E "aws_secret_access_key.*=.*[A-Za-z0-9/+=]{40}" src/ 2>/dev/null; then
+          echo "❌ Potential AWS secret key found"
+          exit 1
+        fi
+
+        echo "✅ No sensitive data found"
+
+    - name: Security audit (Node.js packages)
+      run: |
+        echo "Running security audit..."
+        # Convert bun.lockb to package-lock.json for npm audit
+        if [ -f "bun.lockb" ]; then
+          # Use npm audit if available, otherwise skip
+          if command -v npm >/dev/null 2>&1; then
+            npm audit --audit-level=high || echo "Security audit completed with warnings"
+          else
+            echo "npm not available, skipping security audit"
+          fi
+        fi
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: 'latest'
+
+    - name: Install dependencies
+      run: bun install --frozen-lockfile
+
+    - name: Build TypeScript
+      run: bun run build
+
+    - name: Test production build
+      run: |
+        echo "Testing production build..."
+        if [ -f "dist/server.js" ]; then
+          echo "✅ Build artifacts created successfully"
+
+          # Test that the built server can start
+          timeout 5s node dist/server.js &
+          SERVER_PID=$!
+          sleep 3
+
+          # Check if process is still running
+          if kill -0 $SERVER_PID 2>/dev/null; then
+            echo "✅ Built server starts successfully"
+            kill $SERVER_PID || true
+          else
+            echo "❌ Built server failed to start"
+            exit 1
+          fi
+        else
+          echo "❌ Build failed - no artifacts found"
+          exit 1
+        fi
+      env:
+        NODE_ENV: production
+        ENABLE_DEV_AUTH: true
+
+  mcp-integration:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: 'latest'
+
+    - name: Install Rust (for use_aws_mcp)
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install use_aws_mcp
+      run: cargo install --git https://github.com/runjivu/use_aws_mcp.git
+
+    - name: Install dashboard-server dependencies
+      run: bun install --frozen-lockfile
+
+    - name: Test MCP server integration
+      run: |
+        echo "Testing MCP server integration..."
+
+        # Start dashboard server in background
+        bun --watch src/server.ts &
+        SERVER_PID=$!
+
+        # Wait for server to start
+        sleep 10
+
+        # Test MCP health endpoint
+        if curl -f http://localhost:3001/api/mcp-test/health; then
+          echo "✅ MCP health check passed"
+        else
+          echo "❌ MCP health check failed"
+          kill $SERVER_PID || true
+          exit 1
+        fi
+
+        # Test MCP tools listing
+        if curl -f http://localhost:3001/api/mcp-test/list-tools; then
+          echo "✅ MCP tools listing passed"
+        else
+          echo "❌ MCP tools listing failed"
+          kill $SERVER_PID || true
+          exit 1
+        fi
+
+        # Clean shutdown
+        kill $SERVER_PID || true
+        wait $SERVER_PID 2>/dev/null || true
+        echo "MCP integration test completed"
+      env:
+        NODE_ENV: test
+        ENABLE_DEV_AUTH: true
+        AWS_REGION: us-west-2

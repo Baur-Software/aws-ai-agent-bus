@@ -1,0 +1,10 @@
+{
+  "agent-mesh": {
+    "command": "mcp-rust/target/debug/mcp-multi-tenant",
+    "args": [],
+    "env": {
+      "AWS_REGION": "us-west-2",
+      "AGENT_MESH_ENV": "dev"
+    }
+  }
+}

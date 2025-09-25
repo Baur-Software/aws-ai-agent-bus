@@ -295,6 +295,16 @@ vi.mock('lucide-solid', () => {
     RefreshCw: createMockIcon('RefreshCw'),
     Globe: createMockIcon('Globe'),
     Monitor: createMockIcon('Monitor'),
-    Activity: createMockIcon('Activity')
+    Activity: createMockIcon('Activity'),
+    // Canvas and panel icons
+    ZoomIn: createMockIcon('ZoomIn'),
+    ZoomOut: createMockIcon('ZoomOut'),
+    Pin: createMockIcon('Pin'),
+    PinOff: createMockIcon('PinOff'),
+    Move: createMockIcon('Move'),
+    RotateCcw: createMockIcon('RotateCcw'),
+    Maximize2: createMockIcon('Maximize2'),
+    Minimize2: createMockIcon('Minimize2'),
+    Hand: createMockIcon('Hand')
   };
 });

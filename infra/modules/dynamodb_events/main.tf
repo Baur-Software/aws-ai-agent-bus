@@ -37,17 +37,17 @@ resource "aws_dynamodb_table" "events" {
 
   # Global secondary index for querying by timestamp (most recent first)
   global_secondary_index {
-    name     = "timestamp-index"
-    hash_key = "source"
-    range_key = "timestamp"
+    name            = "timestamp-index"
+    hash_key        = "source"
+    range_key       = "timestamp"
     projection_type = "ALL"
   }
 
   # Global secondary index for querying by user
   global_secondary_index {
-    name     = "user-index"
-    hash_key = "userId"
-    range_key = "timestamp"
+    name            = "user-index"
+    hash_key        = "userId"
+    range_key       = "timestamp"
     projection_type = "ALL"
   }
 
@@ -76,8 +76,8 @@ resource "aws_dynamodb_table" "subscriptions" {
 
   # Global secondary index for querying by user
   global_secondary_index {
-    name     = "user-index"
-    hash_key = "userId"
+    name            = "user-index"
+    hash_key        = "userId"
     projection_type = "ALL"
   }
 
@@ -106,8 +106,8 @@ resource "aws_dynamodb_table" "event_rules" {
 
   # Global secondary index for querying by user
   global_secondary_index {
-    name     = "user-index"
-    hash_key = "userId"
+    name            = "user-index"
+    hash_key        = "userId"
     projection_type = "ALL"
   }
 

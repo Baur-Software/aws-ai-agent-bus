@@ -29,7 +29,8 @@ export default defineConfig({
     },
     include: [
       'src/**/*.test.{ts,tsx}',
-      'src/**/__tests__/*.{ts,tsx}'
+      'src/**/__tests__/*.{ts,tsx}',
+      'test/**/*.test.{ts,tsx}'
     ],
     testTimeout: 10000,
     hookTimeout: 10000

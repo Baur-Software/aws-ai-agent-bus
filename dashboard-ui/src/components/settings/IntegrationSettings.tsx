@@ -424,11 +424,11 @@ export default function IntegrationSettings(props: IntegrationSettingsProps) {
     <div class="max-w-4xl mx-auto space-y-8">
       {/* Header */}
       <div>
-        <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <Settings class="w-6 h-6" />
           Integration Settings
         </h2>
-        <p class="text-gray-600 mt-1">
+        <p class="text-gray-600 dark:text-gray-400 mt-1">
           Connect third-party services to use in your workflows
         </p>
       </div>

@@ -12,13 +12,17 @@ interface HeaderContextType {
 
 const HeaderContext = createContext<HeaderContextType>();
 
-export function HeaderProvider(props) {
+interface HeaderProviderProps {
+  children: any;
+}
+
+export function HeaderProvider(props: HeaderProviderProps) {
   const [headerInfo, setHeaderInfo] = createSignal<HeaderInfo>({
     title: 'AWS AI Agent Bus',
     tagline: 'Model Context Protocol Dashboard'
   });
 
-  const value = {
+  const value: HeaderContextType = {
     headerInfo,
     setHeaderInfo
   };
@@ -44,6 +48,7 @@ export function usePageHeader(title: string, tagline: string) {
   
   // Set header info when component mounts
   setHeaderInfo({ title, tagline });
+  return { title, tagline };
   
   // Optional: You could add cleanup to reset to default when component unmounts
   // This would be useful if you want to reset to default when navigating away

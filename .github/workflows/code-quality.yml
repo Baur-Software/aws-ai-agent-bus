@@ -3,8 +3,22 @@ name: Code Quality
 on:
   push:
     branches: [ main, develop ]
+    paths:
+      - '**.js'
+      - '**.ts'
+      - '**.json'
+      - '**.md'
+      - '.claude/**'
+      - '.github/workflows/code-quality.yml'
   pull_request:
     branches: [ main ]
+    paths:
+      - '**.js'
+      - '**.ts'
+      - '**.json'
+      - '**.md'
+      - '.claude/**'
+      - '.github/workflows/code-quality.yml'
 
 jobs:
   lint-project:

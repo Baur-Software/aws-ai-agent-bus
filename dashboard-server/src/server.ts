@@ -14,9 +14,14 @@ import { setupDashboardRoutes } from './routes/dashboard.js';
 import { setupWebSocketHandlers } from './websocket/handlers.js';
 import { EventSubscriber } from './events/subscriber.js';
 import { MetricsAggregator } from './services/metrics.js';
+import { MCPServiceRegistry } from './services/MCPServiceRegistry.js';
+import { DEFAULT_MCP_SERVERS, getMCPServerConfig } from './config/mcpServers.js';
 import mcpRoutes from './routes/mcpRoutes.js';
+import { createMCPTestRoutes } from './routes/mcpTestRoutes.js';
 import workflowRoutes from './routes/workflowRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
+import kvRoutes from './routes/kvRoutes.js';
+import { setupAuthRoutes } from './routes/authRoutes.js';
 
 interface ServerDependencies {
   eventBridge: EventBridgeClient;
@@ -24,6 +29,7 @@ interface ServerDependencies {
   s3: S3Client;
   metricsAggregator: MetricsAggregator;
   eventSubscriber: EventSubscriber;
+  mcpRegistry: MCPServiceRegistry;
 }
 
 const app: Application = express();
@@ -50,18 +56,46 @@ const wss: WebSocketServer = new WebSocketServer({ server });
 // Services
 const metricsAggregator = new MetricsAggregator(dynamodb, s3);
 const eventSubscriber = new EventSubscriber(eventBridge, wss);
+const mcpRegistry = new MCPServiceRegistry();
 
-// Setup routes
-setupDashboardRoutes(app, {
+// Initialize MCP servers
+async function initializeMCPServers() {
+  console.log('🔧 Initializing MCP servers...');
+
+  for (const serverName of DEFAULT_MCP_SERVERS) {
+    try {
+      const config = getMCPServerConfig(serverName);
+      if (config) {
+        await mcpRegistry.registerServer(serverName, config);
+        console.log(`✅ Registered MCP server: ${serverName}`);
+      }
+    } catch (error) {
+      console.error(`❌ Failed to register MCP server '${serverName}':`, error);
+    }
+  }
+}
+
+// Dependencies object
+const dependencies: ServerDependencies = {
   eventBridge,
   dynamodb,
   s3,
   metricsAggregator,
-  eventSubscriber
-});
+  eventSubscriber,
+  mcpRegistry
+};
+
+// Setup routes
+setupDashboardRoutes(app, dependencies);
 
 // Setup MCP routes
 app.use('/mcp', mcpRoutes);
+
+// Setup MCP test routes
+app.use('/api/mcp-test', createMCPTestRoutes(mcpRegistry));
+
+// Setup KV routes
+app.use('/api/kv', kvRoutes);
 
 // Setup workflow routes
 app.use('/api/workflows', workflowRoutes);
@@ -72,8 +106,11 @@ app.use('/api/chat', chatRoutes);
 // Setup MCP context routes (part of chat routes)
 app.use('/api/mcp', chatRoutes);
 
+// Setup auth routes
+app.use('/api/auth', setupAuthRoutes({ dynamodb, eventBridge }));
+
 // Setup WebSocket handlers
-const { broadcast } = setupWebSocketHandlers(wss, {
+const { broadcast, cleanup: cleanupWebSocket } = setupWebSocketHandlers(wss, {
   metricsAggregator,
   eventSubscriber
 });
@@ -101,19 +138,24 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 });
 
 // Start server
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`🚀 Dashboard server running on port ${PORT}`);
   console.log(`📊 Dashboard UI should connect to: http://localhost:${PORT}`);
   console.log(`🔌 WebSocket available at: ws://localhost:${PORT}`);
+
+  // Initialize MCP servers
+  await initializeMCPServers();
 
   // Initialize event subscriptions
   eventSubscriber.start();
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('📴 Dashboard server shutting down...');
   eventSubscriber.stop();
+  await cleanupWebSocket();
+  await mcpRegistry.disconnect();
   server.close(() => {
     console.log('✅ Dashboard server stopped');
     process.exit(0);

@@ -1,6 +1,9 @@
-import { Settings as SettingsIcon, Plug, User, Shield, Bell, Palette, Database, Menu } from 'lucide-solid';
+import { Settings as SettingsIcon, Plug, User, Shield, Bell, Palette, Database, Menu, ArrowLeft } from 'lucide-solid';
 import { useNavigate } from '@solidjs/router';
+import { createSignal, Show } from 'solid-js';
 import { usePageHeader } from '../contexts/HeaderContext';
+import IntegrationsSettings from '../components/IntegrationsSettings';
+import SidebarSettings from '../components/SidebarSettings';
 
 const SETTINGS_SECTIONS = [
   {
@@ -54,12 +57,17 @@ const SETTINGS_SECTIONS = [
   }
 ];
 
-function SettingsCard({ section }) {
+function SettingsCard({ section, onNavigate }) {
   const navigate = useNavigate();
-  
+
   const handleClick = () => {
     if (section.available) {
-      navigate(section.href);
+      // Check if we have an onNavigate prop (overlay mode) or use regular navigation
+      if (onNavigate) {
+        onNavigate(section.href);
+      } else {
+        navigate(section.href);
+      }
     }
   };
 
@@ -92,16 +100,84 @@ function SettingsCard({ section }) {
   );
 }
 
-function Settings() {
-  // Set page-specific header
-  usePageHeader('Settings', 'Configure dashboard preferences and integrations');
-  
+interface SettingsProps {
+  isOverlay?: boolean;
+}
+
+function Settings({ isOverlay = false }: SettingsProps) {
+  const [currentView, setCurrentView] = createSignal('main');
+
+  // Set page-specific header (only when not in overlay)
+  if (!isOverlay) {
+    usePageHeader('Settings', 'Configure dashboard preferences and integrations');
+  }
+
+  const handleNavigate = (href: string) => {
+    setCurrentView(href);
+  };
+
+  const handleBack = () => {
+    setCurrentView('main');
+  };
+
+  const getPageInfo = (view: string) => {
+    switch (view) {
+      case '/settings/integrations':
+        return { title: 'Connected Apps', description: 'Connect external services and APIs' };
+      case '/settings/sidebar':
+        return { title: 'Sidebar Settings', description: 'Customize navigation menu visibility' };
+      default:
+        return { title: 'Settings', description: 'Configure dashboard preferences and integrations' };
+    }
+  };
+
+  const renderContent = () => {
+    switch (currentView()) {
+      case '/settings/integrations':
+        return <IntegrationsSettings isOverlay={isOverlay} />;
+      case '/settings/sidebar':
+        return <SidebarSettings isOverlay={isOverlay} />;
+      default:
+        return (
+          <div class="grid gap-6 md:grid-cols-2">
+            {SETTINGS_SECTIONS.map(section => (
+              <SettingsCard
+                key={section.title}
+                section={section}
+                onNavigate={isOverlay ? handleNavigate : undefined}
+              />
+            ))}
+          </div>
+        );
+    }
+  };
+
   return (
-    <div class="max-w-4xl mx-auto p-6">
-      <div class="grid gap-6 md:grid-cols-2">
-        {SETTINGS_SECTIONS.map(section => (
-          <SettingsCard key={section.title} section={section} />
-        ))}
+    <div class={`${isOverlay ? 'h-full flex flex-col' : 'max-w-4xl mx-auto'} p-6`}>
+      {/* Header for overlay mode */}
+      <Show when={isOverlay}>
+        <div class="flex-shrink-0 mb-6">
+          <div class="flex items-center gap-3 mb-2">
+            {/* Back button in header */}
+            <Show when={currentView() !== 'main'}>
+              <button
+                onClick={handleBack}
+                class="flex items-center gap-2 px-3 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <ArrowLeft class="w-4 h-4" />
+                <span>Back</span>
+              </button>
+            </Show>
+            <h1 class="text-2xl font-bold text-slate-900 dark:text-white">
+              {getPageInfo(currentView()).title}
+            </h1>
+          </div>
+        </div>
+      </Show>
+
+      {/* Content */}
+      <div class={isOverlay ? 'flex-1 overflow-auto' : ''}>
+        {renderContent()}
       </div>
     </div>
   );

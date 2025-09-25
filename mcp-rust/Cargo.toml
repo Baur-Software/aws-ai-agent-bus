@@ -1,0 +1,33 @@
+[package]
+name = "mcp-rust"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "mcp-multi-tenant"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.0", features = ["v4"] }
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+anyhow = "1.0"
+
+# For MCP protocol
+async-trait = "0.1"
+
+# AWS SDK dependencies (consistent modern versions)
+aws-config = { version = "1.8", features = ["behavior-version-latest"] }
+aws-sdk-dynamodb = "1.93"
+aws-sdk-s3 = "1.106"
+aws-sdk-eventbridge = "1.91"
+aws-sdk-secretsmanager = "1.88"
+
+# Additional dependencies
+chrono = { version = "0.4", features = ["serde"] }
+futures = "0.3"
+base64 = "0.22"
