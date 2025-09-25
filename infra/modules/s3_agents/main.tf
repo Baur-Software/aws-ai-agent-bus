@@ -67,9 +67,9 @@ data "aws_iam_policy_document" "agent_access" {
     ]
 
     condition {
-      string_equals = {
-        "aws:PrincipalTag/Environment" = var.env
-      }
+      test     = "StringEquals"
+      variable = "aws:PrincipalTag/Environment"
+      values   = [var.env]
     }
   }
 
@@ -92,9 +92,9 @@ data "aws_iam_policy_document" "agent_access" {
     ]
 
     condition {
-      string_equals = {
-        "aws:PrincipalTag/Environment" = var.env
-      }
+      test     = "StringEquals"
+      variable = "aws:PrincipalTag/Environment"
+      values   = [var.env]
     }
   }
 
@@ -121,9 +121,9 @@ data "aws_iam_policy_document" "agent_access" {
     ]
 
     condition {
-      string_equals = {
-        "aws:PrincipalTag/Environment" = var.env
-      }
+      test     = "StringEquals"
+      variable = "aws:PrincipalTag/Environment"
+      values   = [var.env]
     }
   }
 
@@ -146,9 +146,9 @@ data "aws_iam_policy_document" "agent_access" {
     ]
 
     condition {
-      string_equals = {
-        "aws:PrincipalTag/Environment" = var.env
-      }
+      test     = "StringEquals"
+      variable = "aws:PrincipalTag/Environment"
+      values   = [var.env]
     }
   }
 
@@ -175,10 +175,15 @@ data "aws_iam_policy_document" "agent_access" {
     ]
 
     condition {
-      string_equals = {
-        "aws:PrincipalTag/Environment"      = var.env
-        "aws:PrincipalTag/OrganizationRole" = "admin"
-      }
+      test     = "StringEquals"
+      variable = "aws:PrincipalTag/Environment"
+      values   = [var.env]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:PrincipalTag/OrganizationRole"
+      values   = ["admin"]
     }
   }
 
@@ -205,9 +210,9 @@ data "aws_iam_policy_document" "agent_access" {
     ]
 
     condition {
-      string_equals = {
-        "aws:PrincipalTag/Environment" = var.env
-      }
+      test     = "StringEquals"
+      variable = "aws:PrincipalTag/Environment"
+      values   = [var.env]
     }
   }
 
@@ -230,17 +235,19 @@ data "aws_iam_policy_document" "agent_access" {
     ]
 
     condition {
-      string_equals = {
-        "aws:PrincipalTag/Environment" = var.env
-      }
+      test     = "StringEquals"
+      variable = "aws:PrincipalTag/Environment"
+      values   = [var.env]
+    }
 
-      string_like = {
-        "s3:prefix" = [
-          "agents/public/*",
-          "agents/users/$${aws:PrincipalTag/UserId}/*",
-          "agents/organizations/$${aws:PrincipalTag/OrganizationId}/*"
-        ]
-      }
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+      values = [
+        "agents/public/*",
+        "agents/users/$${aws:PrincipalTag/UserId}/*",
+        "agents/organizations/$${aws:PrincipalTag/OrganizationId}/*"
+      ]
     }
   }
 }
