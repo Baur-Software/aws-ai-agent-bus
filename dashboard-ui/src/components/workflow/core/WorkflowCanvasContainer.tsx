@@ -433,18 +433,22 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
       }
 
       // const contexts = await dashboard.contexts.getAll(); // Temporarily disabled
-      let contextId = contexts[0]?.contextId;
+      // Use organization ID as contextId for proper tenant isolation
+      let contextId = org.id;
 
       if (!contextId) {
         // const newContext = await dashboard.contexts.create({ // Temporarily disabled
-          contextName: 'Default Context',
-          organizationId: org.id,
-          permissions: ['mcp:*'],
-          oauthGrants: [],
-          workflows: [],
-          createdBy: currentUser.id
-        });
-        contextId = newContext.contextId;
+        //   contextName: 'Default Context',
+        //   organizationId: org.id,
+        //   permissions: ['mcp:*'],
+        //   oauthGrants: [],
+        //   workflows: [],
+        //   createdBy: currentUser.id
+        // });
+        // contextId = newContext.contextId;
+
+        // Fallback - use user ID if no org context
+        contextId = currentUser.id;
       }
 
       const workflowDefinition = {
