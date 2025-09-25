@@ -329,6 +329,7 @@ export function WorkflowList() {
           </For>
         </div>
       </Show>
+      </Show>
 
       <Show when={activeTab() === 'generator'}>
         <WorkflowCapabilityGenerator />

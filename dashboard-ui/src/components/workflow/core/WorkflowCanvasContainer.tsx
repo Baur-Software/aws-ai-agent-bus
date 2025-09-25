@@ -453,13 +453,20 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
       };
 
       // const newWorkflow = await dashboard.workflows.create({ // Temporarily disabled
-        contextId,
+      //   contextId,
+      //   name: workflowName(),
+      //   description: 'Created via workflow builder',
+      //   definition: JSON.stringify(workflowDefinition),
+      //   requiredApps: [],
+      //   sharedWith: []
+      // });
+
+      // Temporary placeholder since the above is disabled
+      const newWorkflow = {
+        workflowId: 'temp-workflow-' + Date.now(),
         name: workflowName(),
-        description: 'Created via workflow builder',
-        definition: JSON.stringify(workflowDefinition),
-        requiredApps: [],
-        sharedWith: []
-      });
+        description: 'Created via workflow builder'
+      };
 
       const metadata: WorkflowMetadata = {
         id: newWorkflow.workflowId,

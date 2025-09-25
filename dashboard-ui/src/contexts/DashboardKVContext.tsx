@@ -1,2 +1,136 @@
 import { createContext, useContext, createSignal } from 'solid-js';
-import { useNotifications } from './NotificationContext';\n\n/**\n * Dashboard-server KV context - replaces direct MCP calls\n * All operations go through dashboard-server API\n */\n\ninterface DashboardKVContextType {\n  get: (key: string) => Promise<any>;\n  set: (key: string, value: any, ttlHours?: number, options?: { showNotification?: boolean }) => Promise<boolean>;\n  del: (key: string, options?: { showNotification?: boolean }) => Promise<boolean>;\n  exists: (key: string) => Promise<boolean>;\n  isLoading: () => boolean;\n}\n\nconst DashboardKVContext = createContext<DashboardKVContextType>();\n\nexport function DashboardKVProvider(props: { children: any }) {\n  const { success, error } = useNotifications();\n  const [isLoading, setIsLoading] = createSignal(false);\n\n  const baseURL = import.meta.env.VITE_DASHBOARD_SERVER_URL || 'http://localhost:3001';\n\n  /**\n   * Get value via dashboard-server KV API\n   */\n  const get = async (key: string): Promise<any> => {\n    try {\n      const response = await fetch(`${baseURL}/api/kv/${encodeURIComponent(key)}`, {\n        method: 'GET',\n        headers: { 'Content-Type': 'application/json' }\n      });\n\n      if (!response.ok) {\n        if (response.status === 404) return null;\n        throw new Error(`HTTP ${response.status}: ${response.statusText}`);\n      }\n\n      const data = await response.json();\n      return data.value;\n    } catch (err: any) {\n      console.error(`Failed to get KV pair \"${key}\":`, err);\n      return null;\n    }\n  };\n\n  /**\n   * Set value via dashboard-server KV API\n   */\n  const set = async (key: string, value: any, ttlHours: number = 24, options: { showNotification?: boolean } = {}): Promise<boolean> => {\n    const { showNotification = true } = options;\n    setIsLoading(true);\n    \n    try {\n      const response = await fetch(`${baseURL}/api/kv/${encodeURIComponent(key)}`, {\n        method: 'PUT',\n        headers: { 'Content-Type': 'application/json' },\n        body: JSON.stringify({ value, ttl_hours: ttlHours })\n      });\n\n      if (!response.ok) {\n        throw new Error(`HTTP ${response.status}: ${response.statusText}`);\n      }\n\n      if (showNotification) {\n        success(`KV pair \"${key}\" saved successfully`);\n      }\n      return true;\n    } catch (err: any) {\n      error(`Failed to save KV pair \"${key}\": ${err.message}`);\n      return false;\n    } finally {\n      setIsLoading(false);\n    }\n  };\n\n  /**\n   * Delete value via dashboard-server KV API\n   */\n  const del = async (key: string, options: { showNotification?: boolean } = {}): Promise<boolean> => {\n    const { showNotification = true } = options;\n    setIsLoading(true);\n    \n    try {\n      const response = await fetch(`${baseURL}/api/kv/${encodeURIComponent(key)}`, {\n        method: 'DELETE',\n        headers: { 'Content-Type': 'application/json' }\n      });\n\n      if (!response.ok) {\n        throw new Error(`HTTP ${response.status}: ${response.statusText}`);\n      }\n\n      if (showNotification) {\n        success(`KV pair \"${key}\" deleted successfully`);\n      }\n      return true;\n    } catch (err: any) {\n      error(`Failed to delete KV pair \"${key}\": ${err.message}`);\n      return false;\n    } finally {\n      setIsLoading(false);\n    }\n  };\n\n  /**\n   * Check if key exists via dashboard-server\n   */\n  const exists = async (key: string): Promise<boolean> => {\n    const value = await get(key);\n    return value !== null;\n  };\n\n  const value = {\n    get,\n    set,\n    del,\n    exists,\n    isLoading\n  };\n\n  return (\n    <DashboardKVContext.Provider value={value}>\n      {props.children}\n    </DashboardKVContext.Provider>\n  );\n}\n\nexport function useDashboardKV(): DashboardKVContextType {\n  const context = useContext(DashboardKVContext);\n  if (!context) {\n    throw new Error('useDashboardKV must be used within a DashboardKVProvider');\n  }\n  return context;\n}
+import { useNotifications } from './NotificationContext';
+
+/**
+ * Dashboard-server KV context - replaces direct MCP calls
+ * All operations go through dashboard-server API
+ */
+
+interface DashboardKVContextType {
+  get: (key: string) => Promise<any>;
+  set: (key: string, value: any, ttlHours?: number, options?: { showNotification?: boolean }) => Promise<boolean>;
+  del: (key: string, options?: { showNotification?: boolean }) => Promise<boolean>;
+  exists: (key: string) => Promise<boolean>;
+  isLoading: () => boolean;
+}
+
+const DashboardKVContext = createContext<DashboardKVContextType>();
+
+export function DashboardKVProvider(props: { children: any }) {
+  const { success, error } = useNotifications();
+  const [isLoading, setIsLoading] = createSignal(false);
+
+  const baseURL = import.meta.env.VITE_DASHBOARD_SERVER_URL || 'http://localhost:3001';
+
+  /**
+   * Get value via dashboard-server KV API
+   */
+  const get = async (key: string): Promise<any> => {
+    try {
+      const response = await fetch(`${baseURL}/api/kv/${encodeURIComponent(key)}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) return null;
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.value;
+    } catch (err: any) {
+      console.error(`Failed to get KV pair "${key}":`, err);
+      return null;
+    }
+  };
+
+  /**
+   * Set value via dashboard-server KV API
+   */
+  const set = async (key: string, value: any, ttlHours: number = 24, options: { showNotification?: boolean } = {}): Promise<boolean> => {
+    const { showNotification = true } = options;
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${baseURL}/api/kv/${encodeURIComponent(key)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value, ttl_hours: ttlHours })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      if (showNotification) {
+        success(`KV pair "${key}" saved successfully`);
+      }
+      return true;
+    } catch (err: any) {
+      error(`Failed to save KV pair "${key}": ${err.message}`);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Delete value via dashboard-server KV API
+   */
+  const del = async (key: string, options: { showNotification?: boolean } = {}): Promise<boolean> => {
+    const { showNotification = true } = options;
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${baseURL}/api/kv/${encodeURIComponent(key)}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      if (showNotification) {
+        success(`KV pair "${key}" deleted successfully`);
+      }
+      return true;
+    } catch (err: any) {
+      error(`Failed to delete KV pair "${key}": ${err.message}`);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Check if key exists via dashboard-server
+   */
+  const exists = async (key: string): Promise<boolean> => {
+    const value = await get(key);
+    return value !== null;
+  };
+
+  const value = {
+    get,
+    set,
+    del,
+    exists,
+    isLoading
+  };
+
+  return (
+    <DashboardKVContext.Provider value={value}>
+      {props.children}
+    </DashboardKVContext.Provider>
+  );
+}
+
+export function useDashboardKV(): DashboardKVContextType {
+  const context = useContext(DashboardKVContext);
+  if (!context) {
+    throw new Error('useDashboardKV must be used within a DashboardKVProvider');
+  }
+  return context;
+}
