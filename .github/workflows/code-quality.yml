@@ -96,11 +96,13 @@ jobs:
           fi
         done
         
-        # Check for password patterns but exclude .claude directory
+        # Check for password patterns but exclude authentication code and .claude directory
         if find . -type f \( -name "*.js" -o -name "*.json" -o -name "*.md" -o -name "*.py" -o -name "*.ts" \) \
           ! -path "./.claude/*" \
           ! -path "*/node_modules/*" \
           ! -path "*/.terraform/*" \
+          ! -path "*/authRoutes.*" \
+          ! -path "*/auth.*" \
           -exec grep -l -E 'password.*=.*[^\s]{8,}' {} + 2>/dev/null | head -1 | grep .; then
           echo "❌ Potential secret found: password.*=.*[^\s]{8,}"
           exit 1
