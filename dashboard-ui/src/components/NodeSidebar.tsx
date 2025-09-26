@@ -1,5 +1,5 @@
 import { createSignal, For, Show, createEffect } from 'solid-js';
-import { useMCP } from '../contexts/MCPContext';
+import { useDashboardServer } from '../contexts/DashboardServerContext';
 import MCPToolDiscovery from './MCPToolDiscovery';
 import {
   Play, Webhook, Clock, FileText, Mail, Bell, Database, Archive, Radio,
@@ -317,7 +317,7 @@ export default function NodeSidebar(props: NodeSidebarProps) {
   const [showMCPDiscovery, setShowMCPDiscovery] = createSignal(false);
   const [discoveredMCPTools, setDiscoveredMCPTools] = createSignal<NodeType[]>([]);
 
-  const { isConnected } = useMCP();
+  const { isConnected } = useDashboardServer();
 
   // Load discovered MCP tools
   createEffect(() => {

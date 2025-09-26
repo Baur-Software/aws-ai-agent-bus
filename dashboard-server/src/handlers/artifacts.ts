@@ -1,4 +1,4 @@
-import S3Service from '../../aws/s3.js';
+import S3Service from '../aws/s3';
 
 /**
  * Handler for artifact storage and retrieval using S3.
@@ -62,7 +62,7 @@ export class ArtifactsHandler {
    * const artifact = await ArtifactsHandler.get({ key: 'documents/report.txt' });
    * console.log(artifact.content); // File content as string
    */
-  static async get({ key } = {}) {
+  static async get({ key }: { key?: string } = {}) {
     if (!key) {
       throw new Error('Key is required');
     }
@@ -109,7 +109,7 @@ export class ArtifactsHandler {
    * });
    * console.log(result.url); // Signed URL for downloading
    */
-  static async put({ key, content, content_type = 'text/plain' } = {}) {
+  static async put({ key, content, content_type = 'text/plain' }: { key?: string; content?: any; content_type?: string } = {}) {
     if (!key || !content) {
       throw new Error('Key and content are required');
     }

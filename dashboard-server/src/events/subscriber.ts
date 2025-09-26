@@ -1,4 +1,11 @@
 export class EventSubscriber {
+  eventBridge: any;
+  wss: any;
+  subscriptions: Set<string>;
+  eventBus: string;
+  callbacks: any;
+  simulationInterval: any;
+
   constructor(eventBridge, webSocketServer) {
     this.eventBridge = eventBridge;
     this.wss = webSocketServer;

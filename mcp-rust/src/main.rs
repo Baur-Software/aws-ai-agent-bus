@@ -5,6 +5,7 @@ mod aws;
 mod handlers;
 mod mcp;
 mod tenant;
+mod rate_limiting;
 
 use mcp::MCPServer;
 use tenant::TenantManager;

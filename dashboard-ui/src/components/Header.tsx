@@ -1,6 +1,6 @@
 import { createSignal, Show, onCleanup, createEffect, For } from 'solid-js';
 import { useTheme } from '../contexts/ThemeContext';
-import { useMCP } from '../contexts/MCPContext';
+import { useDashboardServer } from '../contexts/DashboardServerContext';
 import { useHeader } from '../contexts/HeaderContext';
 import { useOrganization } from '../contexts/OrganizationContext';
 import {
@@ -21,7 +21,7 @@ import {
 
 function Header(props) {
   const { theme, toggleTheme } = useTheme();
-  const { isConnected, loading } = useMCP();
+  const { isConnected, connectionStatus } = useDashboardServer();
   const { headerInfo } = useHeader();
   const { user, currentOrganization, organizations, switchOrganization } = useOrganization();
   const [userMenuOpen, setUserMenuOpen] = createSignal(false);

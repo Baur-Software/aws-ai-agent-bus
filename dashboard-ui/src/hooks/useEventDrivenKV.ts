@@ -1,5 +1,5 @@
 import { createSignal, createEffect, onCleanup } from 'solid-js';
-import { useMCP } from '../contexts/MCPContext';
+import { useDashboardServer } from '../contexts/DashboardServerContext';
 import { useNotifications } from '../contexts/NotificationContext';
 
 /**
@@ -8,7 +8,7 @@ import { useNotifications } from '../contexts/NotificationContext';
  */
 export function useEventDrivenKV() {
   const [isLoading, setIsLoading] = createSignal(false);
-  const { events } = useMCP();
+  const { executeTool } = useDashboardServer();
   const { success, error } = useNotifications();
 
   // Event-driven KV operations
@@ -119,7 +119,7 @@ export function useEventDrivenKV() {
      * Temporary fallback - direct MCP call until event responses are implemented
      */
     async getDirectFallback(key: string) {
-      const { callTool } = useMCP();
+      // Use executeTool from context
       try {
         return await callTool('kv.get', { key });
       } catch (err) {
@@ -141,7 +141,7 @@ export function useEventDrivenKV() {
 export function useEventDrivenAppConfigs() {
   const [configs, setConfigs] = createSignal<any[]>([]);
   const [isLoading, setIsLoading] = createSignal(false);
-  const { events } = useMCP();
+  const { executeTool } = useDashboardServer();
   const { success, error } = useNotifications();
   const kv = useEventDrivenKV();
 

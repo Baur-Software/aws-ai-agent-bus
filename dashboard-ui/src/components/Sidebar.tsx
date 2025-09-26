@@ -1,6 +1,6 @@
 import { A } from '@solidjs/router';
 import { Show, createSignal, For } from 'solid-js';
-import { useMCP } from '../contexts/MCPContext';
+import { useDashboardServer } from '../contexts/DashboardServerContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import ConnectionStatus from './ui/ConnectionStatus';
 import {
@@ -25,8 +25,8 @@ interface SidebarProps {
 }
 
 function Sidebar(props: SidebarProps) {
-  const mcp = useMCP();
-  const { isConnected, serverVersion, health } = mcp;
+  const dashboardServer = useDashboardServer();
+  const { isConnected } = dashboardServer;
   const { sections }: { sections: () => SidebarSection[] } = useSidebar();
   const [isRefreshing, setIsRefreshing] = createSignal<boolean>(false);
 

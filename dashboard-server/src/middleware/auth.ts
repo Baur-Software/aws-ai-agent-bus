@@ -32,6 +32,8 @@ export interface JWTPayload {
   name: string;
   organizationMemberships: OrganizationMembership[];
   personalNamespace: string;
+  organizationId?: string;
+  role?: string;
   iat?: number;
   exp?: number;
 }
@@ -157,7 +159,7 @@ export class AuthMiddleware {
    * Generate JWT token for user
    */
   static generateToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
-    return jwt.sign(payload, this.jwtSecret, { expiresIn: this.jwtExpiresIn });
+    return jwt.sign(payload, this.jwtSecret, { expiresIn: this.jwtExpiresIn } as any);
   }
 
   /**

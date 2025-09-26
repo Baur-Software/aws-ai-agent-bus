@@ -146,7 +146,7 @@ export class MCPStdioService {
       });
 
       // Extract result from MCP response format
-      if (result.content && result.content.length > 0) {
+      if (result.content && Array.isArray(result.content) && result.content.length > 0) {
         const content = result.content[0];
         if (content.type === 'text') {
           try {
@@ -178,7 +178,7 @@ export class MCPStdioService {
 
     try {
       const result = await this.client.listTools();
-      return result.tools;
+      return result.tools as MCPTool[];
     } catch (error) {
       this.logger.error('Error listing tools:', error);
       throw error;

@@ -4,7 +4,7 @@
  */
 
 export class EventsHandler {
-  static async send({ detailType, detail, source = 'dashboard-server' } = {}) {
+  static async send({ detailType, detail, source = 'dashboard-server' }: { detailType?: string; detail?: any; source?: string } = {}) {
     if (!detailType || !detail) {
       throw new Error('detailType and detail are required');
     }

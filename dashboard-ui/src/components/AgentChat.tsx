@@ -1,5 +1,5 @@
 import { createSignal, createEffect, For, Show } from 'solid-js';
-import { useMCP } from '../contexts/MCPContext';
+import { useDashboardServer } from '../contexts/DashboardServerContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { Send, Bot, User, Loader2, AlertCircle, CheckCircle } from 'lucide-solid';
 
@@ -14,7 +14,7 @@ interface ChatMessage {
 }
 
 export default function AgentChat() {
-  const { agents, loading } = useMCP();
+  const { executeTool, isConnected } = useDashboardServer();
   const { success, error: notifyError } = useNotifications();
 
   const [messages, setMessages] = createSignal<ChatMessage[]>([]);

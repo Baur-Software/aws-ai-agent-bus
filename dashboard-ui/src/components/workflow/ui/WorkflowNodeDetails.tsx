@@ -1,5 +1,5 @@
 import { createSignal, createEffect, For, Show } from 'solid-js';
-import { useMCP } from '../../../contexts/MCPContext';
+import { useDashboardServer } from '../../../contexts/DashboardServerContext';
 import { useOrganization } from '../../../contexts/OrganizationContext';
 import {
   Settings, X, Save, Play, Code, Database, Zap, Bot,
@@ -62,7 +62,7 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
   const [validationErrors, setValidationErrors] = createSignal<string[]>([]);
   const [showModelDetails, setShowModelDetails] = createSignal(false);
 
-  const { client } = useMCP();
+  const { executeTool } = useDashboardServer();
   const { currentOrganization } = useOrganization();
 
   // Model configurations with cost and purpose information

@@ -1,5 +1,5 @@
 import { createSignal, createEffect } from 'solid-js';
-import { useMCP } from '../contexts/MCPContext';
+import { useDashboardServer } from '../contexts/DashboardServerContext';
 import { useOrganization } from '../contexts/OrganizationContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import type { AppConfig } from '../contexts/KVStoreContext';
@@ -14,7 +14,7 @@ export function useAppConfigMarketplace() {
   const [isLoading, setIsLoading] = createSignal(true);
   const [lastSeeded, setLastSeeded] = createSignal<string | null>(null);
 
-  const { events, callTool } = useMCP();
+  const { executeTool } = useDashboardServer();
   const { currentOrganization } = useOrganization();
   const { success, error } = useNotifications();
 

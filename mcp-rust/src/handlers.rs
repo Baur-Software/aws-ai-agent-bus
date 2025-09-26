@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use base64::{Engine as _, engine::general_purpose};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -271,7 +272,7 @@ impl Handler for ArtifactsGetHandler {
 
         match self.aws_service.artifacts_get(session, key).await? {
             Some(content) => {
-                let base64_content = base64::encode(&content);
+                let base64_content = general_purpose::STANDARD.encode(&content);
                 Ok(serde_json::json!({
                     "content": base64_content,
                     "encoding": "base64"
@@ -337,7 +338,7 @@ impl Handler for ArtifactsPutHandler {
             .unwrap_or("text/plain");
 
         // Decode base64 content
-        let decoded_content = base64::decode(content).map_err(|e| {
+        let decoded_content = general_purpose::STANDARD.decode(content).map_err(|e| {
             HandlerError::InvalidArguments(format!("Invalid base64 content: {}", e))
         })?;
 

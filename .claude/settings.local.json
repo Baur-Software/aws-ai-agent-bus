@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "WebSearch",
+      "Bash(npm install)",
+      "Bash(npm test:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(git add:*)",
+      "Bash(cargo build:*)",
+      "Bash(touch:*)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "enabledMcpjsonServers": [
+    "agent-mesh"
+  ],
+  "enableAllProjectMcpServers": false
+}

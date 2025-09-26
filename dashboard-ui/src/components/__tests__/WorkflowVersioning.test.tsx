@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createRoot, createSignal } from 'solid-js';
-import type { WorkflowMetadata, WorkflowVersion } from '../WorkflowManager';
-import type { WorkflowNode } from '../WorkflowNodeDetails';
+import type { WorkflowMetadata, WorkflowVersion } from '../workflow/core/WorkflowManager';
+import type { WorkflowNode } from '../workflow/ui/WorkflowNodeDetails';
 
 // Mock KV store for testing versioning logic
 class MockKVStore {

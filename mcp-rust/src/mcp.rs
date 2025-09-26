@@ -3,10 +3,11 @@ use serde_json::Value;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
-use crate::handlers::{Handler, HandlerRegistry};
+use crate::handlers::HandlerRegistry;
 use crate::tenant::{TenantManager, TenantSession};
+use crate::rate_limiting::AwsOperation;
 
 #[derive(Error, Debug)]
 pub enum MCPError {
@@ -167,9 +168,23 @@ impl MCPServer {
         // Create or get tenant session
         let session = self.get_or_create_session(&request).await?;
 
-        // Check rate limiting
+        // Check legacy rate limiting first
         if !session.check_rate_limit().await {
             return Err(MCPError::RateLimitExceeded);
+        }
+
+        // For tool calls, also check AWS-specific rate limiting
+        if request.method == "tools/call" {
+            if let Some(params) = &request.params {
+                if let Some(tool_name) = params.get("name").and_then(|v| v.as_str()) {
+                    if let Some(aws_operation) = AwsOperation::from_tool_name(tool_name, params) {
+                        let aws_limiter = self.tenant_manager.get_aws_rate_limiter();
+                        if !session.check_aws_operation(&aws_limiter, &aws_operation).await {
+                            return Err(MCPError::RateLimitExceeded);
+                        }
+                    }
+                }
+            }
         }
 
         // Increment request counters
@@ -222,6 +237,7 @@ impl MCPServer {
 
     async fn handle_initialize(&self) -> Result<Value, MCPError> {
         let capabilities = serde_json::json!({
+            "protocolVersion": "2024-11-05",
             "capabilities": {
                 "tools": {}
             },

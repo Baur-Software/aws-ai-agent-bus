@@ -1,6 +1,6 @@
 import { createSignal, createResource, Show, For } from 'solid-js';
 import { usePageHeader } from '../contexts/HeaderContext';
-import { useMCP } from '../contexts/MCPContext';
+import { useDashboardServer } from '../contexts/DashboardServerContext';
 import { formatDate, formatFileSize } from '../utils/formatters';
 import { Archive, Upload, Download, Trash2, File, FolderOpen, Search, Plus } from 'lucide-solid';
 
@@ -15,7 +15,7 @@ function Artifacts() {
   // Set page-specific header
   usePageHeader('Artifacts', 'S3 file and content management');
 
-  const { artifacts, isConnected } = useMCP();
+  const { executeTool, isConnected } = useDashboardServer();
   const [selectedFile, setSelectedFile] = createSignal<ArtifactItem | null>(null);
   const [uploadContent, setUploadContent] = createSignal('');
   const [uploadKey, setUploadKey] = createSignal('');

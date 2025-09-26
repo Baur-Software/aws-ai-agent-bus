@@ -4,6 +4,7 @@ use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::RwLock;
 use uuid::Uuid;
+use crate::rate_limiting::{AwsRateLimiter, AwsServiceLimits, AwsOperation};
 
 #[derive(Error, Debug)]
 pub enum TenantError {
@@ -50,8 +51,9 @@ pub enum Permission {
 pub struct ResourceLimits {
     pub max_kv_size: u64,         // Maximum KV storage in bytes
     pub max_artifacts: u32,       // Maximum number of artifacts
-    pub requests_per_minute: u32, // Rate limiting
+    pub requests_per_minute: u32, // Rate limiting (legacy)
     pub max_concurrent_requests: u32,
+    pub aws_service_limits: AwsServiceLimits, // AWS-specific rate limits
 }
 
 impl Default for ResourceLimits {
@@ -59,8 +61,9 @@ impl Default for ResourceLimits {
         Self {
             max_kv_size: 100_000_000, // 100MB
             max_artifacts: 1000,
-            requests_per_minute: 100,
+            requests_per_minute: 100, // Legacy fallback
             max_concurrent_requests: 10,
+            aws_service_limits: AwsServiceLimits::default(),
         }
     }
 }
@@ -116,9 +119,14 @@ impl TenantSession {
         let count = *self.request_count.read().await;
         let active = *self.active_requests.read().await;
 
-        // Simple rate limiting - in production, this would be more sophisticated
+        // Legacy rate limiting check
         count < self.context.resource_limits.requests_per_minute
             && active < self.context.resource_limits.max_concurrent_requests
+    }
+
+    /// Check if an AWS operation is allowed based on service-specific limits
+    pub async fn check_aws_operation(&self, aws_limiter: &AwsRateLimiter, operation: &AwsOperation) -> bool {
+        aws_limiter.check_aws_operation(&self.context.tenant_id, operation).await
     }
 
     pub fn has_permission(&self, permission: &Permission) -> bool {
@@ -133,6 +141,7 @@ pub struct TenantManager {
     sessions: Arc<RwLock<HashMap<String, Arc<TenantSession>>>>,
     // In production, this would integrate with a database
     tenant_configs: Arc<RwLock<HashMap<String, TenantContext>>>,
+    aws_rate_limiter: Arc<AwsRateLimiter>,
 }
 
 impl TenantManager {
@@ -161,9 +170,13 @@ impl TenantManager {
 
         tenant_configs.insert("demo-tenant".to_string(), demo_context);
 
+        // Create AWS rate limiter with default limits
+        let aws_rate_limiter = Arc::new(AwsRateLimiter::new(AwsServiceLimits::default()));
+
         Ok(Self {
             sessions: Arc::new(RwLock::new(HashMap::new())),
             tenant_configs: Arc::new(RwLock::new(tenant_configs)),
+            aws_rate_limiter,
         })
     }
 
@@ -199,6 +212,14 @@ impl TenantManager {
                 futures::executor::block_on(async { *session.last_activity.read().await });
             now.signed_duration_since(last_activity) < timeout
         });
+
+        // Also cleanup AWS rate limiter buckets
+        self.aws_rate_limiter.cleanup_expired_buckets().await;
+    }
+
+    /// Get AWS rate limiter for checking service-specific limits
+    pub fn get_aws_rate_limiter(&self) -> Arc<AwsRateLimiter> {
+        self.aws_rate_limiter.clone()
     }
 
     pub async fn validate_tenant_access(

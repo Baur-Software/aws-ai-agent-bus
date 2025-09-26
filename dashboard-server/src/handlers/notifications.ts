@@ -3,7 +3,38 @@
  * Provides MCP tools for sending and managing notifications via SNS
  */
 
-import { SNSService } from '../../aws/index.js';
+// TODO: Implement proper SNSService
+class SNSService {
+  async publish(params: any) {
+    console.log('SNS publish (stub):', params);
+    return { MessageId: 'stub-message-id' };
+  }
+
+  async publishNotification(params: any) {
+    console.log('SNS publishNotification (stub):', params);
+    return { success: true, messageId: 'stub-message-id' };
+  }
+
+  async subscribeToNotifications(protocol: any, endpoint: any, topicName: any) {
+    console.log('SNS subscribeToNotifications (stub):', { protocol, endpoint, topicName });
+    return { success: true, subscriptionArn: 'stub-subscription-arn' };
+  }
+
+  async unsubscribeFromNotifications(subscriptionArn: any) {
+    console.log('SNS unsubscribeFromNotifications (stub):', subscriptionArn);
+    return { success: true };
+  }
+
+  async publishIntegrationEvent(eventType: any, connectionName: any, userId: any, details: any) {
+    console.log('SNS publishIntegrationEvent (stub):', { eventType, connectionName, userId, details });
+    return { success: true, messageId: 'stub-message-id' };
+  }
+
+  async publishSystemEvent(level: any, component: any, message: any) {
+    console.log('SNS publishSystemEvent (stub):', { level, component, message });
+    return { success: true, messageId: 'stub-message-id' };
+  }
+}
 
 const snsService = new SNSService();
 

@@ -29,7 +29,7 @@ export class S3Service {
             // Add CreateBucketConfiguration for regions other than us-east-1
             ...(process.env.AWS_REGION && process.env.AWS_REGION !== 'us-east-1' && {
               CreateBucketConfiguration: {
-                LocationConstraint: process.env.AWS_REGION
+                LocationConstraint: process.env.AWS_REGION as any
               }
             })
           });

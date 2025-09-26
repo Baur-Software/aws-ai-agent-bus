@@ -1,5 +1,5 @@
 import { createSignal, createEffect, For, Show, createMemo } from 'solid-js';
-import { useMCP } from '../../../contexts/MCPContext';
+import { useDashboardServer } from '../../../contexts/DashboardServerContext';
 import { useIntegrations } from '../../../contexts/IntegrationsContext';
 import { useOrganization } from '../../../contexts/OrganizationContext';
 
@@ -43,7 +43,7 @@ interface TestCase {
 }
 
 export default function MCPToolGenerator() {
-  const mcp = useMCP();
+  const dashboardServer = useDashboardServer();
   const integrations = useIntegrations();
   const { currentOrganization } = useOrganization();
 

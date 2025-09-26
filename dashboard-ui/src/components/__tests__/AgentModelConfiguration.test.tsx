@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@solidjs/testing-library';
 import { createRoot } from 'solid-js';
-import WorkflowNodeDetails from '../WorkflowNodeDetails';
-import type { WorkflowNode } from '../WorkflowNodeDetails';
+import WorkflowNodeDetails from '../workflow/ui/WorkflowNodeDetails';
+import type { WorkflowNode } from '../workflow/ui/WorkflowNodeDetails';
 
 // Test-specific mock overrides
 const mockExecuteTool = vi.fn();

@@ -1,5 +1,5 @@
 import { createSignal, onMount, Show, For, createResource } from 'solid-js';
-import { useMCP } from '../contexts/MCPContext';
+import { useDashboardServer } from '../contexts/DashboardServerContext';
 import { useWorkflow } from '../contexts/WorkflowContext';
 import { useKVStore } from '../contexts/KVStoreContext';
 import { usePageHeader } from '../contexts/HeaderContext';
@@ -26,7 +26,7 @@ function Dashboard(props: DashboardProps = {}) {
     usePageHeader('Statistics', 'Performance metrics and system overview');
   }
 
-  const { isConnected, serverVersion, health, artifacts, availableTools } = useMCP();
+  const { isConnected, executeTool } = useDashboardServer();
   const { workflows } = useWorkflow();
   const kvStore = useKVStore();
   const [uptime, setUptime] = createSignal('0h 0m 0s');

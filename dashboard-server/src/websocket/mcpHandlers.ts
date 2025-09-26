@@ -1,7 +1,7 @@
 import { WebSocket } from 'ws';
-import { mcpMarketplace, MCPServerListing } from '../services/MCPMarketplace.js';
-import { KVHandler } from '../handlers/kv.js';
-import EventsHandler from '../handlers/events.js';
+import { mcpMarketplace, MCPServerListing } from '../services/MCPMarketplace';
+import { KVHandler } from '../handlers/kv';
+import { EventsHandler } from '../handlers/events';
 
 export interface MCPMessage {
   type: string;

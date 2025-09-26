@@ -1,10 +1,12 @@
-import { GetItemCommand, PutItemCommand, QueryCommand, ScanCommand, CreateTableCommand, DescribeTableCommand, waitUntilTableExists } from '@aws-sdk/client-dynamodb';
+import { GetItemCommand, PutItemCommand, QueryCommand, ScanCommand, CreateTableCommand, DescribeTableCommand, waitUntilTableExists, UpdateTimeToLiveCommand } from '@aws-sdk/client-dynamodb';
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 import { dynamodb } from './clients.js';
 
 const TABLE_NAME = process.env.AGENT_MESH_KV_TABLE || process.env.DYNAMODB_TABLE || 'agent-mesh-dev-kv';
 
 export class DynamoDBService {
+  client: any;
+
   constructor() {
     this.client = dynamodb;
   }
@@ -43,15 +45,6 @@ export class DynamoDBService {
               }
             ],
             BillingMode: 'PAY_PER_REQUEST',
-            // Enable TTL for automatic expiration
-            TimeToLiveSpecification: {
-              AttributeName: 'expires_at',
-              Enabled: true
-            },
-            // Enable point-in-time recovery
-            PointInTimeRecoverySpecification: {
-              PointInTimeRecoveryEnabled: true
-            },
             // Add server-side encryption
             SSESpecification: {
               Enabled: true
@@ -64,6 +57,21 @@ export class DynamoDBService {
           // Wait for table to become active
           await waitUntilTableExists({ client: dynamodb, maxWaitTime: 60 }, { TableName: TABLE_NAME });
           console.log(`KV table ${TABLE_NAME} is now active`);
+
+          // Enable TTL for automatic expiration
+          try {
+            const ttlCommand = new UpdateTimeToLiveCommand({
+              TableName: TABLE_NAME,
+              TimeToLiveSpecification: {
+                AttributeName: 'expires_at',
+                Enabled: true
+              }
+            });
+            await dynamodb.send(ttlCommand);
+            console.log(`Enabled TTL on table: ${TABLE_NAME}`);
+          } catch (ttlError) {
+            console.warn(`Could not enable TTL on ${TABLE_NAME}:`, ttlError.message);
+          }
           return true;
         } catch (createError) {
           console.warn(`Cannot create table ${TABLE_NAME}:`, createError.message);

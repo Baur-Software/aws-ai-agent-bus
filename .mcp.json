@@ -1,10 +1,14 @@
 {
-  "agent-mesh": {
-    "command": "mcp-rust/target/debug/mcp-multi-tenant",
-    "args": [],
-    "env": {
-      "AWS_REGION": "us-west-2",
-      "AGENT_MESH_ENV": "dev"
+  "mcpServers": {
+    "agent-mesh": {
+      "command": "./mcp-rust/target/release/mcp-multi-tenant.exe",
+      "env": {
+        "AWS_REGION": "us-west-2",
+        "AWS_PROFILE": "default",
+        "AGENT_MESH_KV_TABLE": "agent-mesh-kv",
+        "AGENT_MESH_ARTIFACTS_BUCKET": "agent-mesh-artifacts",
+        "AGENT_MESH_EVENT_BUS": "agent-mesh-events"
+      }
     }
   }
 }

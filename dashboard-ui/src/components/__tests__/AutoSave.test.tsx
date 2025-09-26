@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { createRoot, createSignal } from 'solid-js';
-import type { WorkflowMetadata } from '../WorkflowManager';
-import type { WorkflowNode } from '../WorkflowNodeDetails';
+import type { WorkflowMetadata } from '../workflow/core/WorkflowManager';
+import type { WorkflowNode } from '../workflow/ui/WorkflowNodeDetails';
 
 // Mock timers for testing auto-save functionality
 vi.useFakeTimers();

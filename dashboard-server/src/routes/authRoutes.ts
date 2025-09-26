@@ -216,6 +216,8 @@ export function setupAuthRoutes(deps: AuthDependencies): Router {
         userId: user.id,
         email: user.email,
         name: user.name,
+        organizationMemberships: [],
+        personalNamespace: `user-${user.id}`,
         organizationId: user.currentOrganizationId || user.organizations[0] || '',
         role: 'admin' // Default role - would come from user permissions in production
       });
@@ -270,6 +272,8 @@ export function setupAuthRoutes(deps: AuthDependencies): Router {
         userId: user.id,
         email: user.email,
         name: user.name,
+        organizationMemberships: [],
+        personalNamespace: `user-${user.id}`,
         organizationId: user.currentOrganizationId || user.organizations[0] || '',
         role: 'admin'
       });
@@ -400,6 +404,8 @@ export function setupAuthRoutes(deps: AuthDependencies): Router {
         userId: req.user!.userId,
         email: req.user!.email!,
         name: req.user!.name!,
+        organizationMemberships: [],
+        personalNamespace: `user-${req.user!.userId}`,
         organizationId,
         role: req.user!.role
       });

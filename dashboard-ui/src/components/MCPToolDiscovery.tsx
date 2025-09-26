@@ -1,5 +1,5 @@
 import { createSignal, createEffect, Show, For } from 'solid-js';
-import { useMCP } from '../contexts/MCPContext';
+import { useDashboardServer } from '../contexts/DashboardServerContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import {
   Search,
@@ -75,7 +75,7 @@ export default function MCPToolDiscovery(props: MCPToolDiscoveryProps) {
   const [selectedTool, setSelectedTool] = createSignal<MCPTool | null>(null);
   const [refreshing, setRefreshing] = createSignal(false);
 
-  const { executeTool, isConnected } = useMCP();
+  const { executeTool, isConnected } = useDashboardServer();
   const { success, error, info } = useNotifications();
 
   const categories = [

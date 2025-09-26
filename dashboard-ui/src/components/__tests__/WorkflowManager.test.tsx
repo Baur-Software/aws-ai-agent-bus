@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@solidjs/testing-library';
 import { createRoot } from 'solid-js';
-import WorkflowManager from '../WorkflowManager';
-import type { WorkflowMetadata } from '../WorkflowManager';
+import WorkflowManager from '../workflow/core/WorkflowManager';
+import type { WorkflowMetadata } from '../workflow/core/WorkflowManager';
 
 // Mock dependencies
 const mockKVStore = {

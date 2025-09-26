@@ -8,7 +8,7 @@ import {
 } from '../utils/oauth2Generator';
 import type { AppConfig } from '../contexts/KVStoreContext';
 import { useEventDrivenAppConfigs } from '../hooks/useEventDrivenKV';
-import { useMCP } from '../contexts/MCPContext';
+import { useDashboardServer } from '../contexts/DashboardServerContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import {
   Plus, X, Check, Code, Key, Globe,
@@ -24,7 +24,7 @@ interface AppConfigGeneratorProps {
 export default function AppConfigGenerator(props: AppConfigGeneratorProps) {
   // Hooks
   const { saveConfig, isLoading } = useEventDrivenAppConfigs();
-  const { events } = useMCP();
+  const dashboardServer = useDashboardServer();
   const { success, error } = useNotifications();
 
   // Form state

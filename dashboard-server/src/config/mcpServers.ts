@@ -5,11 +5,14 @@ import { MCPServerConfig } from '../services/MCPStdioService.js';
  */
 export const MCP_SERVERS: Record<string, MCPServerConfig> = {
   aws: {
-    command: 'C:\\Users\\Todd\\.cargo\\bin\\use_aws_mcp.exe',
+    command: './mcp-rust/target/release/mcp-multi-tenant.exe',
     args: [],
     env: {
       AWS_REGION: process.env.AWS_REGION || 'us-west-2',
-      AWS_PROFILE: process.env.AWS_PROFILE || 'default'
+      AWS_PROFILE: process.env.AWS_PROFILE || 'default',
+      AGENT_MESH_KV_TABLE: process.env.AGENT_MESH_KV_TABLE || 'agent-mesh-kv',
+      AGENT_MESH_ARTIFACTS_BUCKET: process.env.AGENT_MESH_ARTIFACTS_BUCKET || 'agent-mesh-artifacts',
+      AGENT_MESH_EVENT_BUS: process.env.AGENT_MESH_EVENT_BUS || 'agent-mesh-events'
     }
   },
 

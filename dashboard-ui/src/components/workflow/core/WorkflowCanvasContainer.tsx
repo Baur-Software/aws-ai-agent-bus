@@ -9,7 +9,6 @@ import WorkflowBrowserModal from '../modals/WorkflowBrowserModal';
 import { useOrganization } from '../../../contexts/OrganizationContext';
 import { useNotifications } from '../../../contexts/NotificationContext';
 import { useKVStore } from '../../../contexts/KVStoreContext';
-import { useMCP } from '../../../contexts/MCPContext';
 import { useDashboardServer } from '../../../contexts/DashboardServerContext';
 
 interface WorkflowCanvasContainerProps {
@@ -118,7 +117,7 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
   const { currentOrganization, user } = useOrganization();
   const { success, error } = useNotifications();
   const kvStore = useKVStore();
-  const { executeTool } = useMCP();
+  const { executeTool } = useDashboardServer();
   // const dashboard = useDashboard(); // Removed - using DashboardServerContext instead
 
   // Global drag event handlers for external node drops

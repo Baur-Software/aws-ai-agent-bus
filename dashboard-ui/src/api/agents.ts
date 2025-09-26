@@ -1,18 +1,18 @@
 // Agent API for dashboard-ui
 // Connects to dashboard-server for agent CRUD operations
 
-export async function listAgents(ownerType: 'organization' | 'user', ownerId: string) {
+export async function listAgents(_ownerType: 'organization' | 'user', _ownerId: string) {
   // TODO: Replace with actual WebSocket/evented API call
   // Placeholder: returns empty array
   return [];
 }
 
-export async function getAgent(agentId: string, ownerType: 'organization' | 'user', ownerId: string) {
+export async function getAgent(_agentId: string, _ownerType: 'organization' | 'user', _ownerId: string) {
   // TODO: Replace with actual API call
   return null;
 }
 
-export async function createAgent(params: {
+export async function createAgent(_params: {
   ownerType: 'organization' | 'user';
   ownerId: string;
   name: string;
@@ -25,7 +25,7 @@ export async function createAgent(params: {
   return { success: false };
 }
 
-export async function updateAgent(params: {
+export async function updateAgent(_params: {
   agentId: string;
   ownerType: 'organization' | 'user';
   ownerId: string;
@@ -38,7 +38,7 @@ export async function updateAgent(params: {
   return { success: false };
 }
 
-export async function deleteAgent(agentId: string, ownerType: 'organization' | 'user', ownerId: string) {
+export async function deleteAgent(_agentId: string, _ownerType: 'organization' | 'user', _ownerId: string) {
   // TODO: Replace with actual API call
   return { success: false };
 }
