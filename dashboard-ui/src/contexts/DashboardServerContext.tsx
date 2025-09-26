@@ -369,7 +369,7 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
         id: messageId,
         type: 'mcp_call',
         tool,
-        params
+        arguments: params
       });
     });
   };

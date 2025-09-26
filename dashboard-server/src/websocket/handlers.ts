@@ -437,11 +437,25 @@ async function handleWebSocketMessage(ws: WebSocket, message: any, { metricsAggr
     }
   } catch (error) {
     console.error(`Error handling WebSocket message ${message.type}:`, error);
+
+    // Properly serialize error message
+    let errorMessage: string;
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    } else if (error && typeof error === 'object') {
+      // Handle cases where error is an object
+      errorMessage = JSON.stringify(error);
+    } else {
+      errorMessage = 'Unknown error occurred';
+    }
+
     ws.send(JSON.stringify({
       id: message.id,
       error: {
         code: -32603,
-        message: error instanceof Error ? error.message : 'Internal error'
+        message: errorMessage
       }
     }));
   }
