@@ -1,7 +1,7 @@
 use mcp_rust::handlers::HandlerRegistry;
 use mcp_rust::mcp::*;
+use mcp_rust::rate_limiting::{AwsOperation, AwsRateLimiter, AwsServiceLimits};
 use mcp_rust::tenant::{TenantManager, TenantSession};
-use mcp_rust::rate_limiting::{AwsOperation, AwsServiceLimits, AwsRateLimiter};
 use serde_json::json;
 use std::sync::Arc;
 
@@ -137,7 +137,12 @@ async fn test_handle_tool_call_missing_params() {
         .await;
     assert!(resp.error.is_some());
     assert_eq!(resp.error.as_ref().unwrap().code, -32600); // Invalid request
-    assert!(resp.error.as_ref().unwrap().message.contains("Missing parameters"));
+    assert!(resp
+        .error
+        .as_ref()
+        .unwrap()
+        .message
+        .contains("Missing parameters"));
 }
 
 #[tokio::test]
@@ -161,7 +166,12 @@ async fn test_handle_tool_call_missing_tool_name() {
         .await;
     assert!(resp.error.is_some());
     assert_eq!(resp.error.as_ref().unwrap().code, -32600); // Invalid request
-    assert!(resp.error.as_ref().unwrap().message.contains("Missing tool name"));
+    assert!(resp
+        .error
+        .as_ref()
+        .unwrap()
+        .message
+        .contains("Missing tool name"));
 }
 
 #[tokio::test]
@@ -185,7 +195,12 @@ async fn test_handle_tool_call_invalid_tool_name_type() {
         .await;
     assert!(resp.error.is_some());
     assert_eq!(resp.error.as_ref().unwrap().code, -32600); // Invalid request
-    assert!(resp.error.as_ref().unwrap().message.contains("Invalid tool name"));
+    assert!(resp
+        .error
+        .as_ref()
+        .unwrap()
+        .message
+        .contains("Invalid tool name"));
 }
 
 #[tokio::test]
@@ -268,14 +283,15 @@ async fn test_rate_limiting_multiple_requests() {
     // At least one request should be rate limited
     let rate_limited_count = responses
         .iter()
-        .filter(|resp| {
-            resp.error.is_some() && resp.error.as_ref().unwrap().code == -32001
-        })
+        .filter(|resp| resp.error.is_some() && resp.error.as_ref().unwrap().code == -32001)
         .count();
 
     // We expect some rate limiting to occur with 20 rapid requests
     // The exact threshold depends on the rate limiter configuration
-    assert!(rate_limited_count > 0, "Expected some requests to be rate limited");
+    assert!(
+        rate_limited_count > 0,
+        "Expected some requests to be rate limited"
+    );
 }
 
 #[tokio::test]
@@ -308,7 +324,12 @@ async fn test_rate_limiting_error_response() {
 
     if let Some(resp) = rate_limited_response {
         assert_eq!(resp.error.as_ref().unwrap().code, -32001);
-        assert!(resp.error.as_ref().unwrap().message.contains("Rate limit exceeded"));
+        assert!(resp
+            .error
+            .as_ref()
+            .unwrap()
+            .message
+            .contains("Rate limit exceeded"));
         assert!(resp.result.is_none());
     }
 }
@@ -430,7 +451,10 @@ async fn test_aws_rate_limiting_dynamodb_operations() {
     }
 
     // Should trigger AWS-specific rate limiting
-    assert!(rate_limited_count > 0, "Expected AWS DynamoDB rate limiting to trigger");
+    assert!(
+        rate_limited_count > 0,
+        "Expected AWS DynamoDB rate limiting to trigger"
+    );
 }
 
 #[tokio::test]
@@ -463,7 +487,10 @@ async fn test_aws_rate_limiting_s3_operations() {
     }
 
     // S3 PUT operations should be rate limited
-    assert!(rate_limited_count > 0, "Expected AWS S3 rate limiting to trigger");
+    assert!(
+        rate_limited_count > 0,
+        "Expected AWS S3 rate limiting to trigger"
+    );
 }
 
 #[tokio::test]
@@ -539,7 +566,8 @@ async fn test_aws_operation_from_tool_name() {
     });
 
     if let Some(AwsOperation::EventBridgePutEvents { event_count }) =
-        AwsOperation::from_tool_name("events_send", &events_params) {
+        AwsOperation::from_tool_name("events_send", &events_params)
+    {
         assert_eq!(event_count, 3);
     } else {
         panic!("Expected EventBridgePutEvents operation");
@@ -565,7 +593,9 @@ async fn test_tenant_isolation_aws_rate_limits() {
             user_id: Some("user1".to_string()),
             session_token: None,
         };
-        server.handle_request(&serde_json::to_string(&req).unwrap()).await;
+        server
+            .handle_request(&serde_json::to_string(&req).unwrap())
+            .await;
     }
 
     // tenant2 should still be able to make requests
@@ -588,7 +618,10 @@ async fn test_tenant_isolation_aws_rate_limits() {
     // tenant2 should not be affected by tenant1's rate limiting
     // (though it might fail for other reasons like missing handlers)
     if resp.error.is_some() {
-        assert_ne!(resp.error.as_ref().unwrap().code, -32001,
-                  "tenant2 should not be rate limited due to tenant1's usage");
+        assert_ne!(
+            resp.error.as_ref().unwrap().code,
+            -32001,
+            "tenant2 should not be rate limited due to tenant1's usage"
+        );
     }
 }

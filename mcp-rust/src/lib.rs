@@ -1,8 +1,8 @@
 pub mod aws;
 pub mod handlers;
 pub mod mcp;
-pub mod tenant;
 pub mod rate_limiting;
+pub mod tenant;
 
 pub use aws::{AwsError, AwsService};
 pub use handlers::{Handler, HandlerError, HandlerRegistry};

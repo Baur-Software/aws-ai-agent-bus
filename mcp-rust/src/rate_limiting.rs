@@ -1,15 +1,15 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use serde::{Deserialize, Serialize};
 
 /// AWS service rate limits based on actual AWS capabilities
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AwsServiceLimits {
     // DynamoDB limits (per second)
-    pub dynamodb_read_units: u32,    // Default: 40,000 RCU/sec
-    pub dynamodb_write_units: u32,   // Default: 40,000 WCU/sec
+    pub dynamodb_read_units: u32,      // Default: 40,000 RCU/sec
+    pub dynamodb_write_units: u32,     // Default: 40,000 WCU/sec
     pub dynamodb_queries_per_sec: u32, // Default: 10,000/sec
 
     // S3 limits (per second)
@@ -25,15 +25,15 @@ pub struct AwsServiceLimits {
     pub secrets_manager_requests_per_sec: u32, // Default: 5,000/sec
 
     // General AWS API limits
-    pub aws_api_calls_per_sec: u32,    // Default: 2,000/sec (varies by service)
-    pub aws_burst_capacity: u32,       // Burst allowance
+    pub aws_api_calls_per_sec: u32, // Default: 2,000/sec (varies by service)
+    pub aws_burst_capacity: u32,    // Burst allowance
 }
 
 impl Default for AwsServiceLimits {
     fn default() -> Self {
         Self {
             // Conservative defaults based on AWS service quotas
-            dynamodb_read_units: 1000,     // Conservative for multi-tenant
+            dynamodb_read_units: 1000, // Conservative for multi-tenant
             dynamodb_write_units: 1000,
             dynamodb_queries_per_sec: 100,
 
@@ -113,9 +113,9 @@ impl AwsRateLimiter {
         let (capacity, rate, cost) = self.get_limits_for_operation(operation);
 
         let mut buckets = self.buckets.write().await;
-        let bucket = buckets.entry(bucket_key).or_insert_with(|| {
-            RateLimitBucket::new(capacity, rate)
-        });
+        let bucket = buckets
+            .entry(bucket_key)
+            .or_insert_with(|| RateLimitBucket::new(capacity, rate));
 
         bucket.try_consume(cost)
     }
@@ -177,9 +177,7 @@ impl AwsRateLimiter {
         let now = Instant::now();
         let expiry_threshold = Duration::from_secs(3600); // 1 hour
 
-        buckets.retain(|_, bucket| {
-            now.duration_since(bucket.last_refill) < expiry_threshold
-        });
+        buckets.retain(|_, bucket| now.duration_since(bucket.last_refill) < expiry_threshold);
     }
 }
 
@@ -220,12 +218,13 @@ impl AwsOperation {
             "artifacts_get" | "artifacts_list" => Some(AwsOperation::S3Get),
             "artifacts_put" => Some(AwsOperation::S3Put),
             "events_send" => {
-                let event_count = args.get("events")
+                let event_count = args
+                    .get("events")
                     .and_then(|v| v.as_array())
                     .map(|arr| arr.len() as u32)
                     .unwrap_or(1);
                 Some(AwsOperation::EventBridgePutEvents { event_count })
-            },
+            }
             "analytics_query" => Some(AwsOperation::DynamoDbQuery),
             _ => Some(AwsOperation::GenericAwsApi),
         }
@@ -245,11 +244,23 @@ mod tests {
         let limiter = AwsRateLimiter::new(limits);
 
         // Should allow initial requests
-        assert!(limiter.check_aws_operation("tenant1", &AwsOperation::DynamoDbRead { read_units: 5 }).await);
-        assert!(limiter.check_aws_operation("tenant1", &AwsOperation::DynamoDbRead { read_units: 5 }).await);
+        assert!(
+            limiter
+                .check_aws_operation("tenant1", &AwsOperation::DynamoDbRead { read_units: 5 })
+                .await
+        );
+        assert!(
+            limiter
+                .check_aws_operation("tenant1", &AwsOperation::DynamoDbRead { read_units: 5 })
+                .await
+        );
 
         // Should reject when limit exceeded
-        assert!(!limiter.check_aws_operation("tenant1", &AwsOperation::DynamoDbRead { read_units: 1 }).await);
+        assert!(
+            !limiter
+                .check_aws_operation("tenant1", &AwsOperation::DynamoDbRead { read_units: 1 })
+                .await
+        );
     }
 
     #[tokio::test]
@@ -261,10 +272,22 @@ mod tests {
         let limiter = AwsRateLimiter::new(limits);
 
         // Tenant 1 uses up their quota
-        assert!(limiter.check_aws_operation("tenant1", &AwsOperation::DynamoDbRead { read_units: 5 }).await);
-        assert!(!limiter.check_aws_operation("tenant1", &AwsOperation::DynamoDbRead { read_units: 1 }).await);
+        assert!(
+            limiter
+                .check_aws_operation("tenant1", &AwsOperation::DynamoDbRead { read_units: 5 })
+                .await
+        );
+        assert!(
+            !limiter
+                .check_aws_operation("tenant1", &AwsOperation::DynamoDbRead { read_units: 1 })
+                .await
+        );
 
         // Tenant 2 should still have their quota
-        assert!(limiter.check_aws_operation("tenant2", &AwsOperation::DynamoDbRead { read_units: 5 }).await);
+        assert!(
+            limiter
+                .check_aws_operation("tenant2", &AwsOperation::DynamoDbRead { read_units: 5 })
+                .await
+        );
     }
 }

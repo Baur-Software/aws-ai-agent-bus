@@ -6,8 +6,8 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tracing::{debug, error, info};
 
 use crate::handlers::HandlerRegistry;
-use crate::tenant::{TenantManager, TenantSession};
 use crate::rate_limiting::AwsOperation;
+use crate::tenant::{TenantManager, TenantSession};
 
 #[derive(Error, Debug)]
 pub enum MCPError {
@@ -179,7 +179,10 @@ impl MCPServer {
                 if let Some(tool_name) = params.get("name").and_then(|v| v.as_str()) {
                     if let Some(aws_operation) = AwsOperation::from_tool_name(tool_name, params) {
                         let aws_limiter = self.tenant_manager.get_aws_rate_limiter();
-                        if !session.check_aws_operation(&aws_limiter, &aws_operation).await {
+                        if !session
+                            .check_aws_operation(&aws_limiter, &aws_operation)
+                            .await
+                        {
                             return Err(MCPError::RateLimitExceeded);
                         }
                     }

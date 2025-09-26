@@ -79,7 +79,10 @@ impl AwsService {
             .dynamodb
             .get_item()
             .table_name(&self.kv_table)
-            .key("key", aws_sdk_dynamodb::types::AttributeValue::S(tenant_key))
+            .key(
+                "key",
+                aws_sdk_dynamodb::types::AttributeValue::S(tenant_key),
+            )
             .send()
             .await
             .map_err(|e| AwsError::DynamoDb(e.to_string()))?;
@@ -111,7 +114,10 @@ impl AwsService {
             .dynamodb
             .put_item()
             .table_name(&self.kv_table)
-            .item("key", aws_sdk_dynamodb::types::AttributeValue::S(tenant_key))
+            .item(
+                "key",
+                aws_sdk_dynamodb::types::AttributeValue::S(tenant_key),
+            )
             .item(
                 "value",
                 aws_sdk_dynamodb::types::AttributeValue::S(value.to_string()),

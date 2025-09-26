@@ -18,6 +18,7 @@
     "@aws-sdk/client-eventbridge": "^3.450.0",
     "@aws-sdk/client-s3": "^3.450.0",
     "@aws-sdk/client-sfn": "^3.888.0",
+    "@aws-sdk/client-sns": "^3.896.0",
     "@aws-sdk/credential-providers": "^3.888.0",
     "@aws-sdk/lib-dynamodb": "^3.888.0",
     "@aws-sdk/s3-request-presigner": "^3.888.0",

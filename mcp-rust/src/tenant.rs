@@ -1,10 +1,10 @@
+use crate::rate_limiting::{AwsOperation, AwsRateLimiter, AwsServiceLimits};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use crate::rate_limiting::{AwsRateLimiter, AwsServiceLimits, AwsOperation};
 
 #[derive(Error, Debug)]
 pub enum TenantError {
@@ -125,8 +125,14 @@ impl TenantSession {
     }
 
     /// Check if an AWS operation is allowed based on service-specific limits
-    pub async fn check_aws_operation(&self, aws_limiter: &AwsRateLimiter, operation: &AwsOperation) -> bool {
-        aws_limiter.check_aws_operation(&self.context.tenant_id, operation).await
+    pub async fn check_aws_operation(
+        &self,
+        aws_limiter: &AwsRateLimiter,
+        operation: &AwsOperation,
+    ) -> bool {
+        aws_limiter
+            .check_aws_operation(&self.context.tenant_id, operation)
+            .await
     }
 
     pub fn has_permission(&self, permission: &Permission) -> bool {

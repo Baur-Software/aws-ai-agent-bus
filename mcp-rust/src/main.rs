@@ -4,8 +4,8 @@ use tracing::info;
 mod aws;
 mod handlers;
 mod mcp;
-mod tenant;
 mod rate_limiting;
+mod tenant;
 
 use mcp::MCPServer;
 use tenant::TenantManager;
