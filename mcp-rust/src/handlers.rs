@@ -36,7 +36,6 @@ pub trait Handler: Send + Sync {
 
 pub struct HandlerRegistry {
     handlers: HashMap<String, Arc<dyn Handler>>,
-    aws_service: Arc<AwsService>,
 }
 
 impl HandlerRegistry {
@@ -74,10 +73,7 @@ impl HandlerRegistry {
             Arc::new(EventsSendHandler::new(aws_service.clone())),
         );
 
-        Ok(Self {
-            handlers,
-            aws_service,
-        })
+        Ok(Self { handlers })
     }
 
     pub async fn list_tools(&self, session: &TenantSession) -> Result<Vec<Value>, HandlerError> {

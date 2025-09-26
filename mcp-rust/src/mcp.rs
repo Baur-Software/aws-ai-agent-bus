@@ -112,7 +112,7 @@ impl MCPServer {
                     break;
                 }
                 Ok(_) => {
-                    let response = self.handle_request(&line.trim()).await;
+                    let response = self.handle_request(line.trim()).await;
                     let response_json = serde_json::to_string(&response)?;
 
                     stdout.write_all(response_json.as_bytes()).await?;
