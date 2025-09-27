@@ -5,7 +5,7 @@ import { MCPServerConfig } from '../services/MCPStdioService.js';
  */
 export const MCP_SERVERS: Record<string, MCPServerConfig> = {
   aws: {
-    command: './mcp-rust/target/release/mcp-multi-tenant.exe',
+    command: '../mcp-rust/target/release/mcp-multi-tenant.exe',
     args: [],
     env: {
       AWS_REGION: process.env.AWS_REGION || 'us-west-2',
