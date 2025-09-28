@@ -27,7 +27,7 @@ describe('AuthMiddleware', () => {
 
   beforeAll(async () => {
     // Import after mocking
-    const module = await import('../../src/middleware/auth.js');
+    const module = await import('../../src/middleware/auth');
     AuthMiddleware = module.default;
   });
 
@@ -142,7 +142,7 @@ describe('AuthMiddleware', () => {
 
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
-        error: 'Invalid token'
+        error: 'Invalid or expired token'
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -157,7 +157,7 @@ describe('AuthMiddleware', () => {
 
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
-        error: 'Token expired'
+        error: 'Invalid or expired token'
       });
       expect(mockNext).not.toHaveBeenCalled();
     });

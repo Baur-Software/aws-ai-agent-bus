@@ -2,7 +2,7 @@
 title: AWS AI Agent Bus
 description: Comprehensive infrastructure and toolset for AI-powered agent systems on AWS
 baseurl: "/aws-ai-agent-bus"
-url: "https://your-username.github.io"
+url: "https://baur-software.github.io"
 
 # Theme
 theme: minima
@@ -53,15 +53,15 @@ include:
   
 # SEO
 twitter:
-  username: your-twitter
+  username: baur_software
   card: summary
-  
+
 author:
-  name: Your Name
-  twitter: your-twitter
+  name: Baur Software
+  twitter: baur_software
 
 # Social links
-github_username: your-username
+github_username: baur-software
 
 # Google Analytics (optional)
 # google_analytics: UA-XXXXXXXX-X
