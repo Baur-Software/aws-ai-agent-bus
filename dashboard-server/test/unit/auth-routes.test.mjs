@@ -1,34 +1,41 @@
-import { jest } from '@jest/globals';
+import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
-import bcrypt from 'bcrypt';
 
-// Mock dependencies
-jest.mock('bcrypt', () => ({
-  compare: jest.fn(),
-  hash: jest.fn()
+// Mock dependencies - declare before import
+const mockBcrypt = vi.hoisted(() => ({
+  compare: vi.fn(),
+  hash: vi.fn()
 }));
 
-jest.mock('jsonwebtoken', () => ({
-  sign: jest.fn(),
-  verify: jest.fn()
+vi.mock('bcrypt', () => ({
+  default: mockBcrypt
+}));
+
+import bcrypt from 'bcrypt';
+
+vi.mock('jsonwebtoken', () => ({
+  default: {
+    sign: vi.fn(),
+    verify: vi.fn()
+  }
 }));
 
 // Mock AWS SDK clients
 const mockDynamoDBClient = {
-  send: jest.fn()
+  send: vi.fn()
 };
 
 const mockEventBridgeClient = {
-  send: jest.fn()
+  send: vi.fn()
 };
 
-jest.mock('@aws-sdk/client-dynamodb', () => ({
-  DynamoDBClient: jest.fn(() => mockDynamoDBClient)
+vi.mock('@aws-sdk/client-dynamodb', () => ({
+  DynamoDBClient: vi.fn(() => mockDynamoDBClient)
 }));
 
-jest.mock('@aws-sdk/client-eventbridge', () => ({
-  EventBridgeClient: jest.fn(() => mockEventBridgeClient)
+vi.mock('@aws-sdk/client-eventbridge', () => ({
+  EventBridgeClient: vi.fn(() => mockEventBridgeClient)
 }));
 
 describe('Auth Routes', () => {
@@ -38,7 +45,7 @@ describe('Auth Routes', () => {
 
   beforeAll(async () => {
     // Import modules after mocking
-    const authModule = await import('../../src/routes/authRoutes.js');
+    const authModule = await import('../../src/routes/authRoutes');
     setupAuthRoutes = authModule.setupAuthRoutes;
     AuthService = authModule.AuthService;
 
@@ -52,7 +59,7 @@ describe('Auth Routes', () => {
   });
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Reset environment
     process.env.ENABLE_DEV_AUTH = 'false';
@@ -71,13 +78,13 @@ describe('Auth Routes', () => {
         currentOrganizationId: 'org-123'
       };
 
-      jest.spyOn(AuthService, 'authenticateUser').mockResolvedValue(mockUser);
-      jest.spyOn(AuthService, 'getUserOrganizations').mockResolvedValue([]);
-      jest.spyOn(AuthService, 'getOrganization').mockResolvedValue(null);
+      vi.spyOn(AuthService, 'authenticateUser').mockResolvedValue(mockUser);
+      vi.spyOn(AuthService, 'getUserOrganizations').mockResolvedValue([]);
+      vi.spyOn(AuthService, 'getOrganization').mockResolvedValue(null);
 
       // Mock JWT generation
       const jwt = await import('jsonwebtoken');
-      jwt.sign.mockReturnValue('mock-jwt-token');
+      jwt.default.sign.mockReturnValue('mock-jwt-token');
 
       const response = await request(app)
         .post('/api/auth/login')
@@ -94,7 +101,7 @@ describe('Auth Routes', () => {
     });
 
     it('should return 401 for invalid credentials', async () => {
-      jest.spyOn(AuthService, 'authenticateUser').mockResolvedValue(null);
+      vi.spyOn(AuthService, 'authenticateUser').mockResolvedValue(null);
 
       const response = await request(app)
         .post('/api/auth/login')
@@ -130,13 +137,13 @@ describe('Auth Routes', () => {
         currentOrganizationId: 'org-123'
       };
 
-      jest.spyOn(AuthService, 'createUser').mockResolvedValue(mockUser);
-      jest.spyOn(AuthService, 'getUserOrganizations').mockResolvedValue([]);
-      jest.spyOn(AuthService, 'getOrganization').mockResolvedValue(null);
+      vi.spyOn(AuthService, 'createUser').mockResolvedValue(mockUser);
+      vi.spyOn(AuthService, 'getUserOrganizations').mockResolvedValue([]);
+      vi.spyOn(AuthService, 'getOrganization').mockResolvedValue(null);
 
       // Mock JWT generation
       const jwt = await import('jsonwebtoken');
-      jwt.sign.mockReturnValue('mock-jwt-token');
+      jwt.default.sign.mockReturnValue('mock-jwt-token');
 
       const response = await request(app)
         .post('/api/auth/register')
@@ -180,7 +187,7 @@ describe('Auth Routes', () => {
     });
 
     it('should return 409 for existing user', async () => {
-      jest.spyOn(AuthService, 'createUser').mockRejectedValue(new Error('User already exists'));
+      vi.spyOn(AuthService, 'createUser').mockRejectedValue(new Error('User already exists'));
 
       const response = await request(app)
         .post('/api/auth/register')
@@ -210,17 +217,17 @@ describe('Auth Routes', () => {
   describe('AuthService', () => {
     describe('authenticateUser', () => {
       it('should authenticate user with correct password', async () => {
-        bcrypt.compare.mockResolvedValue(true);
+        mockBcrypt.compare.mockResolvedValue(true);
 
         const result = await AuthService.authenticateUser('demo@example.com', 'password');
 
         expect(result).toBeDefined();
         expect(result.email).toBe('demo@example.com');
-        expect(bcrypt.compare).toHaveBeenCalledWith('password', expect.any(String));
+        expect(mockBcrypt.compare).toHaveBeenCalledWith('password', expect.any(String));
       });
 
       it('should return null for incorrect password', async () => {
-        bcrypt.compare.mockResolvedValue(false);
+        mockBcrypt.compare.mockResolvedValue(false);
 
         const result = await AuthService.authenticateUser('demo@example.com', 'wrongpassword');
 
@@ -237,7 +244,7 @@ describe('Auth Routes', () => {
     describe('createUser', () => {
       it('should create new user with hashed password', async () => {
         const hashedPassword = 'hashed-password-123';
-        bcrypt.hash.mockResolvedValue(hashedPassword);
+        mockBcrypt.hash.mockResolvedValue(hashedPassword);
 
         const user = await AuthService.createUser('newuser@example.com', 'password123', 'New User');
 
@@ -246,7 +253,7 @@ describe('Auth Routes', () => {
         expect(user.name).toBe('New User');
         expect(user.passwordHash).toBe(hashedPassword);
         expect(user.organizations).toHaveLength(1);
-        expect(bcrypt.hash).toHaveBeenCalledWith('password123', 10);
+        expect(mockBcrypt.hash).toHaveBeenCalledWith('password123', 10);
       });
 
       it('should throw error for duplicate email', async () => {

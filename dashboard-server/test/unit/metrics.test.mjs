@@ -1,42 +1,43 @@
-import { jest } from '@jest/globals';
+import { vi, describe, it, expect, beforeEach, beforeAll } from 'vitest';
 
 // Mock AWS SDK
-const mockSend = jest.fn();
+const mockSend = vi.fn();
 
-jest.unstable_mockModule('@aws-sdk/client-dynamodb', () => ({
-  DynamoDBClient: jest.fn().mockImplementation(() => ({
+vi.mock('@aws-sdk/client-dynamodb', () => ({
+  DynamoDBClient: vi.fn().mockImplementation(() => ({
     send: mockSend,
   })),
-  ScanCommand: jest.fn(),
+  ScanCommand: vi.fn(),
+  QueryCommand: vi.fn(),
 }));
 
-jest.unstable_mockModule('@aws-sdk/client-s3', () => ({
-  S3Client: jest.fn().mockImplementation(() => ({
+vi.mock('@aws-sdk/client-s3', () => ({
+  S3Client: vi.fn().mockImplementation(() => ({
     send: mockSend,
   })),
-  ListObjectsV2Command: jest.fn(),
-  HeadBucketCommand: jest.fn(),
+  ListObjectsV2Command: vi.fn(),
+  HeadBucketCommand: vi.fn(),
 }));
 
-jest.unstable_mockModule('@aws-sdk/util-dynamodb', () => ({
-  unmarshall: jest.fn().mockImplementation(item => item),
+vi.mock('@aws-sdk/util-dynamodb', () => ({
+  unmarshall: vi.fn().mockImplementation(item => item),
 }));
 
 let MetricsAggregator;
 
 describe('Metrics Aggregator (Dashboard Server)', () => {
   beforeAll(async () => {
-    const metricsModule = await import('../../src/services/metrics.js');
+    const metricsModule = await import('../../src/services/metrics');
     MetricsAggregator = metricsModule.MetricsAggregator;
   });
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
-  test('should get KV metrics from DynamoDB', async () => {
+  it('should get KV metrics from DynamoDB', async () => {
     const mockDynamoDB = { send: mockSend };
-    const mockS3 = { send: jest.fn() };
+    const mockS3 = { send: vi.fn() };
     const aggregator = new MetricsAggregator(mockDynamoDB, mockS3);
 
     mockSend.mockResolvedValue({
@@ -60,8 +61,8 @@ describe('Metrics Aggregator (Dashboard Server)', () => {
     expect(result.totalSize).toBeGreaterThan(0);
   });
 
-  test('should get artifacts metrics from S3', async () => {
-    const mockDynamoDB = { send: jest.fn() };
+  it('should get artifacts metrics from S3', async () => {
+    const mockDynamoDB = { send: vi.fn() };
     const mockS3 = { send: mockSend };
     const aggregator = new MetricsAggregator(mockDynamoDB, mockS3);
 
@@ -82,8 +83,8 @@ describe('Metrics Aggregator (Dashboard Server)', () => {
     expect(result.totalSize).toBe(3); // (1024 + 2048) / 1024 = 3KB
   });
 
-  test('should handle bucket not accessible', async () => {
-    const mockDynamoDB = { send: jest.fn() };
+  it('should handle bucket not accessible', async () => {
+    const mockDynamoDB = { send: vi.fn() };
     const mockS3 = { send: mockSend };
     const aggregator = new MetricsAggregator(mockDynamoDB, mockS3);
 
@@ -95,9 +96,9 @@ describe('Metrics Aggregator (Dashboard Server)', () => {
     expect(result.totalSize).toBe(0);
   });
 
-  test('should get all metrics', async () => {
-    const mockDynamoDB = { send: jest.fn() };
-    const mockS3 = { send: jest.fn() };
+  it('should get all metrics', async () => {
+    const mockDynamoDB = { send: vi.fn() };
+    const mockS3 = { send: vi.fn() };
     const aggregator = new MetricsAggregator(mockDynamoDB, mockS3);
 
     // Mock KV metrics
