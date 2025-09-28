@@ -136,11 +136,13 @@ export class MetricsAggregator {
       const command = new QueryCommand({
         TableName: process.env.AGENT_MESH_EVENTS_TABLE || 'agent-mesh-dev-events',
         IndexName: 'TimestampIndex',
-        KeyConditionExpression: '#ts > :since',
+        KeyConditionExpression: '#source = :source AND #ts > :since',
         ExpressionAttributeNames: {
+          '#source': 'source',
           '#ts': 'timestamp'
         },
         ExpressionAttributeValues: {
+          ':source': { S: 'mcp-rust' },
           ':since': { S: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() } // Last 24 hours
         },
         ScanIndexForward: false, // Most recent first

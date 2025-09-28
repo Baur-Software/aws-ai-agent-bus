@@ -27,33 +27,33 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
 render(
   () => (
     <ThemeProvider>
-      <AuthProvider>
-        <AuthGuard>
-          <DashboardServerProvider>
-              <OrganizationProvider>
-                  <NotificationProvider>
-                    <HeaderProvider>
-                      <KVStoreProvider>
-                        <SidebarProvider>
-                          <OverlayProvider>
-                            <IntegrationsProvider>
-                              <WorkflowProvider>
-                                <Router root={Layout}>
-                                  <Route path="/" component={Canvas} />
-                                  <Route path="/workflows" component={Canvas} />
-                                  <Route path="/workflows/:id" component={Canvas} />
-                                </Router>
-                              </WorkflowProvider>
-                            </IntegrationsProvider>
-                          </OverlayProvider>
-                        </SidebarProvider>
-                      </KVStoreProvider>
-                    </HeaderProvider>
-                  </NotificationProvider>
-                </OrganizationProvider>
-            </DashboardServerProvider>
-        </AuthGuard>
-      </AuthProvider>
+      <NotificationProvider>
+        <AuthProvider>
+          <AuthGuard>
+            <DashboardServerProvider>
+                <OrganizationProvider>
+                  <HeaderProvider>
+                    <KVStoreProvider>
+                      <SidebarProvider>
+                        <OverlayProvider>
+                          <IntegrationsProvider>
+                            <WorkflowProvider>
+                              <Router root={Layout}>
+                                <Route path="/" component={Canvas} />
+                                <Route path="/workflows" component={Canvas} />
+                                <Route path="/workflows/:id" component={Canvas} />
+                              </Router>
+                            </WorkflowProvider>
+                          </IntegrationsProvider>
+                        </OverlayProvider>
+                      </SidebarProvider>
+                    </KVStoreProvider>
+                  </HeaderProvider>
+                  </OrganizationProvider>
+              </DashboardServerProvider>
+          </AuthGuard>
+        </AuthProvider>
+      </NotificationProvider>
     </ThemeProvider>
   ),
   root!

@@ -5,6 +5,7 @@ import { KVHandler } from '../handlers/kv.js';
 import { AgentHandler } from '../handlers/agents.js';
 import AuthMiddleware, { UserContext } from '../middleware/auth.js';
 import { MCPWebSocketHandler, MCP_MESSAGE_TYPES } from './mcpHandlers.js';
+import ErrorHandler from '../utils/ErrorHandler.js';
 
 interface Dependencies {
   metricsAggregator: any;
@@ -15,14 +16,24 @@ export function setupWebSocketHandlers(wss: WebSocketServer, { metricsAggregator
   // MCP service initialization disabled - will use Lambda/nginx proxy later
   const mcpService = null;
 
-  wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+  wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
     console.log('📱 Dashboard client attempting to connect');
 
     // Authenticate the WebSocket connection
     const userContext = AuthMiddleware.authenticateWebSocket(ws, req);
     if (!userContext) {
-      console.log('❌ Authentication failed - closing connection');
-      ws.close(1008, 'Authentication required');
+      const authError = await ErrorHandler.handleError(
+        new Error('WebSocket authentication failed'),
+        'websocket_auth'
+      );
+
+      // Send user-friendly error before closing
+      ws.send(JSON.stringify({
+        type: 'auth_error',
+        error: ErrorHandler.createErrorResponse(authError).error
+      }));
+
+      ws.close(1008, authError.userMessage);
       return;
     }
 
@@ -353,7 +364,17 @@ async function handleWebSocketMessage(ws: WebSocket, message: any, { metricsAggr
             };
           }
         } catch (error) {
-          throw error;
+          // Use the error handler to categorize and log properly
+          const categorizedError = await ErrorHandler.handleError(
+            error,
+            `mcp_call_${message.tool}`,
+            (ws as any).userContext?.userId
+          );
+
+          // Throw the categorized error to be handled by the outer catch
+          const handledError = new Error(categorizedError.userMessage);
+          (handledError as any).categorized = categorizedError;
+          throw handledError;
         }
 
         ws.send(JSON.stringify({
@@ -436,27 +457,26 @@ async function handleWebSocketMessage(ws: WebSocket, message: any, { metricsAggr
         }));
     }
   } catch (error) {
-    console.error(`Error handling WebSocket message ${message.type}:`, error);
+    // Check if this is already a categorized error
+    const categorizedError = (error as any).categorized ||
+      await ErrorHandler.handleError(
+        error,
+        `websocket_${message.type}`,
+        (ws as any).userContext?.userId
+      );
 
-    // Properly serialize error message
-    let errorMessage: string;
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    } else if (typeof error === 'string') {
-      errorMessage = error;
-    } else if (error && typeof error === 'object') {
-      // Handle cases where error is an object
-      errorMessage = JSON.stringify(error);
-    } else {
-      errorMessage = 'Unknown error occurred';
-    }
+    // Send user-friendly error response
+    const errorResponse = ErrorHandler.createErrorResponse(categorizedError);
 
     ws.send(JSON.stringify({
       id: message.id,
       error: {
         code: -32603,
-        message: errorMessage
-      }
+        message: errorResponse.error.message,
+        category: errorResponse.error.category,
+        shouldRetry: errorResponse.error.shouldRetry
+      },
+      retryInfo: errorResponse.retryInfo
     }));
   }
 }

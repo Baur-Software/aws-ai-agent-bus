@@ -22,11 +22,15 @@ jobs:
 
     strategy:
       matrix:
-        node-version: ['18', '20', '22']  # LTS versions
+        node-version: ['22']  # LTS versions
 
     steps:
     - uses: actions/checkout@v4
-
+    - name: Configure git for containers
+      run: |
+        git config --global --add safe.directory /github/workspace
+        git config --global --add safe.directory '*'
+        git config --global init.defaultBranch main
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:

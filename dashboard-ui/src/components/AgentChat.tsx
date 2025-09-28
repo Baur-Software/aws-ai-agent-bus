@@ -14,7 +14,7 @@ interface ChatMessage {
 }
 
 export default function AgentChat() {
-  const { executeTool, isConnected } = useDashboardServer();
+  const { executeTool, isConnected, agents } = useDashboardServer();
   const { success, error: notifyError } = useNotifications();
 
   const [messages, setMessages] = createSignal<ChatMessage[]>([]);
@@ -22,6 +22,7 @@ export default function AgentChat() {
   const [availableAgents, setAvailableAgents] = createSignal<string[]>([]);
   const [selectedAgent, setSelectedAgent] = createSignal<string>('');
   const [mode, setMode] = createSignal<'governance' | 'direct'>('governance');
+  const [loading, setLoading] = createSignal(false);
 
   let chatContainerRef: HTMLDivElement;
 
@@ -71,6 +72,7 @@ export default function AgentChat() {
     });
 
     setInput('');
+    setLoading(true);
 
     // Generate session context
     const userId = 'demo-user-123'; // TODO: Get from auth context
@@ -148,6 +150,8 @@ export default function AgentChat() {
         content: `❌ Error: ${err instanceof Error ? err.message : 'Unknown error occurred'}`
       });
       notifyError('Agent execution failed');
+    } finally {
+      setLoading(false);
     }
   };
 

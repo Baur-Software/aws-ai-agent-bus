@@ -69,7 +69,11 @@ export class ArtifactsPutTask implements WorkflowTask<ArtifactsPutInput, Artifac
       }
 
       // Store the artifact
-      await this.mcpService.artifactsPut(input.key, finalContent, contentType);
+      await this.mcpService.artifactsPut({
+        key: input.key,
+        content: finalContent,
+        content_type: contentType
+      });
 
       const output: ArtifactsPutOutput = {
         key: input.key,

@@ -3,6 +3,7 @@ import { DynamoDBClient, GetItemCommand, PutItemCommand, QueryCommand, DeleteIte
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
+import ErrorHandler from '../utils/ErrorHandler.js';
 
 /**
  * Agent operations handler for dashboard-server
@@ -142,10 +143,16 @@ export class AgentHandler {
         result
       };
     } catch (error) {
-      console.error('Error listing available agents:', error);
+      const categorizedError = await ErrorHandler.handleError(
+        error,
+        'mcp_list_agents'
+      );
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: categorizedError.userMessage,
+        errorCode: categorizedError.code,
+        shouldRetry: categorizedError.shouldRetry,
         fallback: [
           'conductor',
           'critic',

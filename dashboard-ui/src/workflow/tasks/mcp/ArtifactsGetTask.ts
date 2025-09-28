@@ -47,7 +47,7 @@ export class ArtifactsGetTask implements WorkflowTask<ArtifactsGetInput, Artifac
       let parsed = false;
 
       // Auto-parse JSON if requested or if content type is JSON
-      if (input.parseJSON || artifact.contentType?.includes('json')) {
+      if (input.parseJSON || artifact.content_type?.includes('json')) {
         try {
           content = JSON.parse(artifact.content);
           parsed = true;
@@ -61,9 +61,9 @@ export class ArtifactsGetTask implements WorkflowTask<ArtifactsGetInput, Artifac
       const output: ArtifactsGetOutput = {
         key: input.key,
         content,
-        contentType: artifact.contentType,
+        contentType: artifact.content_type,
         size: artifact.size,
-        lastModified: artifact.lastModified,
+        lastModified: artifact.last_modified,
         parsed,
         timestamp: new Date().toISOString()
       };
@@ -74,9 +74,9 @@ export class ArtifactsGetTask implements WorkflowTask<ArtifactsGetInput, Artifac
       context.data.artifactContent = content;
       context.data.artifactKey = input.key;
       context.data.artifactMetadata = {
-        contentType: artifact.contentType,
+        contentType: artifact.content_type,
         size: artifact.size,
-        lastModified: artifact.lastModified
+        lastModified: artifact.last_modified
       };
 
       return output;

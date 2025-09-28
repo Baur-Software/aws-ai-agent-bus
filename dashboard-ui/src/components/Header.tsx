@@ -21,7 +21,7 @@ import {
 
 function Header(props) {
   const { theme, toggleTheme } = useTheme();
-  const { isConnected, connectionStatus } = useDashboardServer();
+  const { isConnected, connectionStatus, loading } = useDashboardServer();
   const { headerInfo } = useHeader();
   const { user, currentOrganization, organizations, switchOrganization } = useOrganization();
   const [userMenuOpen, setUserMenuOpen] = createSignal(false);

@@ -87,7 +87,10 @@ pub struct MCPServer {
 
 impl MCPServer {
     pub async fn new(tenant_manager: Arc<TenantManager>) -> anyhow::Result<Self> {
+        // Pre-initialize handler registry (including AWS clients) before starting stdio loop
+        eprintln!("[MCP Server] Initializing handlers...");
         let handler_registry = HandlerRegistry::new().await?;
+        eprintln!("[MCP Server] Handlers initialized successfully");
 
         Ok(Self {
             tenant_manager,
@@ -96,7 +99,8 @@ impl MCPServer {
     }
 
     pub async fn run(&self) -> anyhow::Result<()> {
-        info!("MCP Server starting on STDIO");
+        // Log to stderr - stdout is reserved for JSON-RPC protocol
+        eprintln!("[MCP Server] Starting on STDIO");
 
         let stdin = tokio::io::stdin();
         let mut reader = BufReader::new(stdin);
@@ -108,19 +112,22 @@ impl MCPServer {
             line.clear();
             match reader.read_line(&mut line).await {
                 Ok(0) => {
-                    debug!("EOF reached, shutting down");
+                    // EOF reached, shutting down quietly
                     break;
                 }
                 Ok(_) => {
-                    let response = self.handle_request(line.trim()).await;
-                    let response_json = serde_json::to_string(&response)?;
+                    if let Some(response) = self.handle_request(line.trim()).await {
+                        let response_json = serde_json::to_string(&response)?;
 
-                    stdout.write_all(response_json.as_bytes()).await?;
-                    stdout.write_all(b"\n").await?;
-                    stdout.flush().await?;
+                        stdout.write_all(response_json.as_bytes()).await?;
+                        stdout.write_all(b"\n").await?;
+                        stdout.flush().await?;
+                    }
+                    // If None, it was a notification - no response needed
                 }
                 Err(e) => {
-                    error!("Error reading from stdin: {}", e);
+                    // Log errors to stderr, not stdout
+                    eprintln!("[MCP Server] Error reading from stdin: {}", e);
                     break;
                 }
             }
@@ -129,38 +136,46 @@ impl MCPServer {
         Ok(())
     }
 
-    async fn handle_request(&self, request_line: &str) -> MCPResponse {
+    pub async fn handle_request(&self, request_line: &str) -> Option<MCPResponse> {
         // Parse the JSON-RPC request
         let request: MCPRequest = match serde_json::from_str(request_line) {
             Ok(req) => req,
             Err(e) => {
-                return MCPResponse {
+                return Some(MCPResponse {
                     jsonrpc: "2.0".to_string(),
                     id: None,
                     result: None,
                     error: Some(MCPError::InvalidRequest(e.to_string()).into()),
-                };
+                });
             }
         };
 
         let request_id = request.id.clone();
 
+        // Check if this is a notification (no ID) - notifications don't get responses
+        if request_id.is_none() {
+            // Handle notification silently
+            debug!("Received notification: {}", request.method);
+            return None;
+        }
+
         // Handle the request with tenant context
         match self.process_request(request).await {
-            Ok(result) => MCPResponse {
+            Ok(result) => Some(MCPResponse {
                 jsonrpc: "2.0".to_string(),
                 id: request_id,
                 result: Some(result),
                 error: None,
-            },
-            Err(error) => MCPResponse {
+            }),
+            Err(error) => Some(MCPResponse {
                 jsonrpc: "2.0".to_string(),
                 id: request_id,
                 result: None,
                 error: Some(error.into()),
-            },
+            }),
         }
     }
+
 
     async fn process_request(&self, request: MCPRequest) -> Result<Value, MCPError> {
         debug!("Processing request: {}", request.method);
@@ -240,7 +255,7 @@ impl MCPServer {
 
     async fn handle_initialize(&self) -> Result<Value, MCPError> {
         let capabilities = serde_json::json!({
-            "protocolVersion": "2024-11-05",
+            "protocolVersion": "2025-06-18",
             "capabilities": {
                 "tools": {}
             },

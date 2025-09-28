@@ -37,7 +37,7 @@ resource "aws_dynamodb_table" "events" {
 
   # Global secondary index for querying by timestamp (most recent first)
   global_secondary_index {
-    name            = "timestamp-index"
+    name            = "TimestampIndex"
     hash_key        = "source"
     range_key       = "timestamp"
     projection_type = "ALL"

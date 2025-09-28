@@ -34,7 +34,9 @@ export class TrelloCreateBoardTask implements WorkflowTask<TrelloCreateBoardInpu
 
   getSchema() {
     return {
+      type: 'object' as const,
       title: 'Create Trello Board',
+      description: 'Creates a new Trello board with specified configuration',
       properties: {
         name: { type: 'string', description: 'Board name' },
         description: { type: 'string', description: 'Board description' },

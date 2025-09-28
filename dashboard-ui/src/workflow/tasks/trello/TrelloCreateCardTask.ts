@@ -38,13 +38,15 @@ export class TrelloCreateCardTask implements WorkflowTask<TrelloCreateCardInput,
 
   getSchema() {
     return {
+      type: 'object' as const,
       title: 'Create Trello Card',
+      description: 'Creates a new card in a Trello list',
       properties: {
         listId: { type: 'string', description: 'ID of the Trello list' },
         name: { type: 'string', description: 'Card title' },
         description: { type: 'string', description: 'Card description' },
-        position: { 
-          type: 'string', 
+        position: {
+          type: 'string',
           enum: ['top', 'bottom'],
           description: 'Position in the list'
         }
@@ -91,7 +93,12 @@ export class TrelloCreateCardTask implements WorkflowTask<TrelloCreateCardInput,
       };
     } catch (error) {
       this.logger?.error('Failed to create Trello card:', error);
-      throw new TaskExecutionError(`Trello create card failed: ${error.message}`);
+      throw new TaskExecutionError(
+        `Trello create card failed: ${error.message}`,
+        this.type,
+        context.nodeId,
+        input
+      );
     }
   }
 }

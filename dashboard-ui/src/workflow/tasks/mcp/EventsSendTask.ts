@@ -73,7 +73,11 @@ export class EventsSendTask implements WorkflowTask<EventsSendInput, EventsSendO
       }
 
       // Send the event
-      await this.mcpService.eventsSend(input.detailType, detail, source);
+      await this.mcpService.eventsSend({
+        detailType: input.detailType,
+        detail: detail,
+        source: source
+      });
 
       const eventSize = JSON.stringify(detail).length;
       const eventId = `${context.executionId}-${context.nodeId}-${Date.now()}`;

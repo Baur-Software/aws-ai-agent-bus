@@ -22,6 +22,7 @@ import workflowRoutes from './routes/workflowRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import kvRoutes from './routes/kvRoutes.js';
 import { setupAuthRoutes } from './routes/authRoutes.js';
+import { profile } from 'console';
 
 interface ServerDependencies {
   eventBridge: EventBridgeClient;
@@ -35,10 +36,16 @@ interface ServerDependencies {
 const app: Application = express();
 const PORT: string | number = process.env.DASHBOARD_PORT || 3001;
 
+// AWS client configuration (AWS SDK will automatically use AWS_PROFILE from environment)
+const awsConfig = {
+  profile: process.env.AWS_PROFILE,
+  region: process.env.AWS_REGION || 'us-west-2'
+};
+
 // AWS clients
-const eventBridge = new EventBridgeClient({ region: process.env.AWS_REGION || 'us-west-2' });
-const dynamodb = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-west-2' });
-const s3 = new S3Client({ region: process.env.AWS_REGION || 'us-west-2' });
+const eventBridge = new EventBridgeClient(awsConfig);
+const dynamodb = new DynamoDBClient(awsConfig);
+const s3 = new S3Client(awsConfig);
 
 // Middleware
 app.use(cors({
@@ -150,14 +157,45 @@ server.listen(PORT, async () => {
   eventSubscriber.start();
 });
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('📴 Dashboard server shutting down...');
-  eventSubscriber.stop();
-  await cleanupWebSocket();
-  await mcpRegistry.disconnect();
-  server.close(() => {
-    console.log('✅ Dashboard server stopped');
+// Graceful shutdown handler
+async function gracefulShutdown(signal: string) {
+  console.log(`📴 Dashboard server shutting down (${signal})...`);
+
+  try {
+    // Stop event subscriber
+    eventSubscriber.stop();
+
+    // Clean up WebSocket connections
+    await cleanupWebSocket();
+
+    // Disconnect MCP servers
+    await mcpRegistry.disconnect();
+
+    // Close HTTP server
+    await new Promise<void>((resolve) => {
+      server.close(() => {
+        console.log('✅ Dashboard server stopped');
+        resolve();
+      });
+    });
+  } catch (error) {
+    console.error('❌ Error during graceful shutdown:', error);
+  } finally {
     process.exit(0);
-  });
+  }
+}
+
+// Handle shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('💥 Uncaught exception:', error);
+  gracefulShutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 Unhandled rejection at:', promise, 'reason:', reason);
+  gracefulShutdown('unhandledRejection');
 });

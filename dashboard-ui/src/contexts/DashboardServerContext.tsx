@@ -1,5 +1,6 @@
 import { createContext, useContext, createSignal, createEffect, onMount, onCleanup, JSX, ParentComponent } from 'solid-js';
 import { useAuth } from './AuthContext';
+import { useNotifications } from './NotificationContext';
 
 interface DashboardServerContextValue {
   // Connection state
@@ -76,6 +77,7 @@ const DashboardServerContext = createContext<DashboardServerContextValue>();
 
 export const DashboardServerProvider: ParentComponent<DashboardServerProviderProps> = (props) => {
   const { user, isAuthenticated } = useAuth();
+  const notifications = useNotifications();
   const serverUrl = () => props.serverUrl || 'ws://localhost:3001';
   const userId = () => user()?.userId || 'anonymous';
 
@@ -93,15 +95,67 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
   // MCP response handlers
   const pendingRequests = new Map<string, { resolve: (value: any) => void; reject: (error: any) => void; timeout: number }>();
 
+  // Error handling helper
+  const handleCategorizedError = (error: any, context: string = '') => {
+    const category = error.category || 'system_error';
+    const message = error.message || 'An unexpected error occurred';
+    const shouldRetry = error.shouldRetry || false;
+
+    // Determine notification type based on category
+    const notificationTypeMap: Record<string, 'error' | 'warning' | 'info'> = {
+      'infrastructure': 'warning',
+      'user_error': 'error',
+      'authentication': 'warning',
+      'business_logic': 'error',
+      'external_service': 'warning',
+      'system_error': 'error'
+    };
+
+    const notificationType = notificationTypeMap[category] || 'error';
+
+    // Show user-friendly notification
+    if (notificationType === 'error') {
+      notifications.error(message, {
+        title: context ? `${context} Error` : 'Error',
+        duration: shouldRetry ? 6000 : 8000
+      });
+    } else if (notificationType === 'warning') {
+      notifications.warning(message, {
+        title: context ? `${context} Notice` : 'Notice',
+        duration: 5000
+      });
+    } else {
+      notifications.info(message, {
+        title: context,
+        duration: 4000
+      });
+    }
+
+    // Log for debugging (but don't show infrastructure details to user)
+    if (category === 'infrastructure') {
+      console.warn(`Infrastructure issue (${category}):`, error);
+    } else {
+      console.error(`Application error (${category}):`, error);
+    }
+  };
+
   let reconnectTimer: number | null = null;
   let reconnectAttempts = 0;
   const maxReconnectAttempts = 5;
+  let isConnecting = false; // Prevent multiple simultaneous connection attempts
 
   const connect = () => {
     if (ws() && ws()!.readyState !== WebSocket.CLOSED) {
       return;
     }
 
+    // Prevent multiple simultaneous connection attempts
+    if (isConnecting) {
+      console.log('🔄 Connection attempt already in progress, skipping...');
+      return;
+    }
+
+    isConnecting = true;
     setConnectionStatus('connecting');
     console.log('🔌 Connecting to dashboard server:', serverUrl());
 
@@ -114,6 +168,7 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
         setIsConnected(true);
         setConnectionStatus('connected');
         reconnectAttempts = 0;
+        isConnecting = false; // Reset connection flag
 
         // Send initial authentication
         sendMessage({
@@ -141,6 +196,7 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
       websocket.onerror = (error) => {
         console.error('❌ Dashboard server WebSocket error:', error);
         setConnectionStatus('error');
+        isConnecting = false; // Reset connection flag on error
       };
 
       websocket.onclose = (event) => {
@@ -148,24 +204,33 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
         setWs(null);
         setIsConnected(false);
         setConnectionStatus('disconnected');
+        isConnecting = false; // Reset connection flag
 
-        // Attempt to reconnect
-        if (reconnectAttempts < maxReconnectAttempts) {
+        // Only attempt to reconnect if we're still authenticated and haven't hit max attempts
+        if (isAuthenticated() && reconnectAttempts < maxReconnectAttempts) {
           reconnectAttempts++;
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
           console.log(`⏳ Reconnecting to dashboard server in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
 
           reconnectTimer = window.setTimeout(() => {
-            connect();
+            // Double-check authentication before reconnecting
+            if (isAuthenticated()) {
+              connect();
+            }
           }, delay);
         } else {
-          console.error('❌ Max reconnection attempts reached. Dashboard server connection failed.');
+          if (!isAuthenticated()) {
+            console.log('🔐 User no longer authenticated - stopping reconnection attempts');
+          } else {
+            console.error('❌ Max reconnection attempts reached. Dashboard server connection failed.');
+          }
         }
       };
 
     } catch (error) {
       console.error('❌ Failed to create dashboard server WebSocket connection:', error);
       setConnectionStatus('error');
+      isConnecting = false; // Reset connection flag on error
     }
   };
 
@@ -174,6 +239,9 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
+
+    isConnecting = false; // Reset connection flag
+    reconnectAttempts = 0; // Reset reconnection attempts
 
     const websocket = ws();
     if (websocket) {
@@ -207,7 +275,17 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
       pendingRequests.delete(message.id);
 
       if (message.error) {
-        request.reject(new Error(message.error));
+        // Check if this is a categorized error
+        if (message.error.category) {
+          handleCategorizedError(message.error, 'Tool Call');
+          const error = new Error(message.error.message);
+          (error as any).category = message.error.category;
+          (error as any).shouldRetry = message.error.shouldRetry;
+          request.reject(error);
+        } else {
+          // Legacy error handling
+          request.reject(new Error(typeof message.error === 'string' ? message.error : 'Tool call failed'));
+        }
       } else {
         request.resolve(message.result || message);
       }
@@ -251,6 +329,13 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
             console.error('Error in activity update callback:', error);
           }
         });
+        break;
+
+      case 'auth_error':
+        // Handle authentication errors with user-friendly messages
+        if (message.error) {
+          handleCategorizedError(message.error, 'Authentication');
+        }
         break;
 
       case 'initial_data':
@@ -477,7 +562,10 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
   createEffect(() => {
     if (isAuthenticated() && user()) {
       console.log('🔐 User authenticated - connecting to WebSocket');
-      authenticate();
+      // Only connect if not already connected or connecting
+      if (!isConnected() && !isConnecting) {
+        authenticate();
+      }
     } else if (!isAuthenticated()) {
       console.log('🔐 User not authenticated - disconnecting WebSocket');
       disconnect();

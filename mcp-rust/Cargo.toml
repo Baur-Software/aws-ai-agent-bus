@@ -31,3 +31,12 @@ aws-sdk-secretsmanager = "1.88"
 chrono = { version = "0.4", features = ["serde"] }
 futures = "0.3"
 base64 = "0.22"
+
+# Test organization
+[[test]]
+name = "unit_tests"
+path = "tests/unit/mod.rs"
+
+[[test]]
+name = "integration_tests"
+path = "tests/integration/mod.rs"

@@ -47,15 +47,15 @@ export class ArtifactsListTask implements WorkflowTask<ArtifactsListInput, Artif
       const artifactList = await this.mcpService.artifactsList(prefix);
       
       // Apply limit if specified
-      const limitedArtifacts = input.limit 
-        ? artifactList.slice(0, input.limit)
-        : artifactList;
+      const limitedArtifacts = input.limit
+        ? artifactList.artifacts.slice(0, input.limit)
+        : artifactList.artifacts;
 
       const artifacts = limitedArtifacts.map(artifact => ({
         key: artifact.key,
         size: artifact.size,
-        lastModified: artifact.lastModified,
-        contentType: artifact.contentType
+        lastModified: artifact.last_modified,
+        contentType: artifact.content_type
       }));
 
       const output: ArtifactsListOutput = {

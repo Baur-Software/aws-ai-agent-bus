@@ -69,7 +69,12 @@ export class JSONParseTask implements WorkflowTask<JSONParseInput, JSONParseOutp
       const contextValue = context.data[contextKey];
       
       if (contextValue === undefined) {
-        throw new TaskExecutionError(`Context data key '${contextKey}' not found`);
+        throw new TaskExecutionError(
+          `Context data key '${contextKey}' not found`,
+          this.type,
+          context.nodeId,
+          input
+        );
       }
       
       jsonString = typeof contextValue === 'string' ? contextValue : JSON.stringify(contextValue);
@@ -104,7 +109,12 @@ export class JSONParseTask implements WorkflowTask<JSONParseInput, JSONParseOutp
       };
     } catch (error) {
       this.logger?.error('Failed to parse JSON:', error);
-      throw new TaskExecutionError(`JSON parse failed: ${error.message}`);
+      throw new TaskExecutionError(
+        `JSON parse failed: ${error.message}`,
+        this.type,
+        context.nodeId,
+        input
+      );
     }
   }
 }

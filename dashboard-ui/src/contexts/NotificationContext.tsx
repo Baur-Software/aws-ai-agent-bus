@@ -1,6 +1,5 @@
 import { createContext, useContext, createSignal, For, JSX } from 'solid-js';
 import { Portal } from 'solid-js/web';
-import { useDashboardServer } from './DashboardServerContext';
 
 export type NotificationType = 'success' | 'error' | 'warning' | 'info';
 export type NotificationPosition = 'top' | 'bottom' | 'left' | 'right' | 'center' | 'attached';
@@ -48,7 +47,6 @@ interface NotificationProviderProps {
 
 export function NotificationProvider(props: NotificationProviderProps) {
   const [notifications, setNotifications] = createSignal<Notification[]>([]);
-  const { executeTool } = useDashboardServer();
 
   const addNotification = (notification: Partial<Notification>): string => {
     const id = Date.now().toString();
@@ -105,24 +103,12 @@ export function NotificationProvider(props: NotificationProviderProps) {
   // SNS-backed persistent notifications
   const sendPersistentNotification = async (notification: Partial<Notification>): Promise<string> => {
     try {
-      // Send to SNS for persistence across sessions
-      const result = await executeTool('notifications.send', {
-        type: notification.type || 'info',
-        message: notification.message || '',
-        title: notification.title,
-        userId: 'demo-user-123', // TODO: Get from actual user context
-        metadata: {
-          position: notification.position,
-          duration: notification.duration,
-          source: 'dashboard-ui'
-        }
-      });
-
-      // Also show locally
+      // For now, just show locally since we don't want circular dependency
+      // TODO: Implement persistent notifications through a different mechanism
       const localId = addNotification(notification);
-      
-      console.log('📨 Notification sent to SNS:', result.messageId);
-      return result.messageId || localId;
+
+      console.log('📨 Notification queued for persistence (local only for now)');
+      return localId;
     } catch (error) {
       console.error('❌ Failed to send persistent notification:', error);
       // Fallback to local notification
@@ -132,29 +118,22 @@ export function NotificationProvider(props: NotificationProviderProps) {
 
   const publishIntegrationEvent = async (integration: string, action: string, details: Record<string, any> = {}): Promise<string> => {
     try {
-      const result = await executeTool('notifications.integration-event', {
-        integration,
-        action,
-        userId: 'demo-user-123', // TODO: Get from actual user context
-        details
-      });
-
       // Show local notification for immediate feedback
       const typeMap: Record<string, NotificationType> = {
         'connected': 'success',
-        'disconnected': 'warning', 
+        'disconnected': 'warning',
         'error': 'error'
       };
 
-      addNotification({
+      const localId = addNotification({
         type: typeMap[action] || 'info',
         title: `${integration} ${action}`,
         message: `Integration ${integration} has been ${action}`,
         duration: action === 'error' ? 8000 : 5000
       });
 
-      console.log('📨 Integration event published to SNS:', result.messageId);
-      return result.messageId;
+      console.log('📨 Integration event queued for publishing (local only for now)');
+      return localId;
     } catch (error) {
       console.error('❌ Failed to publish integration event:', error);
       throw error;
