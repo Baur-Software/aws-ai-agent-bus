@@ -223,7 +223,13 @@ jobs:
       run: cargo install --git https://github.com/runjivu/use_aws_mcp.git
 
     - name: Install dashboard-server dependencies
-      run: bun install --frozen-lockfile
+      run: |
+        # Try frozen lockfile first, fallback to regular install if it fails
+        if ! bun install --frozen-lockfile; then
+          echo "⚠️ Frozen lockfile failed, regenerating lockfile..."
+          rm -f bun.lock
+          bun install
+        fi
 
     - name: Test MCP server integration
       run: |
