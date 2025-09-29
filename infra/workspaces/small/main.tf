@@ -58,6 +58,20 @@ module "timeline_store" {
   env = var.env
 }
 
+# Cognito authentication
+module "cognito_auth" {
+  source = "../../modules/cognito_auth"
+
+  name = local.name
+  tags = var.tags
+
+  # Development-friendly configuration
+  callback_urls        = var.cognito_callback_urls
+  logout_urls         = var.cognito_logout_urls
+  enable_hosted_ui    = var.cognito_enable_hosted_ui
+  enable_identity_pool = var.cognito_enable_identity_pool
+}
+
 # Dashboard service with all dependencies
 module "dashboard_service" {
   source = "../../modules/ecs_dashboard_service"

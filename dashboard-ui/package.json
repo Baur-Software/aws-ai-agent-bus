@@ -18,6 +18,7 @@
     "test:ci": "vitest run --coverage --reporter=junit --reporter=json --outputFile.junit=test-results.xml --outputFile.json=test-results.json"
   },
   "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.896.0",
     "@mcp-ui/client": "^5.9.0",
     "@mcp-ui/server": "^5.10.0",
     "@solidjs/meta": "^0.29.4",

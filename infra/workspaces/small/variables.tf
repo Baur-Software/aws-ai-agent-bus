@@ -75,3 +75,38 @@ variable "subnet_ids" {
   type        = list(string)
   default     = []
 }
+
+# Cognito authentication configuration
+variable "cognito_callback_urls" {
+  description = "List of allowed callback URLs for Cognito OAuth"
+  type        = list(string)
+  default     = [
+    "http://localhost:5173",
+    "https://localhost:5173",
+    "http://localhost:3000",
+    "https://localhost:3000"
+  ]
+}
+
+variable "cognito_logout_urls" {
+  description = "List of allowed logout URLs for Cognito OAuth"
+  type        = list(string)
+  default     = [
+    "http://localhost:5173",
+    "https://localhost:5173",
+    "http://localhost:3000",
+    "https://localhost:3000"
+  ]
+}
+
+variable "cognito_enable_hosted_ui" {
+  description = "Enable Cognito Hosted UI for authentication"
+  type        = bool
+  default     = true
+}
+
+variable "cognito_enable_identity_pool" {
+  description = "Enable Cognito Identity Pool for AWS resource access"
+  type        = bool
+  default     = false
+}

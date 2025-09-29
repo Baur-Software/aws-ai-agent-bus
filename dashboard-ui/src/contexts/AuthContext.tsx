@@ -1,4 +1,5 @@
 import { createContext, useContext, createSignal, createEffect, onMount, ParentComponent } from 'solid-js';
+import CognitoAuthService, { CognitoConfig, CognitoUser, AuthTokens } from '../services/CognitoAuthService';
 
 export interface User {
   userId: string;
@@ -16,6 +17,10 @@ export interface AuthContextType {
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   switchOrganization: (organizationId: string) => Promise<void>;
+  confirmSignUp?: (email: string, code: string) => Promise<void>;
+  resendConfirmationCode?: (email: string) => Promise<void>;
+  forgotPassword?: (email: string) => Promise<void>;
+  confirmForgotPassword?: (email: string, code: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>();
@@ -33,6 +38,8 @@ interface AuthProviderProps {}
 export const AuthProvider: ParentComponent<AuthProviderProps> = (props) => {
   const [user, setUser] = createSignal<User | null>(null);
   const [isLoading, setIsLoading] = createSignal(true);
+  const [cognitoService, setCognitoService] = createSignal<CognitoAuthService | null>(null);
+  const [tokens, setTokens] = createSignal<AuthTokens | null>(null);
 
   // Check if dev auth is enabled
   const isDevMode = () => {
@@ -49,6 +56,68 @@ export const AuthProvider: ParentComponent<AuthProviderProps> = (props) => {
     name: 'Demo User'
   };
 
+  // Initialize Cognito service
+  const initializeCognito = async () => {
+    if (isDevMode()) {
+      console.log('🔧 Dev mode - skipping Cognito initialization');
+      return;
+    }
+
+    try {
+      // Get Cognito configuration from environment or API
+      const cognitoConfig = await getCognitoConfig();
+      const service = new CognitoAuthService(cognitoConfig);
+      setCognitoService(service);
+      console.log('✅ Cognito service initialized');
+    } catch (error) {
+      console.error('❌ Failed to initialize Cognito:', error);
+      // Fall back to dev mode if Cognito fails
+      console.log('🔧 Falling back to dev mode due to Cognito initialization failure');
+    }
+  };
+
+  // Convert CognitoUser to User interface
+  const convertCognitoUser = (cognitoUser: CognitoUser): User => {
+    return {
+      userId: cognitoUser.userId,
+      organizationId: cognitoUser.organizationId || 'default',
+      role: (cognitoUser.role as 'admin' | 'user' | 'viewer') || 'user',
+      email: cognitoUser.email,
+      name: cognitoUser.name,
+    };
+  };
+
+  // Get Cognito configuration from environment or dashboard server
+  const getCognitoConfig = async (): Promise<CognitoConfig> => {
+    // Try environment variables first
+    const envConfig = {
+      userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID,
+      userPoolClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
+      region: import.meta.env.VITE_AWS_REGION || 'us-west-2',
+      domain: import.meta.env.VITE_COGNITO_DOMAIN,
+      redirectSignIn: import.meta.env.VITE_COGNITO_REDIRECT_SIGN_IN || window.location.origin,
+      redirectSignOut: import.meta.env.VITE_COGNITO_REDIRECT_SIGN_OUT || window.location.origin,
+    };
+
+    if (envConfig.userPoolId && envConfig.userPoolClientId) {
+      return envConfig as CognitoConfig;
+    }
+
+    // Fall back to dashboard server API
+    try {
+      const serverUrl = import.meta.env.VITE_MCP_SERVER_URL || 'http://localhost:3001';
+      const response = await fetch(`${serverUrl}/api/auth/config`);
+      if (response.ok) {
+        const config = await response.json();
+        return config.cognito;
+      }
+    } catch (error) {
+      console.warn('Failed to fetch Cognito config from server:', error);
+    }
+
+    throw new Error('Cognito configuration not found');
+  };
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
 
@@ -61,24 +130,28 @@ export const AuthProvider: ParentComponent<AuthProviderProps> = (props) => {
         return;
       }
 
-      // Production login
-      const serverUrl = import.meta.env.VITE_MCP_SERVER_URL || 'http://localhost:3001';
-      const response = await fetch(`${serverUrl}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Login failed');
+      // Cognito authentication
+      const service = cognitoService();
+      if (!service) {
+        throw new Error('Authentication service not initialized');
       }
 
-      const { user, token } = await response.json();
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('auth_user', JSON.stringify(user));
-      setUser(user);
+      const result = await service.signIn(email, password);
+
+      if (result.challengeName) {
+        // Handle challenges (MFA, password change, etc.)
+        throw new Error(`Authentication challenge required: ${result.challengeName}`);
+      }
+
+      const convertedUser = convertCognitoUser(result.user);
+
+      // Store tokens and user
+      setTokens(result.tokens);
+      setUser(convertedUser);
+      localStorage.setItem('auth_tokens', JSON.stringify(result.tokens));
+      localStorage.setItem('auth_user', JSON.stringify(convertedUser));
+
+      console.log('✅ Login successful');
     } catch (error) {
       console.error('Login error:', error);
       throw error;

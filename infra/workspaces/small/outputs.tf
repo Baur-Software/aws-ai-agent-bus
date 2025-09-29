@@ -63,8 +63,35 @@ output "dashboard_url" {
   value       = module.dashboard_service.dashboard_url
 }
 
+# Cognito authentication outputs
+output "cognito_user_pool_id" {
+  description = "Cognito User Pool ID for authentication"
+  value       = module.cognito_auth.user_pool_id
+}
+
+output "cognito_user_pool_client_id" {
+  description = "Cognito User Pool Client ID"
+  value       = module.cognito_auth.user_pool_client_id
+}
+
+output "cognito_user_pool_domain" {
+  description = "Cognito User Pool domain for hosted UI"
+  value       = module.cognito_auth.user_pool_domain
+}
+
+output "cognito_user_pool_domain_url" {
+  description = "Cognito Hosted UI URL"
+  value       = module.cognito_auth.user_pool_domain_url
+}
+
+output "cognito_config" {
+  description = "Complete Cognito configuration for frontend applications"
+  value       = module.cognito_auth.cognito_config
+  sensitive   = false
+}
+
 # Combined cost estimation
 output "total_estimated_monthly_cost" {
   description = "Total estimated monthly cost for small workspace"
-  value       = "~$25-35/month (dashboard: ${module.dashboard_service.estimated_monthly_cost_usd}, storage: ~$5-10, networking: ~$5-10)"
+  value       = "~$25-35/month (dashboard: ${module.dashboard_service.estimated_monthly_cost_usd}, storage: ~$5-10, networking: ~$5-10, cognito: ~$0-5)"
 }
