@@ -8,6 +8,11 @@ use tracing::{debug, error};
 
 use crate::aws::{AwsError, AwsService};
 use crate::tenant::{Permission, TenantSession};
+use crate::registry::MCPServerRegistry;
+
+// Re-export handler modules
+pub mod integrations;
+pub mod mcp_proxy;
 
 #[derive(Error, Debug)]
 pub enum HandlerError {
@@ -36,11 +41,13 @@ pub trait Handler: Send + Sync {
 
 pub struct HandlerRegistry {
     handlers: HashMap<String, Arc<dyn Handler>>,
+    registry: Arc<MCPServerRegistry>,
 }
 
 impl HandlerRegistry {
     pub async fn new() -> anyhow::Result<Self> {
         let aws_service = Arc::new(AwsService::new("us-west-2").await?);
+        let registry = Arc::new(MCPServerRegistry::new(aws_service.clone()));
         let mut handlers: HashMap<String, Arc<dyn Handler>> = HashMap::new();
 
         // Register KV handlers
@@ -73,7 +80,51 @@ impl HandlerRegistry {
             Arc::new(EventsSendHandler::new(aws_service.clone())),
         );
 
-        Ok(Self { handlers })
+        // Register integration management handlers
+        handlers.insert(
+            "integration_register".to_string(),
+            Arc::new(integrations::IntegrationRegisterHandler::new(
+                aws_service.clone(),
+                registry.clone(),
+            )),
+        );
+        handlers.insert(
+            "integration_connect".to_string(),
+            Arc::new(integrations::IntegrationConnectHandler::new(
+                aws_service.clone(),
+                registry.clone(),
+            )),
+        );
+        handlers.insert(
+            "integration_list".to_string(),
+            Arc::new(integrations::IntegrationListHandler::new(
+                aws_service.clone(),
+                registry.clone(),
+            )),
+        );
+        handlers.insert(
+            "integration_disconnect".to_string(),
+            Arc::new(integrations::IntegrationDisconnectHandler::new(
+                aws_service.clone(),
+                registry.clone(),
+            )),
+        );
+        handlers.insert(
+            "integration_test".to_string(),
+            Arc::new(integrations::IntegrationTestHandler::new(registry.clone())),
+        );
+
+        // Register MCP proxy handlers
+        handlers.insert(
+            "mcp_proxy".to_string(),
+            Arc::new(mcp_proxy::MCPProxyHandler::new(registry.clone())),
+        );
+        handlers.insert(
+            "mcp_list_tools".to_string(),
+            Arc::new(mcp_proxy::MCPListToolsHandler::new(registry.clone())),
+        );
+
+        Ok(Self { handlers, registry })
     }
 
     pub async fn list_tools(&self, session: &TenantSession) -> Result<Vec<Value>, HandlerError> {
