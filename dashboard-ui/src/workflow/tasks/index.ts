@@ -4,6 +4,7 @@
 // Core task imports
 export { TriggerTask } from './core/TriggerTask';
 export { OutputTask } from './core/OutputTask';
+export { PersonTask } from './core/PersonTask';
 
 // Google Analytics tasks
 export { GATopPagesTask } from './analytics/GATopPagesTask';
@@ -32,16 +33,21 @@ export { JSONParseTask } from './data/JSONParseTask';
 // Agent tasks
 export { AgentConductorTask } from './agents/AgentConductorTask';
 
+// HubSpot tasks
+export { HubSpotContactTask } from './hubspot/HubSpotContactTask';
+export { HubSpotEmailTask } from './hubspot/HubSpotEmailTask';
+
 // Task registration helper
 import { TaskRegistry } from '../TaskRegistry';
-import { 
-  TriggerTask, OutputTask,
+import {
+  TriggerTask, OutputTask, PersonTask,
   GATopPagesTask, GASearchDataTask, GAOpportunitiesTask, GACalendarTask,
   KVGetTask, KVSetTask, ArtifactsListTask, ArtifactsGetTask, ArtifactsPutTask, EventsSendTask,
   TrelloCreateCardTask, TrelloCreateBoardTask,
   HTTPGetTask,
   JSONParseTask,
-  AgentConductorTask
+  AgentConductorTask,
+  HubSpotContactTask, HubSpotEmailTask
 } from './index';
 
 export function registerAllTasks(
@@ -51,14 +57,18 @@ export function registerAllTasks(
     trello?: any;
     mcp?: any;
     http?: any;
+    auth?: any;
+    notification?: any;
+    hubspot?: any;
     logger?: any;
   }
 ): void {
-  const { googleAnalytics, trello, mcp, http, logger } = services;
+  const { googleAnalytics, trello, mcp, http, auth, notification, hubspot, logger } = services;
 
   // Core tasks
   taskRegistry.registerTask(new TriggerTask(logger));
   taskRegistry.registerTask(new OutputTask(logger));
+  taskRegistry.registerTask(new PersonTask(auth, notification, logger));
 
   // Google Analytics tasks (if service available)
   if (googleAnalytics) {
@@ -95,6 +105,12 @@ export function registerAllTasks(
   // Agent tasks (no external dependencies - simulated for now)
   taskRegistry.registerTask(new AgentConductorTask(logger));
 
+  // HubSpot tasks (if service available)
+  if (hubspot) {
+    taskRegistry.registerTask(new HubSpotContactTask(hubspot, logger));
+    taskRegistry.registerTask(new HubSpotEmailTask(hubspot, logger));
+  }
+
   console.log(`Registered ${taskRegistry.getTaskCount()} workflow tasks`);
 }
 
@@ -105,7 +121,7 @@ export const TASK_CATEGORIES = [
     name: 'Core',
     description: 'Essential workflow control tasks',
     icon: 'Zap',
-    tasks: ['trigger', 'output']
+    tasks: ['trigger', 'output', 'person']
   },
   {
     id: 'analytics',
@@ -148,5 +164,12 @@ export const TASK_CATEGORIES = [
     description: 'Intelligent agents for complex task automation',
     icon: 'Bot',
     tasks: ['agent-conductor', 'agent-critic', 'agent-frontend', 'agent-backend']
+  },
+  {
+    id: 'hubspot',
+    name: 'HubSpot',
+    description: 'CRM and marketing automation with HubSpot',
+    icon: 'Users',
+    tasks: ['hubspot-contact', 'hubspot-email']
   }
 ];

@@ -1,15 +1,15 @@
-import { createContext, useContext, createSignal, createResource, onMount, JSX } from 'solid-js';
+import { createContext, useContext, createSignal, createResource, onMount, onCleanup, JSX } from 'solid-js';
 import { useDashboardServer } from './DashboardServerContext';
-
-export interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  memberCount: number;
-  role: 'owner' | 'admin' | 'member';
-  createdAt: string;
-}
+import { useAuth } from './AuthContext';
+import OrganizationService, {
+  Organization,
+  OrganizationMember,
+  OrganizationPermission,
+  CreateOrganizationRequest,
+  UpdateOrganizationRequest,
+  InviteMemberRequest,
+  UpdateMemberRequest
+} from '../services/OrganizationService';
 
 export interface User {
   id: string;
@@ -24,14 +24,33 @@ export interface OrganizationContextValue {
   // Current user and org
   user: () => User | null;
   currentOrganization: () => Organization | null;
-
-  // Resources
   organizations: () => Organization[];
 
-  // Actions
-  switchOrganization: (orgId: string) => void;
-  createOrganization: (name: string, description?: string) => Promise<Organization>;
-  updateOrganization: (orgId: string, updates: Partial<Organization>) => Promise<void>;
+  // Member management
+  members: () => OrganizationMember[];
+  userPermissions: () => OrganizationPermission[];
+
+  // Organization actions
+  switchOrganization: (orgId: string) => Promise<boolean>;
+  createOrganization: (data: CreateOrganizationRequest) => Promise<Organization>;
+  updateOrganization: (orgId: string, updates: UpdateOrganizationRequest) => Promise<void>;
+  deleteOrganization: (orgId: string) => Promise<void>;
+
+  // Member actions
+  inviteMember: (data: InviteMemberRequest) => Promise<OrganizationMember>;
+  updateMember: (memberId: string, updates: UpdateMemberRequest) => Promise<OrganizationMember>;
+  removeMember: (memberId: string) => Promise<void>;
+  resendInvitation: (memberId: string) => Promise<void>;
+
+  // Permissions
+  hasPermission: (resource: string, action: string) => boolean;
+  canManageMembers: () => boolean;
+  canManageOrganization: () => boolean;
+  canInviteMembers: () => boolean;
+
+  // Resource management
+  refreshOrganizations: () => void;
+  refreshMembers: () => void;
 
   // Loading states
   loading: () => boolean;
@@ -40,170 +59,176 @@ export interface OrganizationContextValue {
 
 const OrganizationContext = createContext<OrganizationContextValue>();
 
-// Mock API service (replace with real API calls)
-class OrganizationService {
-  static async getCurrentUser(): Promise<User> {
-    // Mock user data - in production, get from JWT/session
-    return {
-      id: 'user_123',
-      email: 'demo@example.com',
-      name: 'Demo User',
-      avatar: 'https://via.placeholder.com/40',
-      organizations: [
-        {
-          id: 'org_123',
-          name: 'Acme Corporation',
-          slug: 'acme',
-          description: 'Building the future',
-          memberCount: 15,
-          role: 'admin',
-          createdAt: '2024-01-01T00:00:00Z'
-        },
-        {
-          id: 'org_456',
-          name: 'Personal Projects',
-          slug: 'personal',
-          description: 'My personal workspace',
-          memberCount: 1,
-          role: 'owner',
-          createdAt: '2024-01-15T00:00:00Z'
-        }
-      ],
-      currentOrganizationId: 'org_123'
-    };
-  }
-
-  static async createOrganization(name: string, description?: string): Promise<Organization> {
-    // Mock creation
-    const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-    return {
-      id: `org_${Date.now()}`,
-      name,
-      slug,
-      description,
-      memberCount: 1,
-      role: 'owner',
-      createdAt: new Date().toISOString()
-    };
-  }
-
-  static async updateOrganization(orgId: string, updates: Partial<Organization>): Promise<void> {
-    // Mock update
-    console.log('Updating organization', orgId, updates);
-  }
-}
-
 interface OrganizationProviderProps {
   children: JSX.Element;
 }
 
 export function OrganizationProvider(props: OrganizationProviderProps) {
+  const auth = useAuth();
+  const dashboardServer = useDashboardServer();
+
+  // State
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [currentOrgId, setCurrentOrgId] = createSignal<string | null>(null);
+  const [orgService] = createSignal(new OrganizationService());
 
-  const dashboardServer = useDashboardServer();
+  // Resources
+  const [organizations, { refetch: refetchOrganizations }] = createResource(
+    () => auth.isAuthenticated(),
+    async (isAuth) => {
+      if (!isAuth) return [];
 
-  // Load user data from dashboard server
-  const [user] = createResource(async () => {
-    try {
-      setLoading(true);
+      try {
+        setLoading(true);
+        setError(null);
 
-      // Wait for dashboard server connection
-      if (!dashboardServer.isConnected()) {
-        await new Promise(resolve => {
-          const checkConnection = () => {
-            if (dashboardServer.isConnected()) {
-              resolve(true);
-            } else {
-              setTimeout(checkConnection, 100);
-            }
-          };
-          checkConnection();
-        });
-      }
-
-      // Fetch user data from dashboard server
-      const response = await fetch('http://localhost:3001/api/auth/me', {
-        headers: {
-          'X-User-Id': 'user-demo-123'
+        // Set tokens for the service
+        const tokens = localStorage.getItem('auth_tokens');
+        if (tokens) {
+          orgService().setTokens(JSON.parse(tokens));
         }
-      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch user data: ${response.statusText}`);
+        const orgs = await orgService().getOrganizations();
+
+        // Set current org if none selected
+        if (!currentOrgId() && orgs.length > 0) {
+          setCurrentOrgId(orgs[0].id);
+        }
+
+        return orgs;
+      } catch (err) {
+        console.error('Failed to load organizations:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load organizations');
+        return [];
+      } finally {
+        setLoading(false);
       }
-
-      const data = await response.json();
-      const userData = {
-        id: data.user.id,
-        email: data.user.email,
-        name: data.user.name,
-        avatar: data.user.avatar,
-        organizations: data.organizations.map((org: any) => ({
-          id: org.id,
-          name: org.name,
-          slug: org.slug,
-          description: org.description,
-          memberCount: org.memberCount,
-          role: org.ownerId === data.user.id ? 'owner' : 'member',
-          createdAt: org.createdAt
-        })),
-        currentOrganizationId: data.user.currentOrganizationId
-      };
-
-      setCurrentOrgId(userData.currentOrganizationId || userData.organizations[0]?.id || null);
-      return userData;
-    } catch (err) {
-      setError('Failed to load user data');
-      console.error('Organization context error:', err);
-      return null;
-    } finally {
-      setLoading(false);
     }
-  });
+  );
+
+  const [members, { refetch: refetchMembers }] = createResource(
+    () => currentOrgId(),
+    async (orgId) => {
+      if (!orgId || !auth.isAuthenticated()) return [];
+
+      try {
+        return await orgService().getMembers(orgId);
+      } catch (err) {
+        console.error('Failed to load members:', err);
+        return [];
+      }
+    }
+  );
+
+  const [userPermissions] = createResource(
+    () => currentOrgId(),
+    async (orgId) => {
+      if (!orgId || !auth.isAuthenticated()) return [];
+
+      try {
+        return await orgService().getUserPermissions(orgId);
+      } catch (err) {
+        console.error('Failed to load permissions:', err);
+        // Fall back to role-based permissions
+        const currentOrg = currentOrganization();
+        return currentOrg ? orgService().getRolePermissions(currentOrg.userRole) : [];
+      }
+    }
+  );
 
   // Computed values
-  const organizations = () => user()?.organizations || [];
   const currentOrganization = () => {
     const orgId = currentOrgId();
-    return organizations().find(org => org.id === orgId) || null;
+    return organizations()?.find(org => org.id === orgId) || null;
   };
 
-  // Actions
-  const switchOrganization = async (orgId: string) => {
-    const org = organizations().find(o => o.id === orgId);
-    if (org) {
-      try {
-        const success = await dashboardServer.switchOrganization(orgId);
-        if (success) {
-          setCurrentOrgId(orgId);
-          // Update URL to reflect organization change
-          const currentPath = window.location.pathname;
-          const newPath = `/${org.slug}${currentPath.replace(/^\/[^/]+/, '') || '/workflows'}`;
-          window.history.pushState({}, '', newPath);
-          window.dispatchEvent(new PopStateEvent('popstate'));
-        } else {
-          setError('Failed to switch organization');
-        }
-      } catch (err) {
-        setError('Failed to switch organization');
-        console.error('Switch organization error:', err);
-      }
-    }
+  // Create user object from auth context
+  const user = () => {
+    const authUser = auth.user();
+    if (!authUser || !organizations()) return null;
+
+    return {
+      id: authUser.userId,
+      email: authUser.email || '',
+      name: authUser.name || '',
+      avatar: undefined,
+      organizations: organizations() || [],
+      currentOrganizationId: currentOrgId() || undefined,
+    };
   };
 
-  const createOrganization = async (name: string, description?: string): Promise<Organization> => {
+  // Organization actions
+  const switchOrganization = async (orgId: string): Promise<boolean> => {
+    const org = organizations()?.find(o => o.id === orgId);
+    if (!org) return false;
+
     try {
       setLoading(true);
       setError(null);
-      const newOrg = await dashboardServer.createOrganization(name, description);
 
-      // Reload user data to include new organization
-      user.refetch();
+      const result = await orgService().switchOrganization(orgId);
+      if (result.success) {
+        setCurrentOrgId(orgId);
+
+        // Emit organization switch event
+        await dashboardServer.sendMessage({
+          type: 'event_send',
+          data: {
+            source: 'agent-mesh.organization',
+            detailType: 'Organization Switched',
+            detail: {
+              userId: auth.user()?.userId,
+              fromOrgId: currentOrgId(),
+              toOrgId: orgId,
+              orgName: org.name,
+              timestamp: new Date().toISOString()
+            }
+          }
+        });
+
+        // Refresh members for new organization
+        refetchMembers();
+
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Failed to switch organization:', err);
+      setError(err instanceof Error ? err.message : 'Failed to switch organization');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createOrganization = async (data: CreateOrganizationRequest): Promise<Organization> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const newOrg = await orgService().createOrganization(data);
+
+      // Refresh organizations list
+      refetchOrganizations();
 
       // Switch to the new organization
       await switchOrganization(newOrg.id);
+
+      // Emit organization created event
+      await dashboardServer.sendMessage({
+        type: 'event_send',
+        data: {
+          source: 'agent-mesh.organization',
+          detailType: 'Organization Created',
+          detail: {
+            userId: auth.user()?.userId,
+            orgId: newOrg.id,
+            orgName: newOrg.name,
+            timestamp: new Date().toISOString()
+          }
+        }
+      });
 
       return newOrg;
     } catch (err) {
@@ -215,51 +240,250 @@ export function OrganizationProvider(props: OrganizationProviderProps) {
     }
   };
 
-  const updateOrganization = async (orgId: string, updates: Partial<Organization>) => {
+  const updateOrganization = async (orgId: string, updates: UpdateOrganizationRequest): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
-      await OrganizationService.updateOrganization(orgId, updates);
 
-      // Update local state
-      const currentUser = user();
-      if (currentUser) {
-        const orgIndex = currentUser.organizations.findIndex(org => org.id === orgId);
-        if (orgIndex !== -1) {
-          currentUser.organizations[orgIndex] = {
-            ...currentUser.organizations[orgIndex],
-            ...updates
-          };
+      await orgService().updateOrganization(orgId, updates);
+
+      // Refresh organizations list
+      refetchOrganizations();
+
+      // Emit organization updated event
+      await dashboardServer.sendMessage({
+        type: 'event_send',
+        data: {
+          source: 'agent-mesh.organization',
+          detailType: 'Organization Updated',
+          detail: {
+            userId: auth.user()?.userId,
+            orgId,
+            updates,
+            timestamp: new Date().toISOString()
+          }
         }
-      }
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update organization');
-      throw err;
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update organization';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  // Set organization from URL on mount
-  onMount(() => {
-    const path = window.location.pathname;
-    const orgSlug = path.split('/')[1];
+  const deleteOrganization = async (orgId: string): Promise<void> => {
+    try {
+      setLoading(true);
+      setError(null);
 
-    if (orgSlug && organizations().length > 0) {
-      const org = organizations().find(o => o.slug === orgSlug);
-      if (org) {
-        setCurrentOrgId(org.id);
+      await orgService().deleteOrganization(orgId);
+
+      // Refresh organizations list
+      refetchOrganizations();
+
+      // Switch to another organization if current was deleted
+      if (currentOrgId() === orgId) {
+        const remainingOrgs = organizations()?.filter(org => org.id !== orgId) || [];
+        if (remainingOrgs.length > 0) {
+          await switchOrganization(remainingOrgs[0].id);
+        } else {
+          setCurrentOrgId(null);
+        }
       }
+
+      // Emit organization deleted event
+      await dashboardServer.sendMessage({
+        type: 'event_send',
+        data: {
+          source: 'agent-mesh.organization',
+          detailType: 'Organization Deleted',
+          detail: {
+            userId: auth.user()?.userId,
+            orgId,
+            timestamp: new Date().toISOString()
+          }
+        }
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete organization';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // Member actions
+  const inviteMember = async (data: InviteMemberRequest): Promise<OrganizationMember> => {
+    const orgId = currentOrgId();
+    if (!orgId) throw new Error('No organization selected');
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const member = await orgService().inviteMember(orgId, data);
+
+      // Refresh members list
+      refetchMembers();
+
+      // Emit member invited event
+      await dashboardServer.sendMessage({
+        type: 'event_send',
+        data: {
+          source: 'agent-mesh.organization',
+          detailType: 'Member Invited',
+          detail: {
+            userId: auth.user()?.userId,
+            orgId,
+            invitedEmail: data.email,
+            role: data.role,
+            timestamp: new Date().toISOString()
+          }
+        }
+      });
+
+      return member;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to invite member';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateMember = async (memberId: string, updates: UpdateMemberRequest): Promise<OrganizationMember> => {
+    const orgId = currentOrgId();
+    if (!orgId) throw new Error('No organization selected');
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const member = await orgService().updateMember(orgId, memberId, updates);
+
+      // Refresh members list
+      refetchMembers();
+
+      return member;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update member';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const removeMember = async (memberId: string): Promise<void> => {
+    const orgId = currentOrgId();
+    if (!orgId) throw new Error('No organization selected');
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      await orgService().removeMember(orgId, memberId);
+
+      // Refresh members list
+      refetchMembers();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to remove member';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendInvitation = async (memberId: string): Promise<void> => {
+    const orgId = currentOrgId();
+    if (!orgId) throw new Error('No organization selected');
+
+    try {
+      await orgService().resendInvitation(orgId, memberId);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to resend invitation';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
+  // Permission helpers
+  const hasPermission = (resource: string, action: string): boolean => {
+    const permissions = userPermissions() || [];
+    return orgService().hasPermission(permissions, resource, action);
+  };
+
+  const canManageMembers = (): boolean => {
+    const currentOrg = currentOrganization();
+    return currentOrg ? orgService().canManageMembers(currentOrg.userRole) : false;
+  };
+
+  const canManageOrganization = (): boolean => {
+    const currentOrg = currentOrganization();
+    return currentOrg ? orgService().canManageOrganization(currentOrg.userRole) : false;
+  };
+
+  const canInviteMembers = (): boolean => {
+    const currentOrg = currentOrganization();
+    return currentOrg ? orgService().canInviteMembers(currentOrg.userRole, currentOrg.settings) : false;
+  };
+
+  // Update tokens when auth state changes
+  onMount(() => {
+    const updateTokens = () => {
+      if (auth.isAuthenticated()) {
+        const tokens = localStorage.getItem('auth_tokens');
+        if (tokens) {
+          orgService().setTokens(JSON.parse(tokens));
+        }
+      }
+    };
+
+    updateTokens();
+
+    // Listen for auth changes
+    const interval = setInterval(updateTokens, 1000);
+    onCleanup(() => clearInterval(interval));
   });
 
   const contextValue: OrganizationContextValue = {
+    // Current user and org
     user,
     currentOrganization,
-    organizations,
+    organizations: () => organizations() || [],
+
+    // Member management
+    members: () => members() || [],
+    userPermissions: () => userPermissions() || [],
+
+    // Organization actions
     switchOrganization,
     createOrganization,
     updateOrganization,
+    deleteOrganization,
+
+    // Member actions
+    inviteMember,
+    updateMember,
+    removeMember,
+    resendInvitation,
+
+    // Permissions
+    hasPermission,
+    canManageMembers,
+    canManageOrganization,
+    canInviteMembers,
+
+    // Resource management
+    refreshOrganizations: refetchOrganizations,
+    refreshMembers: refetchMembers,
+
+    // Loading states
     loading,
     error
   };

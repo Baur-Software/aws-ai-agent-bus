@@ -2,9 +2,13 @@
 // Pre-built workflows for common use cases
 
 import { WorkflowDefinition } from '../types';
+import { hubspotDemoSequenceWorkflow } from './hubspot-demo-sequence';
 
 // Basic workflow templates
 export const WORKFLOW_TEMPLATES: WorkflowDefinition[] = [
+  // Add HubSpot demo sequence workflow
+  hubspotDemoSequenceWorkflow,
+
   {
     version: '1.0',
     created: '2025-01-15T10:00:00Z',
@@ -415,6 +419,13 @@ export const TEMPLATE_CATEGORIES = [
     description: 'Simple examples to help you get started',
     icon: 'Star',
     templates: getTemplatesByCategory('Examples')
+  },
+  {
+    id: 'marketing',
+    name: 'Marketing Automation',
+    description: 'Customer engagement and lead nurturing workflows',
+    icon: 'Mail',
+    templates: getTemplatesByCategory('Marketing')
   }
 ];
 

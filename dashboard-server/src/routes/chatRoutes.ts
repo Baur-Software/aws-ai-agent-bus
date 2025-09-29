@@ -1,15 +1,37 @@
 import { Router, Request, Response } from 'express';
 import TokenService from '../services/TokenService.js';
+import { ChatService } from '../services/ChatService.js';
 import { Logger } from '../utils/Logger.js';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { EventBridgeClient } from '@aws-sdk/client-eventbridge';
+import { MCPServiceRegistry } from '../services/MCPServiceRegistry.js';
 import crypto from 'crypto';
 
 const router = Router();
 const logger = new Logger('ChatRoutes');
 
-// Initialize TokenService
+// Initialize services
 const dynamodb = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-west-2' });
+const eventBridge = new EventBridgeClient({ region: process.env.AWS_REGION || 'us-west-2' });
 const tokenService = new TokenService(dynamodb);
+
+// Initialize MCP registry and ChatService
+const mcpRegistry = new MCPServiceRegistry();
+const chatService = new ChatService(dynamodb, eventBridge, mcpRegistry, {
+  bedrock: {
+    region: process.env.AWS_REGION || 'us-west-2',
+    modelId: process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-sonnet-20240229-v1:0'
+  },
+  ollama: {
+    endpoint: process.env.OLLAMA_ENDPOINT || 'http://localhost:11434',
+    model: process.env.OLLAMA_MODEL || 'llama2'
+  },
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY || '',
+    model: process.env.OPENAI_MODEL || 'gpt-4',
+    baseURL: process.env.OPENAI_BASE_URL
+  }
+});
 
 interface ChatSession {
   sessionId: string;
@@ -48,43 +70,86 @@ const extractUserContext = (req: Request): { userId: string; organizationId?: st
 };
 
 /**
+ * POST /chat/message - Send message and get AI response
+ */
+router.post('/message', async (req: Request, res: Response) => {
+  try {
+    const { userId, organizationId } = extractUserContext(req);
+    const { sessionId, message, contextId, backend } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    let targetSessionId = sessionId;
+
+    // Create session if not provided
+    if (!targetSessionId) {
+      const session = await chatService.createSession(
+        userId,
+        'New Chat',
+        backend || 'bedrock',
+        organizationId,
+        contextId
+      );
+      targetSessionId = session.sessionId;
+    }
+
+    const response = await chatService.sendMessage({
+      sessionId: targetSessionId,
+      message,
+      userId,
+      organizationId,
+      context: {
+        mcpContextId: contextId
+      }
+    });
+
+    res.json({
+      sessionId: targetSessionId,
+      message: response,
+      timestamp: response.timestamp
+    });
+  } catch (error) {
+    logger.error('Failed to process chat message:', error);
+    res.status(500).json({
+      error: 'Failed to process message',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * GET /chat/sessions - Get user's chat sessions
  */
 router.get('/sessions', async (req: Request, res: Response) => {
   try {
     const { userId, organizationId } = extractUserContext(req);
 
-    // For now, mock sessions - in production, these would be stored in DynamoDB
-    const mockSessions: ChatSession[] = [
-      {
-        sessionId: 'session_1',
-        userId,
-        contextId: `personal_${userId}`,
-        contextType: 'personal',
-        title: 'Data Analysis Chat',
-        lastMessage: 'Can you help me analyze this dataset?',
-        createdAt: Date.now() - 86400000, // 1 day ago
-        updatedAt: Date.now() - 86400000
-      }
-    ];
+    // Get sessions from ChatService
+    const userSessions = chatService.getUserSessions(userId);
 
-    if (organizationId) {
-      mockSessions.push({
-        sessionId: 'session_2',
-        userId,
-        contextId: `org_${organizationId}`,
-        contextType: 'organization',
-        organizationId,
-        title: 'Team Workflow Discussion',
-        lastMessage: 'Let\'s set up the analytics pipeline',
-        createdAt: Date.now() - 43200000, // 12 hours ago
-        updatedAt: Date.now() - 43200000
-      });
-    }
+    // Transform to expected format
+    const sessions = userSessions.map(session => ({
+      sessionId: session.sessionId,
+      userId: session.userId,
+      contextId: session.context.mcpContextId || `personal_${userId}`,
+      contextType: session.organizationId ? 'organization' as const : 'personal' as const,
+      organizationId: session.organizationId,
+      title: session.title,
+      lastMessage: session.messages.length > 0
+        ? session.messages[session.messages.length - 1].content
+        : undefined,
+      backend: session.backend,
+      model: session.model,
+      messageCount: session.messages.length,
+      createdAt: new Date(session.createdAt).getTime(),
+      updatedAt: new Date(session.updatedAt).getTime()
+    }));
 
     res.json({
-      sessions: mockSessions,
-      count: mockSessions.length
+      sessions,
+      count: sessions.length
     });
   } catch (error) {
     logger.error('Failed to get chat sessions:', error);

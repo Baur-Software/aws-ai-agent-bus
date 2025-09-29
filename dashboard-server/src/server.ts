@@ -22,6 +22,7 @@ import workflowRoutes from './routes/workflowRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import kvRoutes from './routes/kvRoutes.js';
 import { setupAuthRoutes } from './routes/authRoutes.js';
+import { setupWebhookRoutes } from './routes/webhookRoutes.js';
 import { profile } from 'console';
 
 interface ServerDependencies {
@@ -115,6 +116,9 @@ app.use('/api/mcp', chatRoutes);
 
 // Setup auth routes
 app.use('/api/auth', setupAuthRoutes({ dynamodb, eventBridge }));
+
+// Setup webhook routes
+app.use('/api/webhooks', setupWebhookRoutes({ dynamodb, eventBridge }));
 
 // Setup WebSocket handlers
 const { broadcast, cleanup: cleanupWebSocket } = setupWebSocketHandlers(wss, {
