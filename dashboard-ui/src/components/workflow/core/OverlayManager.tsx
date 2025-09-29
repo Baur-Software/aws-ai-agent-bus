@@ -26,10 +26,15 @@ export default function OverlayManager() {
         <For each={overlays()}>
           {(overlay, index) => (
             <div class="absolute inset-0">
-              {/* Backdrop */}
+              {/* Backdrop with proper event capture */}
               <div
                 class="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                onClick={() => closeOverlay(overlay.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeOverlay(overlay.id);
+                }}
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
               />
 
               {/* Overlay Panel */}
@@ -40,15 +45,21 @@ export default function OverlayManager() {
                     'z-index': 101 + index(),
                     transform: `scale(${1 - index() * 0.02}) translateY(${index() * 20}px)`
                   }}
+                  onClick={(e) => e.stopPropagation()}
+                  onWheel={(e) => e.stopPropagation()}
+                  onTouchMove={(e) => e.stopPropagation()}
                 >
                   {/* Header */}
-                  <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+                  <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 flex-shrink-0">
                     <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
                       {overlay.title}
                     </h2>
                     <div class="flex items-center gap-2">
                       <button
-                        onClick={() => closeOverlay(overlay.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closeOverlay(overlay.id);
+                        }}
                         class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                         title="Close"
                       >
@@ -57,9 +68,15 @@ export default function OverlayManager() {
                     </div>
                   </div>
 
-                  {/* Content */}
-                  <div class="flex-1 overflow-auto bg-white dark:bg-gray-800">
-                    {overlay.component()}
+                  {/* Content with isolated scrolling */}
+                  <div class="flex-1 overflow-auto bg-white dark:bg-gray-800 overscroll-contain">
+                    <div
+                      onWheel={(e) => e.stopPropagation()}
+                      onTouchMove={(e) => e.stopPropagation()}
+                      class="h-full"
+                    >
+                      {overlay.component()}
+                    </div>
                   </div>
                 </div>
               </div>

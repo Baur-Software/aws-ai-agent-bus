@@ -3,7 +3,7 @@ import { Show, For } from 'solid-js';
 interface VerificationBadgesProps {
   isOfficial: boolean;
   isSigned: boolean;
-  verificationBadges: ('official' | 'signed' | 'popular' | 'verified')[];
+  verificationBadges?: ('official' | 'signed' | 'popular' | 'verified')[];
 }
 
 export default function VerificationBadges(props: VerificationBadgesProps) {
@@ -50,7 +50,7 @@ export default function VerificationBadges(props: VerificationBadgesProps) {
     if (props.isSigned) result.push('signed');
 
     // Add additional badges from the array
-    props.verificationBadges.forEach(badge => {
+    props.verificationBadges?.forEach(badge => {
       if (!result.includes(badge)) {
         result.push(badge);
       }

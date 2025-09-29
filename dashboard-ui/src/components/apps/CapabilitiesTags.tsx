@@ -1,14 +1,15 @@
 import { For } from 'solid-js';
 
 interface CapabilitiesTagsProps {
-  capabilities: string[];
+  capabilities?: string[];
   maxDisplay?: number;
 }
 
 export default function CapabilitiesTags(props: CapabilitiesTagsProps) {
   const maxDisplay = () => props.maxDisplay || 4;
-  const displayCapabilities = () => props.capabilities.slice(0, maxDisplay());
-  const remainingCount = () => Math.max(0, props.capabilities.length - maxDisplay());
+  const capabilities = () => props.capabilities || [];
+  const displayCapabilities = () => capabilities().slice(0, maxDisplay());
+  const remainingCount = () => Math.max(0, capabilities().length - maxDisplay());
 
   const getCapabilityColor = (capability: string): string => {
     // Simple hash to color mapping for consistent colors
@@ -58,7 +59,7 @@ export default function CapabilitiesTags(props: CapabilitiesTagsProps) {
       {remainingCount() > 0 && (
         <span
           class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-          title={`${remainingCount()} more capabilities: ${props.capabilities.slice(maxDisplay()).map(formatCapability).join(', ')}`}
+          title={`${remainingCount()} more capabilities: ${capabilities().slice(maxDisplay()).map(formatCapability).join(', ')}`}
         >
           +{remainingCount()} more
         </span>

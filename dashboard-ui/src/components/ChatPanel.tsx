@@ -101,40 +101,15 @@ function ChatPanel(props) {
         return pageHelp[currentPath] || 'I can help you with whatever page you\'re currently viewing. What specific help do you need?';
       }
 
-      // Analytics requests
-      if (lower.includes('analytics') || lower.includes('users') || lower.includes('traffic')) {
-        if (lower.includes('top pages')) {
-          const result = await executeTool('mcp__aws__ga_getTopPages', {
-            propertyId: 'demo-property',
-            days: extractDays(message) || 30
-          });
-          return `📊 Here's your top pages analytics data:\n\n${formatAnalyticsResult(result)}`;
-        } else {
-          return 'I can help you with analytics! Try asking for:\n• "Show me top pages for the last 30 days"\n• "Get users by country data"\n• "Analyze content opportunities"';
-        }
-      }
-
-      // Content calendar requests
-      if (lower.includes('calendar') || lower.includes('content')) {
-        if (lower.includes('generate')) {
-          const result = await executeTool('mcp__aws__ga_generateContentCalendar', {
-            propertyId: 'demo-property',
-            siteUrl: 'https://example.com'
-          });
-          return `📅 I've generated a content calendar! Check the Content Calendar page to see the full details.`;
-        } else {
-          return 'I can generate content calendars based on your analytics data. Try:\n• "Generate a content calendar for this month"\n• "Create content ideas based on top performing pages"';
-        }
-      }
 
       // KV Store requests
       if (lower.includes('store') || lower.includes('save') || lower.includes('get')) {
         return 'I can help you with the KV store:\n• "Save data to key: mykey"\n• "Get value from key: mykey"\n• Visit the KV Store page for full management';
       }
 
-      // Workflow requests
-      if (lower.includes('workflow') || lower.includes('process')) {
-        return 'I can help with workflows:\n• "Start a new workflow"\n• "Check workflow status"\n• Visit the Workflows page to see all available workflows';
+      // Dynamic tool requests - route to available user MCP servers
+      if (lower.includes('workflow') || lower.includes('process') || lower.includes('analytics') || lower.includes('calendar')) {
+        return 'I can help with tools based on your connected MCP servers. Check the Settings page to connect integrations that enable these features.';
       }
 
       // Help and general requests

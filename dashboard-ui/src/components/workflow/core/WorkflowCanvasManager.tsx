@@ -16,6 +16,8 @@ interface WorkflowCanvasManagerProps {
   // Modal state props
   showWorkflowBrowser?: boolean;
   onSetShowWorkflowBrowser?: (show: boolean) => void;
+  // Navigation props
+  onNavigate?: (page: string) => void;
 }
 
 // Inner component that uses the drag drop context
@@ -347,6 +349,7 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
               availableModels={['claude-3-sonnet', 'claude-3-haiku', 'gpt-4', 'gpt-3.5-turbo']}
               onPinnedChange={workflowUI.setIsNodePanelPinned}
               onVisibilityChange={workflowUI.setIsNodesPanelVisible}
+              onNavigate={props.onNavigate}
             />
           </div>
         </Show>

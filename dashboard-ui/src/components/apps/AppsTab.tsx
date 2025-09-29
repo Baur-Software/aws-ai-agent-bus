@@ -6,6 +6,7 @@ import { MCPServerListing } from '../../types/mcpCatalog';
 import MCPServerCard from './MCPServerCard';
 import ServerFilters from './ServerFilters';
 import ServerCatalogSkeleton from './ServerCatalogSkeleton';
+import MCPOAuthManager from './MCPOAuthManager';
 
 export default function AppsTab() {
   usePageHeader('MCP Apps', 'Discover and connect MCP servers for enhanced AI capabilities');
@@ -24,9 +25,28 @@ export default function AppsTab() {
   const [selectedVerification, setSelectedVerification] = createSignal<'all' | 'official' | 'signed' | 'popular'>('all');
   const [sortBy, setSortBy] = createSignal<'name' | 'downloadCount' | 'lastUpdated' | 'starCount'>('downloadCount');
 
+  // Tab state
+  const [activeTab, setActiveTab] = createSignal<'my-servers' | 'catalog' | 'oauth'>('catalog');
+
   // Connection state
   const [connectingServerId, setConnectingServerId] = createSignal<string | null>(null);
   const [connectedServers, setConnectedServers] = createSignal<Set<string>>(new Set());
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = createSignal(1);
+  const itemsPerPage = 12;
+
+  // Featured SaaS platforms (top platforms with MCP servers)
+  const featuredPlatformIds = [
+    'mcp-aws-core', 'mcp-aws-bedrock-kb-retrieval', 'mcp-aws-cdk', 'mcp-aws-cost-analysis',
+    'mcp-azure-devops', 'mcp-cloudflare', 'mcp-box', 'mcp-clickhouse',
+    'mcp-apify', 'mcp-chargebee', 'mcp-aiven', 'mcp-browserbase',
+    'mcp-stripe', 'mcp-buildkite', 'mcp-circleci', 'mcp-github'
+  ];
+
+  const featuredServers = createMemo(() => {
+    return servers().filter(server => featuredPlatformIds.includes(server.id));
+  });
 
   // Derived state with memos
   const categories = createMemo(() => {
@@ -64,7 +84,12 @@ export default function AppsTab() {
 
   const sortedServers = createMemo(() => {
     const sort = sortBy();
-    return [...filteredServers()].sort((a, b) => {
+    // Exclude featured servers from the main list to avoid duplicates
+    const nonFeaturedServers = filteredServers().filter(server =>
+      !featuredPlatformIds.includes(server.id)
+    );
+
+    return [...nonFeaturedServers].sort((a, b) => {
       switch (sort) {
         case 'name':
           return a.name.localeCompare(b.name);
@@ -80,10 +105,62 @@ export default function AppsTab() {
     });
   });
 
-  // Load servers data
+  // Pagination logic
+  const paginatedServers = createMemo(() => {
+    const servers = sortedServers();
+    const startIndex = (currentPage() - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return servers.slice(startIndex, endIndex);
+  });
+
+  const totalPages = createMemo(() => {
+    return Math.ceil(sortedServers().length / itemsPerPage);
+  });
+
+  // Load servers data and connection state
   createEffect(() => {
     loadServers();
+    loadConnectedServers();
   });
+
+  // Load persisted connection state
+  const loadConnectedServers = async () => {
+    try {
+      if (!dashboardServer.kvStore?.get) {
+        console.warn('KV store not available, skipping load');
+        return;
+      }
+      const result = await dashboardServer.kvStore.get('user-connected-mcp-servers');
+      if (result.value) {
+        const connectionData = typeof result.value === 'string'
+          ? JSON.parse(result.value)
+          : result.value;
+
+        if (Array.isArray(connectionData)) {
+          setConnectedServers(new Set(connectionData));
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load connected servers state:', error);
+    }
+  };
+
+  // Persist connection state
+  const persistConnectedServers = async (connectedSet: Set<string>) => {
+    try {
+      if (!dashboardServer.kvStore?.set) {
+        console.warn('KV store not available, skipping persistence');
+        return;
+      }
+      await dashboardServer.kvStore.set(
+        'user-connected-mcp-servers',
+        JSON.stringify(Array.from(connectedSet)),
+        168 // 7 days TTL
+      );
+    } catch (error) {
+      console.warn('Failed to persist connected servers state:', error);
+    }
+  };
 
   const loadServers = async () => {
     setIsLoading(true);
@@ -92,7 +169,7 @@ export default function AppsTab() {
     try {
       // Call MCP Catalog Service through dashboard server
       const result = await dashboardServer.sendMessageWithResponse({
-        type: 'mcp:discover_servers',
+        type: 'mcp_catalog_list',
         payload: { integration: '' }
       });
 
@@ -104,7 +181,7 @@ export default function AppsTab() {
         throw new Error(result.error);
       }
 
-      setServers(result.payload?.servers || []);
+      setServers(result.data || []);
 
       // Emit discovery completed event
       dashboardServer.sendMessage({
@@ -167,6 +244,28 @@ export default function AppsTab() {
     const server = servers().find(s => s.id === serverId);
     if (!server) return;
 
+    // Check if server requires authentication (either through authMethods or static integration config)
+    const requiresAuth = (server.authMethods &&
+      server.authMethods.length > 0 &&
+      !server.authMethods.includes('none')) ||
+      await checkStaticIntegrationRequiresAuth(serverId);
+
+    if (requiresAuth) {
+      // Check if authentication credentials exist
+      const hasCredentials = await checkAuthenticationCredentials(serverId);
+
+      if (!hasCredentials) {
+        // Redirect to OAuth tab for authentication setup
+        addNotification({
+          type: 'warning',
+          title: 'Authentication Required',
+          message: `${server.name} requires authentication. Please configure credentials in the OAuth tab first.`
+        });
+        setActiveTab('oauth');
+        return;
+      }
+    }
+
     setConnectingServerId(serverId);
 
     // Emit connection attempt event
@@ -178,6 +277,7 @@ export default function AppsTab() {
         detail: {
           serverId,
           serverName: server.name,
+          authRequired: requiresAuth,
           retryAttempt: 1,
           timestamp: new Date().toISOString()
         }
@@ -185,6 +285,12 @@ export default function AppsTab() {
     });
 
     try {
+      // Get authentication credentials if required
+      let authConfig = undefined;
+      if (requiresAuth) {
+        authConfig = await getAuthenticationCredentials(serverId);
+      }
+
       const result = await dashboardServer.sendMessageWithResponse({
         type: 'mcp_server_connect',
         data: {
@@ -192,7 +298,8 @@ export default function AppsTab() {
           serverConfig: {
             command: server.installCommand,
             name: server.name,
-            description: server.description
+            description: server.description,
+            authConfig: authConfig
           }
         }
       });
@@ -201,7 +308,9 @@ export default function AppsTab() {
         throw new Error(result.error);
       }
 
-      setConnectedServers(prev => new Set([...prev, serverId]));
+      const newConnectedServers = new Set([...connectedServers(), serverId]);
+      setConnectedServers(newConnectedServers);
+      await persistConnectedServers(newConnectedServers);
 
       // Emit connection established event
       await dashboardServer.sendMessage({
@@ -213,6 +322,7 @@ export default function AppsTab() {
             serverId,
             serverName: server.name,
             connectionId: `conn_${Date.now()}`,
+            authMethod: requiresAuth ? server.authMethods[0] : 'none',
             timestamp: new Date().toISOString()
           }
         }
@@ -238,6 +348,7 @@ export default function AppsTab() {
             serverName: server.name,
             errorType: 'connection_error',
             errorMessage,
+            authRequired: requiresAuth,
             retryAttempt: 1,
             timestamp: new Date().toISOString()
           }
@@ -268,11 +379,10 @@ export default function AppsTab() {
         throw new Error(result.error);
       }
 
-      setConnectedServers(prev => {
-        const next = new Set(prev);
-        next.delete(serverId);
-        return next;
-      });
+      const newConnectedServers = new Set(connectedServers());
+      newConnectedServers.delete(serverId);
+      setConnectedServers(newConnectedServers);
+      await persistConnectedServers(newConnectedServers);
 
       // Emit disconnection event
       await dashboardServer.sendMessage({
@@ -311,13 +421,83 @@ export default function AppsTab() {
     }
   };
 
+  // Authentication helper functions
+  const checkStaticIntegrationRequiresAuth = async (serverId: string): Promise<boolean> => {
+    try {
+      // Check if there's a static integration configuration for this server
+      const integrationKey = `integration-${serverId}`;
+      const result = await dashboardServer.kvStore.get(integrationKey);
+
+      if (result?.value) {
+        const config = typeof result.value === 'string' ? JSON.parse(result.value) : result.value;
+        // Check if the integration has required fields
+        return config.fields && config.fields.some((field: any) => field.required);
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Failed to check static integration requirements:', error);
+      return false;
+    }
+  };
+
+  const checkAuthenticationCredentials = async (serverId: string): Promise<boolean> => {
+    try {
+      // First check OAuth-style credentials
+      const connectionIds = ['default', 'work', 'personal', 'backup'];
+
+      for (const connectionId of connectionIds) {
+        const key = `user-oauth-${serverId}-${connectionId}`;
+        const result = await dashboardServer.kvStore.get(key);
+        if (result?.value) {
+          return true;
+        }
+      }
+
+      // Also check static integration-style credentials
+      const legacyKey = `user-demo-user-123-integration-${serverId}-default`;
+      const legacyResult = await dashboardServer.kvStore.get(legacyKey);
+      if (legacyResult?.value &&
+          typeof legacyResult.value === 'object' &&
+          legacyResult.value.value !== null &&
+          legacyResult.value.value !== undefined) {
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Failed to check authentication credentials:', error);
+      return false;
+    }
+  };
+
+  const getAuthenticationCredentials = async (serverId: string): Promise<any> => {
+    try {
+      const connectionIds = ['default', 'work', 'personal', 'backup'];
+
+      for (const connectionId of connectionIds) {
+        const key = `user-oauth-${serverId}-${connectionId}`;
+        const result = await dashboardServer.kvStore.get(key);
+        if (result?.value) {
+          const config = typeof result.value === 'string' ? JSON.parse(result.value) : result.value;
+          return config.credentials;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Failed to get authentication credentials:', error);
+      return null;
+    }
+  };
+
   return (
     <div class="max-w-7xl mx-auto p-6">
       <Show when={isLoading()}>
         <ServerCatalogSkeleton />
       </Show>
 
-      <Show when={error() && !isLoading()}>
+      <Show when={error() && !isLoading() && servers().length === 0}>
         <div class="text-center py-12">
           <div class="text-red-600 dark:text-red-400 mb-4">
             <svg class="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -335,9 +515,47 @@ export default function AppsTab() {
         </div>
       </Show>
 
-      <Show when={!isLoading() && !error()}>
-        <div class="mb-6">
-          <ServerFilters
+      <Show when={!isLoading() && (!error() || servers().length > 0)}>
+        {/* Tabbed Navigation */}
+        <div class="border-b border-slate-200 dark:border-slate-700 mb-6">
+          <nav class="flex space-x-8" aria-label="MCP Tabs">
+            <button
+              onClick={() => setActiveTab('my-servers')}
+              class={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab() === 'my-servers'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300'
+              }`}
+            >
+              My servers ({connectedServers().size})
+            </button>
+            <button
+              onClick={() => setActiveTab('catalog')}
+              class={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab() === 'catalog'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300'
+              }`}
+            >
+              Catalog ({servers().length})
+            </button>
+            <button
+              onClick={() => setActiveTab('oauth')}
+              class={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab() === 'oauth'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300'
+              }`}
+            >
+              OAuth
+            </button>
+          </nav>
+        </div>
+
+        {/* Catalog Tab Content */}
+        <Show when={activeTab() === 'catalog'}>
+          <div class="mb-6">
+            <ServerFilters
             searchQuery={searchQuery()}
             selectedCategory={selectedCategory()}
             selectedVerification={selectedVerification()}
@@ -352,20 +570,104 @@ export default function AppsTab() {
           />
         </div>
 
-        <Show when={sortedServers().length > 0}>
-          <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            <For each={sortedServers()}>
-              {(server) => (
-                <MCPServerCard
-                  server={server}
-                  isConnected={connectedServers().has(server.id)}
-                  isConnecting={connectingServerId() === server.id}
-                  onConnect={handleServerConnect}
-                  onDisconnect={handleServerDisconnect}
-                  onViewDetails={handleServerView}
-                />
-              )}
-            </For>
+        {/* Featured SaaS Platforms Section */}
+        <Show when={featuredServers().length > 0 && searchQuery() === '' && selectedCategory() === 'all'}>
+          <div class="mb-8">
+            <div class="flex items-center gap-3 mb-6">
+              <div class="flex-shrink-0">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+              </div>
+              <div>
+                <h2 class="text-xl font-semibold text-slate-900 dark:text-white">Featured SaaS Platforms</h2>
+                <p class="text-sm text-slate-600 dark:text-slate-400">Top enterprise platforms with official MCP integrations</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <For each={featuredServers()}>
+                {(server) => (
+                  <MCPServerCard
+                    server={server}
+                    isConnected={connectedServers().has(server.id)}
+                    isConnecting={connectingServerId() === server.id}
+                    onConnect={handleServerConnect}
+                    onDisconnect={handleServerDisconnect}
+                    onViewDetails={handleServerView}
+                  />
+                )}
+              </For>
+            </div>
+          </div>
+        </Show>
+
+        {/* All Apps Section */}
+        <Show when={paginatedServers().length > 0}>
+          <div class="mb-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-medium text-slate-900 dark:text-white">
+                {searchQuery() !== '' || selectedCategory() !== 'all' ? 'Search Results' : 'All Apps'}
+              </h3>
+              <div class="text-sm text-slate-600 dark:text-slate-400">
+                Page {currentPage()} of {totalPages()} • {sortedServers().length} apps
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <For each={paginatedServers()}>
+                {(server) => (
+                  <MCPServerCard
+                    server={server}
+                    isConnected={connectedServers().has(server.id)}
+                    isConnecting={connectingServerId() === server.id}
+                    onConnect={handleServerConnect}
+                    onDisconnect={handleServerDisconnect}
+                    onViewDetails={handleServerView}
+                  />
+                )}
+              </For>
+            </div>
+
+            {/* Pagination */}
+            <Show when={totalPages() > 1}>
+              <div class="flex items-center justify-center gap-2 mt-8">
+                <button
+                  class="px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={currentPage() === 1}
+                  onClick={() => setCurrentPage(Math.max(1, currentPage() - 1))}
+                >
+                  Previous
+                </button>
+
+                <For each={Array.from({ length: Math.min(5, totalPages()) }, (_, i) => {
+                  const page = Math.max(1, Math.min(totalPages() - 4, currentPage() - 2)) + i;
+                  return page <= totalPages() ? page : null;
+                }).filter(Boolean)}>
+                  {(page) => (
+                    <button
+                      class={`px-3 py-2 text-sm font-medium rounded-lg ${
+                        currentPage() === page
+                          ? 'bg-blue-600 text-white'
+                          : 'text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
+                      }`}
+                      onClick={() => setCurrentPage(page!)}
+                    >
+                      {page}
+                    </button>
+                  )}
+                </For>
+
+                <button
+                  class="px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={currentPage() === totalPages()}
+                  onClick={() => setCurrentPage(Math.min(totalPages(), currentPage() + 1))}
+                >
+                  Next
+                </button>
+              </div>
+            </Show>
           </div>
         </Show>
 
@@ -392,6 +694,60 @@ export default function AppsTab() {
               Clear Filters
             </button>
           </div>
+        </Show>
+        </Show>
+
+        {/* My Servers Tab Content */}
+        <Show when={activeTab() === 'my-servers'}>
+          <div class="space-y-6">
+            <Show when={connectedServers().size === 0}>
+              <div class="text-center py-12">
+                <svg class="w-16 h-16 mx-auto mb-4 text-slate-400 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <h3 class="text-lg font-medium text-slate-900 dark:text-white mb-2">
+                  No servers connected
+                </h3>
+                <p class="text-slate-600 dark:text-slate-400 mb-4">
+                  Connect to MCP servers from the catalog to see them here.
+                </p>
+                <button
+                  class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  onClick={() => setActiveTab('catalog')}
+                >
+                  Browse Catalog
+                </button>
+              </div>
+            </Show>
+
+            <Show when={connectedServers().size > 0}>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <For each={servers().filter(server => connectedServers().has(server.id))}>
+                  {(server) => (
+                    <MCPServerCard
+                      server={server}
+                      isConnected={true}
+                      isConnecting={connectingServerId() === server.id}
+                      onConnect={handleServerConnect}
+                      onDisconnect={handleServerDisconnect}
+                      onViewDetails={handleServerView}
+                    />
+                  )}
+                </For>
+              </div>
+            </Show>
+          </div>
+        </Show>
+
+        {/* OAuth Tab Content */}
+        <Show when={activeTab() === 'oauth'}>
+          <MCPOAuthManager
+            servers={servers()}
+            connectedServers={connectedServers()}
+            onConnect={handleServerConnect}
+            onDisconnect={handleServerDisconnect}
+            connectingServerId={connectingServerId()}
+          />
         </Show>
       </Show>
     </div>

@@ -8,11 +8,14 @@ export const MCP_SERVERS: Record<string, MCPServerConfig> = {
     command: '../mcp-rust/target/release/mcp-multi-tenant.exe',
     args: [],
     env: {
+      // Pass through all existing environment variables plus our specific ones
+      ...process.env,
       AWS_REGION: process.env.AWS_REGION || 'us-west-2',
-      AWS_PROFILE: process.env.AWS_PROFILE,
-      AGENT_MESH_KV_TABLE: process.env.AGENT_MESH_KV_TABLE || 'agent-mesh-kv',
-      AGENT_MESH_ARTIFACTS_BUCKET: process.env.AGENT_MESH_ARTIFACTS_BUCKET || 'agent-mesh-artifacts',
-      AGENT_MESH_EVENT_BUS: process.env.AGENT_MESH_EVENT_BUS || 'agent-mesh-events'
+      AWS_PROFILE: process.env.AWS_PROFILE || 'baursoftware',
+      AGENT_MESH_KV_TABLE: process.env.AGENT_MESH_KV_TABLE || 'agent-mesh-dev-kv',
+      AGENT_MESH_ARTIFACTS_BUCKET: process.env.AGENT_MESH_ARTIFACTS_BUCKET || 'agent-mesh-dev-artifacts-a6b7e7a7',
+      AGENT_MESH_EVENT_BUS: process.env.AGENT_MESH_EVENT_BUS || 'agent-mesh-dev-events',
+      AGENT_MESH_ENV: process.env.AGENT_MESH_ENV || 'dev'
     }
   }
 

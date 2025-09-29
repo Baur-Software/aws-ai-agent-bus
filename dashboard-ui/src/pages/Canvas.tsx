@@ -48,8 +48,8 @@ export default function Canvas() {
       openOverlay({
         id: 'apps-catalog',
         component: () => <AppsTab />,
-        title: 'MCP Apps',
-        size: 'full'
+        title: 'Connect an app',
+        size: 'fullscreen'
       });
     } else {
       console.log('Navigating to:', page);
@@ -110,6 +110,7 @@ export default function Canvas() {
             setTimeout(() => handleOpenWorkflowBrowser(), 100);
           }
         }}
+        onNavigate={handleNavigation}
       />
     </div>
   );

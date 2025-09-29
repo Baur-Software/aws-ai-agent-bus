@@ -3,7 +3,7 @@ import { useOverlay } from '../../../contexts/OverlayContext';
 import { useOrganization } from '../../../contexts/OrganizationContext';
 import ConnectionStatus from '../../ui/ConnectionStatus';
 import {
-  Home,
+  House,
   Database,
   Archive,
   Workflow,
@@ -114,7 +114,7 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
   const navItems: NavItem[] = [
     { id: 'workflows', label: 'Workflows', icon: Workflow, path: '/' },
     { id: 'apps', label: 'Apps', icon: Grid3X3, path: '/apps' },
-    { id: 'overview', label: 'Stats', icon: Home, path: '/dashboard' },
+    { id: 'overview', label: 'Stats', icon: House, path: '/dashboard' },
     { id: 'kv-store', label: 'KV Store', icon: Database, path: '/kv-store' },
     { id: 'artifacts', label: 'Artifacts & S3', icon: Archive, path: '/artifacts' },
     { id: 'events', label: 'Events', icon: Calendar, path: '/events' },

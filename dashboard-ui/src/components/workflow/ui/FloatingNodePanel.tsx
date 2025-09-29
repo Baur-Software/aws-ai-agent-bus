@@ -9,7 +9,7 @@ import IntegrationsGrid from '../../IntegrationsGrid';
 
 interface FloatingNodePanelProps {
   onDragStart: (nodeType: string, e: DragEvent) => void;
-  connectedApps: string[];
+  connectedApps?: string[];
   onConnectApp: (app: string) => void;
   onPositionChange?: (x: number, y: number) => void;
   onPinnedChange?: (isPinned: boolean) => void;
@@ -19,6 +19,7 @@ interface FloatingNodePanelProps {
   selectedNode?: WorkflowNode | null;
   onNodeUpdate?: (node: WorkflowNode) => void;
   availableModels?: string[];
+  onNavigate?: (page: string) => void;
 }
 
 interface NodeCategory {
@@ -196,12 +197,14 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
 
         window.addEventListener('message', handleMessage);
 
-        // Send the request
+        // Send the request using kv_get to retrieve tenant's registered agents
         dashboardServer.sendMessage({
           id: messageId,
           type: 'mcp_call',
-          tool: 'agent.listAvailableAgents',
-          params: {}
+          tool: 'kv_get',
+          arguments: {
+            key: 'tenant-agents-registry'
+          }
         });
       });
 
@@ -1026,14 +1029,14 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                           <Show when={!searchQuery() || category.id === activeCategory() || searchQuery()}>
                             <div class={searchQuery() ? '' : (category.id === activeCategory() ? '' : 'hidden')}>
                               <Show
-                                when={!(category.id === 'apps' && activeCategory() === 'apps' && props.connectedApps.length === 0)}
+                                when={!(category.id === 'apps' && activeCategory() === 'apps' && (props.connectedApps?.length || 0) === 0)}
                                 fallback={
                                   <div class="text-center p-4">
                                     <div class="text-gray-500 dark:text-gray-400 text-sm mb-3">
                                       No apps connected yet
                                     </div>
                                     <button
-                                      onClick={() => setShowConnectedApps(true)}
+                                      onClick={() => props.onNavigate?.('apps')}
                                       class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                                     >
                                       Connect Apps →
@@ -1093,7 +1096,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                                             </div>
                                             <Show when={node.requiresConnectedApp && !isConnected}>
                                               <button
-                                                onClick={() => setShowConnectedApps(true)}
+                                                onClick={() => props.onNavigate?.('apps')}
                                                 class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                                               >
                                                 Connect {node.requiresConnectedApp}

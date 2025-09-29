@@ -26,13 +26,7 @@ interface DashboardServerContextValue {
   callMCPTool: (tool: string, params?: any) => Promise<any>;
   executeTool: (name: string, args?: Record<string, any>) => Promise<any>;
 
-  // Domain-specific APIs
-  analytics: {
-    getTopPages: (args?: Record<string, any>) => Promise<any>;
-    getSearchConsoleData: (args?: Record<string, any>) => Promise<any>;
-    analyzeContentOpportunities: (args?: Record<string, any>) => Promise<any>;
-    generateContentCalendar: (args?: Record<string, any>) => Promise<any>;
-  };
+  // Core MCP APIs (6 tools)
   kvStore: {
     get: (key: string) => Promise<any>;
     set: (key: string, value: any, ttlHours?: number) => Promise<any>;
@@ -42,18 +36,8 @@ interface DashboardServerContextValue {
     get: (key: string) => Promise<any>;
     put: (key: string, content: string, contentType?: string) => Promise<any>;
   };
-  workflows: {
-    start: (name: string, input?: Record<string, any>) => Promise<any>;
-    getStatus: (executionArn: string) => Promise<any>;
-  };
   events: {
     send: (detailType: string, detail: Record<string, any>, source?: string) => Promise<any>;
-  };
-  agents: {
-    processRequest: (userId: string, sessionId: string, request: string, context?: Record<string, any>) => Promise<any>;
-    delegateToAgent: (agentType: string, prompt: string, userId: string, sessionId: string, context?: Record<string, any>) => Promise<any>;
-    listAvailableAgents: () => Promise<any>;
-    getTaskStatus: (taskId: string) => Promise<any>;
   };
 
   // Event handlers
@@ -297,11 +281,13 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
       });
 
       // Send the message
-      websocket.send(JSON.stringify({
+      const wsMessage = {
         ...message,
         id: messageId,
         userId: userId()
-      }));
+      };
+      console.log('📤 Sending WebSocket message:', wsMessage.type, wsMessage);
+      websocket.send(JSON.stringify(wsMessage));
     });
   };
 
@@ -398,6 +384,12 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
             }
           });
         }
+        break;
+
+      case 'mcp:servers_discovered':
+        // Handle MCP server discovery results
+        console.log('📡 MCP servers discovered:', message.payload);
+        // Store discovered servers in component state or emit event for interested components
         break;
 
       // TODO: Remove these logging-only handlers post-troubleshooting
@@ -544,47 +536,26 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
     }
   };
 
-  // Analytics specific methods
-  const analytics = {
-    getTopPages: (args?: Record<string, any>) => executeToolSafely('mcp__aws__ga_getTopPages', args),
-    getSearchConsoleData: (args?: Record<string, any>) => executeToolSafely('mcp__aws__ga_getSearchConsoleData', args),
-    analyzeContentOpportunities: (args?: Record<string, any>) => executeToolSafely('mcp__aws__ga_analyzeContentOpportunities', args),
-    generateContentCalendar: (args?: Record<string, any>) => executeToolSafely('mcp__aws__ga_generateContentCalendar', args),
-  };
 
   // KV Store methods
   const kvStore = {
-    get: (key: string) => executeToolSafely('mcp__aws__kv_get', { key }),
-    set: (key: string, value: any, ttlHours: number = 24) => executeToolSafely('mcp__aws__kv_set', { key, value, ttl_hours: ttlHours }),
+    get: (key: string) => executeToolSafely('kv_get', { key }),
+    set: (key: string, value: any, ttlHours: number = 24) => executeToolSafely('kv_set', { key, value, ttl_hours: ttlHours }),
   };
 
   // Artifacts methods
   const artifacts = {
-    list: (prefix: string = '') => executeToolSafely('mcp__aws__artifacts_list', { prefix }),
-    get: (key: string) => executeToolSafely('mcp__aws__artifacts_get', { key }),
-    put: (key: string, content: string, contentType: string = 'text/plain') => executeToolSafely('mcp__aws__artifacts_put', { key, content, content_type: contentType }),
+    list: (prefix: string = '') => executeToolSafely('artifacts_list', { prefix }),
+    get: (key: string) => executeToolSafely('artifacts_get', { key }),
+    put: (key: string, content: string, contentType: string = 'text/plain') => executeToolSafely('artifacts_put', { key, content, content_type: contentType }),
   };
 
-  // Workflows methods
-  const workflows = {
-    start: (name: string, input: Record<string, any> = {}) => executeToolSafely('mcp__aws__workflow_start', { name, input }),
-    getStatus: (executionArn: string) => executeToolSafely('mcp__aws__workflow_status', { executionArn }),
-  };
 
   // Events methods
   const events = {
-    send: (detailType: string, detail: Record<string, any>, source: string = 'dashboard') => executeToolSafely('mcp__aws__events_send', { detailType, detail, source }),
+    send: (detailType: string, detail: Record<string, any>, source: string = 'dashboard') => executeToolSafely('events_send', { detailType, detail, source }),
   };
 
-  // Agent delegation methods
-  const agents = {
-    processRequest: (userId: string, sessionId: string, request: string, context?: Record<string, any>) =>
-      executeToolSafely('mcp__aws__agent_processRequest', { userId, sessionId, request, context }),
-    delegateToAgent: (agentType: string, prompt: string, userId: string, sessionId: string, context?: Record<string, any>) =>
-      executeToolSafely('mcp__aws__agent_delegateToAgent', { agentType, prompt, userId, sessionId, context }),
-    listAvailableAgents: () => executeToolSafely('mcp__aws__agent_listAvailableAgents', {}),
-    getTaskStatus: (taskId: string) => executeToolSafely('mcp__aws__agent_getTaskStatus', { taskId }),
-  };
 
   // Event subscription methods
   const onOrganizationSwitched = (callback: (data: any) => void) => {
@@ -666,13 +637,10 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
     callMCPTool,
     executeTool,
 
-    // Domain-specific APIs
-    analytics,
+    // Core MCP APIs
     kvStore,
     artifacts,
-    workflows,
     events,
-    agents,
 
     // Event handlers
     onOrganizationSwitched,

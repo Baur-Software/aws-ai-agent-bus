@@ -75,9 +75,9 @@ export function OrganizationProvider(props: OrganizationProviderProps) {
 
   // Resources
   const [organizations, { refetch: refetchOrganizations }] = createResource(
-    () => auth.isAuthenticated(),
-    async (isAuth) => {
-      if (!isAuth) return [];
+    () => auth.isAuthenticated() && dashboardServer.isConnected(),
+    async (canLoad) => {
+      if (!canLoad) return [];
 
       try {
         setLoading(true);
@@ -112,15 +112,15 @@ export function OrganizationProvider(props: OrganizationProviderProps) {
   );
 
   const [members, { refetch: refetchMembers }] = createResource(
-    () => currentOrgId(),
-    async (orgId) => {
-      if (!orgId || !auth.isAuthenticated()) return [];
+    () => currentOrgId() && dashboardServer.isConnected() && auth.isAuthenticated(),
+    async (canLoad) => {
+      if (!canLoad || !currentOrgId()) return [];
 
       try {
         // Request members via WebSocket event
         const result = await dashboardServer.sendMessageWithResponse({
           type: 'organization_members',
-          data: { organizationId: orgId }
+          data: { organizationId: currentOrgId() }
         });
 
         if (result?.error) {
