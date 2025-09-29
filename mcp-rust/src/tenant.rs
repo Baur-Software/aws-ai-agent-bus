@@ -17,14 +17,57 @@ pub enum TenantError {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ContextType {
+    Personal,
+    Organization { org_id: String, org_name: String },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TenantContext {
     pub tenant_id: String,
     pub user_id: String,
-    pub organization_id: String,
+    pub context_type: ContextType,
+    pub organization_id: String, // Deprecated, kept for compatibility
     pub role: UserRole,
     pub permissions: Vec<Permission>,
     pub aws_region: String,
     pub resource_limits: ResourceLimits,
+}
+
+impl TenantContext {
+    /// Returns true if this is a personal context
+    pub fn is_personal(&self) -> bool {
+        matches!(self.context_type, ContextType::Personal)
+    }
+
+    /// Returns true if this is an organizational context
+    pub fn is_organizational(&self) -> bool {
+        matches!(self.context_type, ContextType::Organization { .. })
+    }
+
+    /// Get the effective context identifier for namespacing
+    pub fn get_context_id(&self) -> String {
+        match &self.context_type {
+            ContextType::Personal => format!("personal-{}", self.user_id),
+            ContextType::Organization { org_id, .. } => format!("org-{}", org_id),
+        }
+    }
+
+    /// Get namespace prefix for KV storage and other resources
+    pub fn get_namespace_prefix(&self) -> String {
+        match &self.context_type {
+            ContextType::Personal => format!("user:{}", self.user_id),
+            ContextType::Organization { org_id, .. } => format!("org:{}:user:{}", org_id, self.user_id),
+        }
+    }
+
+    /// Get the organization ID if in organizational context
+    pub fn get_org_id(&self) -> Option<String> {
+        match &self.context_type {
+            ContextType::Organization { org_id, .. } => Some(org_id.clone()),
+            ContextType::Personal => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,6 +88,10 @@ pub enum Permission {
     SendEvents,
     ExecuteWorkflows,
     ManageUsers,
+    Execute,
+    Admin,
+    Read,
+    Write,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

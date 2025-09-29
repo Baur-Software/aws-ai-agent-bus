@@ -72,7 +72,8 @@ impl AwsService {
         session: &TenantSession,
         key: &str,
     ) -> Result<Option<String>, AwsError> {
-        let tenant_key = format!("{}:{}", session.context.tenant_id, key);
+        // Use context-aware namespacing
+        let tenant_key = format!("{}:{}", session.context.get_namespace_prefix(), key);
 
         let result = self
             .clients
@@ -105,7 +106,8 @@ impl AwsService {
         value: &str,
         ttl_hours: Option<u32>,
     ) -> Result<(), AwsError> {
-        let tenant_key = format!("{}:{}", session.context.tenant_id, key);
+        // Use context-aware namespacing
+        let tenant_key = format!("{}:{}", session.context.get_namespace_prefix(), key);
         let now = chrono::Utc::now().timestamp();
 
         // Prepare DynamoDB item
@@ -150,7 +152,7 @@ impl AwsService {
         content: &[u8],
         content_type: &str,
     ) -> Result<(), AwsError> {
-        let tenant_key = format!("{}/{}", session.context.tenant_id, key);
+        let tenant_key = format!("{}/{}", session.context.get_context_id(), key);
 
         self.clients
             .s3
@@ -171,7 +173,7 @@ impl AwsService {
         session: &TenantSession,
         key: &str,
     ) -> Result<Option<Vec<u8>>, AwsError> {
-        let tenant_key = format!("{}/{}", session.context.tenant_id, key);
+        let tenant_key = format!("{}/{}", session.context.get_context_id(), key);
 
         match self
             .clients
@@ -201,8 +203,8 @@ impl AwsService {
         prefix: Option<&str>,
     ) -> Result<Vec<String>, AwsError> {
         let tenant_prefix = match prefix {
-            Some(p) => format!("{}/{}", session.context.tenant_id, p),
-            None => format!("{}/", session.context.tenant_id),
+            Some(p) => format!("{}/{}", session.context.get_context_id(), p),
+            None => format!("{}/", session.context.get_context_id()),
         };
 
         let result = self
@@ -270,6 +272,120 @@ impl AwsService {
             Ok(_) => {}
             Err(e) => return Err(AwsError::Config(format!("EventBridge error: {}", e))),
         }
+
+        Ok(())
+    }
+
+    // Direct KV operations without session (for internal use)
+    pub async fn kv_get_direct(&self, key: &str) -> Result<Option<String>, AwsError> {
+        let result = self
+            .clients
+            .dynamodb
+            .get_item()
+            .table_name(&self.kv_table)
+            .key(
+                "key",
+                aws_sdk_dynamodb::types::AttributeValue::S(key.to_string()),
+            )
+            .send()
+            .await
+            .map_err(|e| AwsError::DynamoDb(e.to_string()))?;
+
+        if let Some(item) = result.item {
+            if let Some(value) = item.get("value") {
+                if let Ok(s_val) = value.as_s() {
+                    return Ok(Some(s_val.clone()));
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
+    pub async fn kv_set_direct(
+        &self,
+        key: &str,
+        value: &str,
+        ttl_hours: Option<u32>,
+    ) -> Result<(), AwsError> {
+        let now = chrono::Utc::now().timestamp();
+
+        // Prepare DynamoDB item
+        let mut put_request = self
+            .clients
+            .dynamodb
+            .put_item()
+            .table_name(&self.kv_table)
+            .item(
+                "key",
+                aws_sdk_dynamodb::types::AttributeValue::S(key.to_string()),
+            )
+            .item(
+                "value",
+                aws_sdk_dynamodb::types::AttributeValue::S(value.to_string()),
+            )
+            .item(
+                "created_at",
+                aws_sdk_dynamodb::types::AttributeValue::N(now.to_string()),
+            );
+
+        if let Some(ttl) = ttl_hours {
+            let expiry = now + (ttl as i64 * 3600);
+            put_request = put_request.item(
+                "expires_at",
+                aws_sdk_dynamodb::types::AttributeValue::N(expiry.to_string()),
+            );
+        }
+
+        put_request
+            .send()
+            .await
+            .map_err(|e| AwsError::DynamoDb(e.to_string()))?;
+        Ok(())
+    }
+
+    pub async fn kv_list(&self, prefix: &str) -> Result<Vec<String>, AwsError> {
+        let result = self
+            .clients
+            .dynamodb
+            .scan()
+            .table_name(&self.kv_table)
+            .filter_expression("begins_with(#k, :prefix)")
+            .expression_attribute_names("#k", "key")
+            .expression_attribute_values(
+                ":prefix",
+                aws_sdk_dynamodb::types::AttributeValue::S(prefix.to_string()),
+            )
+            .send()
+            .await
+            .map_err(|e| AwsError::DynamoDb(e.to_string()))?;
+
+        let mut keys = Vec::new();
+        if let Some(items) = result.items {
+            for item in items {
+                if let Some(key_attr) = item.get("key") {
+                    if let Ok(key) = key_attr.as_s() {
+                        keys.push(key.clone());
+                    }
+                }
+            }
+        }
+
+        Ok(keys)
+    }
+
+    pub async fn kv_delete(&self, key: &str) -> Result<(), AwsError> {
+        self.clients
+            .dynamodb
+            .delete_item()
+            .table_name(&self.kv_table)
+            .key(
+                "key",
+                aws_sdk_dynamodb::types::AttributeValue::S(key.to_string()),
+            )
+            .send()
+            .await
+            .map_err(|e| AwsError::DynamoDb(e.to_string()))?;
 
         Ok(())
     }
