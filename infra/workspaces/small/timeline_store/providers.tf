@@ -12,11 +12,13 @@ terraform {
     }
   }
 
-  # backend "s3" {
-  #   bucket = "your-terraform-state-bucket"
-  #   key    = "agent-mesh/small/timeline_store/terraform.tfstate"
-  #   region = "us-east-1"
-  # }
+  backend "s3" {
+    bucket  = "baursoftware-terraform-state"
+    key     = "agent-mesh/small/timeline_store/terraform.tfstate"
+    region  = "us-west-2"
+    profile = "baursoftware"
+    encrypt = true
+  }
 }
 
 provider "aws" {
