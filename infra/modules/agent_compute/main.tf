@@ -14,8 +14,7 @@ locals {
 
 # Data source to get MCP server infrastructure outputs
 data "terraform_remote_state" "mcp_server" {
-  count   = var.mcp_server_state_path != "" ? 1 : 0
-  backend = "local" # Update with your backend configuration
+  count = var.mcp_server_state_path != "" ? 1 : 0
   config = {
     path = var.mcp_server_state_path
   }
@@ -65,9 +64,9 @@ data "aws_iam_policy_document" "task_role_policy" {
         "secretsmanager:GetSecretValue"
       ]
       resources = [
-        data.terraform_remote_state.mcp_server[0].outputs.kv_store_table_arn,
-        data.terraform_remote_state.mcp_server[0].outputs.artifacts_bucket_arn,
-        "${data.terraform_remote_state.mcp_server[0].outputs.artifacts_bucket_arn}/*",
+        data.terraform_remote_state.mcp_server[0].outputs.dynamodb_kv_table_arn,
+        data.terraform_remote_state.mcp_server[0].outputs.s3_bucket_artifacts,
+        "${data.terraform_remote_state.mcp_server[0].outputs.s3_bucket_artifacts}/*",
         data.terraform_remote_state.mcp_server[0].outputs.message_queue_arn,
         data.terraform_remote_state.mcp_server[0].outputs.event_bus_arn,
         "${data.terraform_remote_state.mcp_server[0].outputs.secrets_kms_key_arn}*"

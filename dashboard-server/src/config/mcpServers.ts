@@ -14,17 +14,6 @@ export const MCP_SERVERS: Record<string, MCPServerConfig> = {
       AGENT_MESH_ARTIFACTS_BUCKET: process.env.AGENT_MESH_ARTIFACTS_BUCKET || 'agent-mesh-artifacts',
       AGENT_MESH_EVENT_BUS: process.env.AGENT_MESH_EVENT_BUS || 'agent-mesh-events'
     }
-  },
-
-  // Original JavaScript MCP server (for comparison/fallback)
-  'aws-js': {
-    command: 'node',
-    args: ['src/server.js'],
-    cwd: '../mcp-server',
-    env: {
-      NODE_ENV: 'development',
-      AWS_REGION: process.env.AWS_REGION || 'us-west-2'
-    }
   }
 
   // Future MCP servers can be added here:

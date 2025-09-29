@@ -1,4 +1,5 @@
-import MCPStdioService from '../services/MCPStdioService.js';
+import MCPStdioService, { MCPServerConfig } from '../services/MCPStdioService.js';
+import { getMCPServerConfig } from '../config/mcpServers.js';
 import { DynamoDBClient, GetItemCommand, PutItemCommand, QueryCommand, DeleteItemCommand, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
@@ -37,7 +38,12 @@ export class AgentHandler {
   private static async getMCPService(): Promise<MCPStdioService> {
     if (!this.mcpService) {
       this.mcpService = new MCPStdioService();
-      await this.mcpService.connect();
+      // Use configured AWS MCP server (Rust)
+      const config = getMCPServerConfig('aws');
+      if (!config) {
+        throw new Error('No AWS MCP server configuration found. MCP servers must be explicitly configured.');
+      }
+      await this.mcpService.connect(config);
     }
     return this.mcpService;
   }

@@ -211,12 +211,12 @@ export function setupAuthRoutes(deps: AuthDependencies): Router {
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
-      // Generate JWT token
+      // Generate JWT token with minimal user claims only
       const token = AuthMiddleware.generateToken({
         userId: user.id,
         email: user.email,
         name: user.name,
-        organizationMemberships: [],
+        organizationMemberships: [], // Keep empty - orgs fetched from DB
         personalNamespace: `user-${user.id}`,
         organizationId: user.currentOrganizationId || user.organizations[0] || '',
         role: 'admin' // Default role - would come from user permissions in production
@@ -267,12 +267,12 @@ export function setupAuthRoutes(deps: AuthDependencies): Router {
 
       const user = await AuthService.createUser(email, password, name);
 
-      // Generate JWT token
+      // Generate JWT token with minimal user claims only
       const token = AuthMiddleware.generateToken({
         userId: user.id,
         email: user.email,
         name: user.name,
-        organizationMemberships: [],
+        organizationMemberships: [], // Keep empty - orgs fetched from DB
         personalNamespace: `user-${user.id}`,
         organizationId: user.currentOrganizationId || user.organizations[0] || '',
         role: 'admin'
@@ -399,12 +399,12 @@ export function setupAuthRoutes(deps: AuthDependencies): Router {
       const user = await AuthService.getUser(req.user!.userId);
       const newOrganization = await AuthService.getOrganization(organizationId);
 
-      // Generate new token with updated organization
+      // Generate new token with updated organization context
       const newToken = AuthMiddleware.generateToken({
         userId: req.user!.userId,
         email: req.user!.email!,
         name: req.user!.name!,
-        organizationMemberships: [],
+        organizationMemberships: [], // Keep empty - orgs fetched from DB
         personalNamespace: `user-${req.user!.userId}`,
         organizationId,
         role: req.user!.role

@@ -5,25 +5,23 @@
   "main": "mcp-server/src/server.js",
   "type": "module",
   "workspaces": [
-    "mcp-server",
+    "dashboard-server",
     "dashboard-ui"
   ],
   "scripts": {
-    "start": "npm run start --workspace=mcp-server",
-    "dev": "npm run dev --workspace=mcp-server",
-    "start:http": "npm run start:http --workspace=mcp-server",
-    "dev:http": "npm run dev:http --workspace=mcp-server",
-    "test": "npm run test --workspace=mcp-server",
-    "lint": "npm run lint --workspace=mcp-server",
+    "server:start": "npm run start --workspace=dashboard-server",
+    "server:dev": "npm run dev --workspace=dashboard-server",
+    "server:test": "npm run test --workspace=dashboard-server",
     "ui:dev": "npm run dev --workspace=dashboard-ui",
     "ui:build": "npm run build --workspace=dashboard-ui",
     "ui:preview": "npm run preview --workspace=dashboard-ui",
-    "dev:all": "concurrently \"npm run dev:http\" \"npm run ui:dev\"",
+    "dev:all": "concurrently \"npm run server:dev\" \"npm run ui:dev\"",
+    "dev:bun": "bun run dev.js",
     "build:all": "npm run ui:build && echo 'All builds complete'",
     "install:all": "npm install --workspaces",
-    "setup:ga-google-cloud": "npm run setup:ga-google-cloud --workspace=mcp-server",
-    "report:users-by-country": "npm run report:users-by-country --workspace=mcp-server",
-    "report:users-by-country-sample": "npm run report:users-by-country-sample --workspace=mcp-server",
+    "setup:ga-google-cloud": "npm run setup:ga-google-cloud --workspace=dashboard-server",
+    "report:users-by-country": "npm run report:users-by-country --workspace=dashboard-server",
+    "report:users-by-country-sample": "npm run report:users-by-country-sample --workspace=dashboard-server",
     "tf:fmt": "terraform fmt -recursive",
     "tf:init": "cd infra/workspaces/${WS:-small/kv_store} && terraform init",
     "tf:plan": "cd infra/workspaces/${WS:-small/kv_store} && terraform plan -var env=${ENV:-dev}",
@@ -32,7 +30,7 @@
     "check:test-debt": "node scripts/pre-commit-check.js",
     "install:hooks": "bash scripts/install-hooks.sh",
     "ui:test": "npm run test --workspace=dashboard-ui",
-    "test:all": "npm run test --workspace=mcp-server && npm run test --workspace=dashboard-ui && npm run check:test-debt"
+    "test:all": "npm run test --workspace=dashboard-server && npm run test --workspace=dashboard-ui && npm run check:test-debt"
   },
   "keywords": [
     "mcp",

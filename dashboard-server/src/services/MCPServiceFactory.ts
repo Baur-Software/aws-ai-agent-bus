@@ -1,5 +1,6 @@
-import MCPStdioService from './MCPStdioService.js';
+import MCPStdioService, { MCPServerConfig } from './MCPStdioService.js';
 import MCPBridgeService from './MCPBridgeService.js';
+import { getMCPServerConfig } from '../config/mcpServers.js';
 import { Logger } from '../utils/Logger.js';
 
 export interface IMCPService {
@@ -63,6 +64,15 @@ class StdioMCPAdapter implements IMCPService {
 
   constructor() {
     this.stdioService = new MCPStdioService();
+    // Connect using the configured AWS MCP server (Rust)
+    const config = getMCPServerConfig('aws');
+    if (config) {
+      this.stdioService.connect(config).catch(error => {
+        console.error('Failed to connect to configured MCP server:', error);
+      });
+    } else {
+      throw new Error('No AWS MCP server configuration found. MCP servers must be explicitly configured.');
+    }
   }
 
   async executeTool(name: string, args: Record<string, any> = {}): Promise<any> {

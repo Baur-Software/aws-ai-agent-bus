@@ -2,7 +2,7 @@
 
 output "user_pool_id" {
   description = "ID of the Cognito User Pool"
-  value       = aws_cognito_user_pool.agent_mesh.id
+  value       = aws_cognito_user_pool.auth.id
 }
 
 output "user_pool_arn" {
@@ -50,13 +50,13 @@ output "authenticated_role_arn" {
 output "cognito_config" {
   description = "Complete Cognito configuration for frontend applications"
   value = {
-    userPoolId         = aws_cognito_user_pool.agent_mesh.id
-    userPoolClientId   = aws_cognito_user_pool_client.agent_mesh_web.id
-    region            = data.aws_region.current.name
-    identityPoolId    = var.enable_identity_pool ? aws_cognito_identity_pool.agent_mesh[0].id : null
-    domain            = var.enable_hosted_ui ? aws_cognito_user_pool_domain.agent_mesh[0].domain : null
-    redirectSignIn    = length(var.callback_urls) > 0 ? var.callback_urls[0] : null
-    redirectSignOut   = length(var.logout_urls) > 0 ? var.logout_urls[0] : null
+    userPoolId             = aws_cognito_user_pool.agent_mesh.id
+    userPoolClientId       = aws_cognito_user_pool_client.agent_mesh_web.id
+    region                 = data.aws_region.current.name
+    identityPoolId         = var.enable_identity_pool ? aws_cognito_identity_pool.agent_mesh[0].id : null
+    domain                 = var.enable_hosted_ui ? aws_cognito_user_pool_domain.agent_mesh[0].domain : null
+    redirectSignIn         = length(var.callback_urls) > 0 ? var.callback_urls[0] : null
+    redirectSignOut        = length(var.logout_urls) > 0 ? var.logout_urls[0] : null
     authenticationFlowType = "USER_PASSWORD_AUTH"
   }
 }

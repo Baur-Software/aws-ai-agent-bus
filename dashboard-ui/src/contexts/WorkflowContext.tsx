@@ -272,7 +272,21 @@ export const WorkflowProvider: ParentComponent = (props) => {
         const savedWorkflows = await kvStore.get(workflowListKey);
 
         if (savedWorkflows) {
-          workflowSummaries = JSON.parse(savedWorkflows);
+          // Handle both JSON strings and objects returned from KV store
+          if (typeof savedWorkflows === 'string') {
+            try {
+              workflowSummaries = JSON.parse(savedWorkflows);
+            } catch (parseErr) {
+              console.warn('Failed to parse workflows JSON string:', parseErr);
+              throw new Error('Invalid workflows data format');
+            }
+          } else if (Array.isArray(savedWorkflows)) {
+            // Direct object/array - use as is
+            workflowSummaries = savedWorkflows;
+          } else {
+            console.warn('Unexpected workflows data format:', typeof savedWorkflows);
+            throw new Error('Unexpected workflows data format');
+          }
           console.log(`📂 Loaded ${workflowSummaries.length} workflows from KV store`);
         } else {
           // Try dashboard API as fallback (temporarily disabled - needs DashboardServerContext integration)

@@ -1,112 +1,87 @@
 variable "aws_region" {
-  description = "AWS region"
-  type        = string
-  default     = "us-west-2"
+  default = "us-west-2"
+}
+variable "cpu_units" {
+  description = "CPU units for the dashboard service"
+  type        = number
+  default     = 0.75
 }
 
-variable "env" {
-  description = "Environment name (dev/stage/prod)"
-  type        = string
-  default     = "dev"
+variable "memory_mb" {
+  description = "Memory (MB) for the dashboard service"
+  type        = number
+  default     = 512
 }
 
-variable "tags" {
-  description = "Default tags for all resources"
-  type        = map(string)
-  default = {
-    workspace   = "small"
-    managed_by  = "terraform"
-    cost_center = "agent-mesh"
-  }
+variable "enable_spot" {
+  description = "Enable spot instances for the dashboard service"
+  type        = bool
+  default     = false
 }
 
-# Dashboard service configuration
-variable "dashboard_cpu_units" {
-  description = "CPU units for dashboard service (512 = 0.5 vCPU)"
-  type        = string
-  default     = "512"
-}
-
-variable "dashboard_memory_mb" {
-  description = "Memory in MB for dashboard service"
-  type        = string
-  default     = "1024"
-}
-
-variable "dashboard_desired_count" {
-  description = "Number of dashboard service instances"
+variable "desired_count" {
+  description = "Desired count of dashboard service tasks"
   type        = number
   default     = 1
 }
 
-variable "dashboard_enable_spot" {
-  description = "Use Fargate Spot for dashboard service"
+variable "create_alb" {
+  description = "Whether to create an ALB for the dashboard service"
   type        = bool
   default     = true
 }
 
-variable "dashboard_create_alb" {
-  description = "Create ALB for dashboard service"
-  type        = bool
-  default     = true
-}
-
-variable "dashboard_container_image" {
-  description = "Container image for dashboard service"
+variable "container_image" {
+  description = "Container image for the dashboard service"
   type        = string
-  default     = "public.ecr.aws/docker/library/node:18-alpine"
+  default     = ""
 }
 
-variable "dashboard_container_port" {
-  description = "Port for dashboard service container"
+variable "container_port" {
+  description = "Container port for the dashboard service"
   type        = number
-  default     = 3000
+  default     = 3001
 }
 
-# Network configuration (optional overrides)
+variable "env" {
+  description = "Environment name"
+  type        = string
+  default     = "production"
+}
+
 variable "vpc_id" {
-  description = "VPC ID (leave empty for default VPC)"
+  description = "VPC ID"
   type        = string
   default     = ""
 }
 
 variable "subnet_ids" {
-  description = "Subnet IDs (leave empty for default subnets)"
+  description = "Subnet IDs"
   type        = list(string)
   default     = []
 }
 
-# Cognito authentication configuration
+variable "cognito_user_pool_id" {
+  description = "Cognito User Pool ID"
+  type        = string
+  default     = ""
+}
+
+variable "cognito_user_pool_client_id" {
+  description = "Cognito User Pool Client ID"
+  type        = string
+  default     = ""
+}
+
 variable "cognito_callback_urls" {
-  description = "List of allowed callback URLs for Cognito OAuth"
+  description = "Cognito callback URLs"
   type        = list(string)
-  default     = [
-    "http://localhost:5173",
-    "https://localhost:5173",
-    "http://localhost:3000",
-    "https://localhost:3000"
-  ]
+  default     = ["http://localhost:5173"]
 }
 
-variable "cognito_logout_urls" {
-  description = "List of allowed logout URLs for Cognito OAuth"
-  type        = list(string)
-  default     = [
-    "http://localhost:5173",
-    "https://localhost:5173",
-    "http://localhost:3000",
-    "https://localhost:3000"
-  ]
-}
+variable "aws_profile" {
+  description = "AWS CLI profile to use"
+  type        = string
+  default     = "baursoftware"
 
-variable "cognito_enable_hosted_ui" {
-  description = "Enable Cognito Hosted UI for authentication"
-  type        = bool
-  default     = true
-}
-
-variable "cognito_enable_identity_pool" {
-  description = "Enable Cognito Identity Pool for AWS resource access"
-  type        = bool
-  default     = false
 }

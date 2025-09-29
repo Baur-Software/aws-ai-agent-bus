@@ -91,16 +91,20 @@ export default function AppsTab() {
 
     try {
       // Call MCP Catalog Service through dashboard server
-      const result = await dashboardServer.sendMessage({
-        type: 'mcp_catalog_list',
-        data: {}
+      const result = await dashboardServer.sendMessageWithResponse({
+        type: 'mcp:discover_servers',
+        payload: { integration: '' }
       });
+
+      if (!result) {
+        throw new Error('No response received from MCP catalog service');
+      }
 
       if (result.error) {
         throw new Error(result.error);
       }
 
-      setServers(result.data?.servers || []);
+      setServers(result.payload?.servers || []);
 
       // Emit discovery completed event
       dashboardServer.sendMessage({
@@ -109,7 +113,7 @@ export default function AppsTab() {
           source: 'agent-mesh.mcp.catalog',
           detailType: 'MCP Catalog Discovery Completed',
           detail: {
-            serverCount: result.data?.servers?.length || 0,
+            serverCount: result.payload?.servers?.length || 0,
             timestamp: new Date().toISOString()
           }
         }
@@ -181,7 +185,7 @@ export default function AppsTab() {
     });
 
     try {
-      const result = await dashboardServer.sendMessage({
+      const result = await dashboardServer.sendMessageWithResponse({
         type: 'mcp_server_connect',
         data: {
           serverId,
@@ -255,7 +259,7 @@ export default function AppsTab() {
     if (!server) return;
 
     try {
-      const result = await dashboardServer.sendMessage({
+      const result = await dashboardServer.sendMessageWithResponse({
         type: 'mcp_server_disconnect',
         data: { serverId }
       });
@@ -348,22 +352,24 @@ export default function AppsTab() {
           />
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          <For each={sortedServers()}>
-            {(server) => (
-              <MCPServerCard
-                server={server}
-                isConnected={connectedServers().has(server.id)}
-                isConnecting={connectingServerId() === server.id}
-                onConnect={handleServerConnect}
-                onDisconnect={handleServerDisconnect}
-                onViewDetails={handleServerView}
-              />
-            )}
-          </For>
-        </div>
+        <Show when={sortedServers().length > 0}>
+          <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <For each={sortedServers()}>
+              {(server) => (
+                <MCPServerCard
+                  server={server}
+                  isConnected={connectedServers().has(server.id)}
+                  isConnecting={connectingServerId() === server.id}
+                  onConnect={handleServerConnect}
+                  onDisconnect={handleServerDisconnect}
+                  onViewDetails={handleServerView}
+                />
+              )}
+            </For>
+          </div>
+        </Show>
 
-        <Show when={sortedServers().length === 0 && !isLoading()}>
+        <Show when={sortedServers().length === 0}>
           <div class="text-center py-12">
             <svg class="w-16 h-16 mx-auto mb-4 text-slate-400 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -387,7 +393,7 @@ export default function AppsTab() {
             </button>
           </div>
         </Show>
-      </div>
+      </Show>
     </div>
   );
 }

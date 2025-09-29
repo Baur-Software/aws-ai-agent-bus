@@ -113,7 +113,7 @@ export class OrganizationService {
   private baseUrl: string;
   private tokens: AuthTokens | null = null;
 
-  constructor(baseUrl: string = 'http://localhost:3001/api') {
+  constructor(baseUrl: string = 'http://localhost:3001/api/auth') {
     this.baseUrl = baseUrl;
   }
 

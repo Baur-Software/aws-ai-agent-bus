@@ -30,3 +30,7 @@ resource "aws_cloudwatch_event_rule" "agent_events" {
 
   tags = local.tags
 }
+
+resource "aws_cloudwatch_event_bus" "main" {
+  name = "main-event-bus"
+}

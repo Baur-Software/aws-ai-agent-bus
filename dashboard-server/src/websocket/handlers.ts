@@ -555,6 +555,144 @@ async function handleWebSocketMessage(ws: WebSocket, message: any, { metricsAggr
         }
         break;
 
+      // Organization-related message handlers
+      case 'organization_list':
+        try {
+          const userContext = (ws as any).userContext as UserContext;
+          // Get organizations from auth service (import needed)
+          const { AuthService } = await import('../routes/authRoutes.js');
+          const organizations = await AuthService.getUserOrganizations(userContext.userId);
+
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'organization_list_response',
+            data: { organizations }
+          }));
+        } catch (error) {
+          const orgError = await ErrorHandler.handleError(
+            error,
+            'organization_list',
+            (ws as any).userContext?.userId
+          );
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'organization_list_response',
+            error: orgError.userMessage
+          }));
+        }
+        break;
+
+      case 'organization_members':
+        try {
+          const userContext = (ws as any).userContext as UserContext;
+          const { organizationId } = message.data;
+
+          // For demo purposes, return mock member data
+          // In production, this would query a members table
+          const members = [
+            {
+              id: userContext.userId,
+              email: userContext.email,
+              name: userContext.name,
+              role: 'admin',
+              joinedAt: new Date().toISOString(),
+              status: 'active'
+            }
+          ];
+
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'organization_members_response',
+            data: { members }
+          }));
+        } catch (error) {
+          const memberError = await ErrorHandler.handleError(
+            error,
+            'organization_members',
+            (ws as any).userContext?.userId
+          );
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'organization_members_response',
+            error: memberError.userMessage
+          }));
+        }
+        break;
+
+      case 'organization_permissions':
+        try {
+          const userContext = (ws as any).userContext as UserContext;
+          const { organizationId } = message.data;
+
+          // For demo purposes, return admin permissions
+          // In production, this would query user roles and permissions
+          const permissions = [
+            {
+              resource: 'workflows',
+              action: 'read',
+              granted: true
+            },
+            {
+              resource: 'workflows',
+              action: 'write',
+              granted: true
+            },
+            {
+              resource: 'workflows',
+              action: 'delete',
+              granted: true
+            },
+            {
+              resource: 'organizations',
+              action: 'read',
+              granted: true
+            },
+            {
+              resource: 'organizations',
+              action: 'write',
+              granted: true
+            },
+            {
+              resource: 'members',
+              action: 'read',
+              granted: true
+            },
+            {
+              resource: 'members',
+              action: 'write',
+              granted: true
+            },
+            {
+              resource: 'agents',
+              action: 'read',
+              granted: true
+            },
+            {
+              resource: 'agents',
+              action: 'write',
+              granted: true
+            }
+          ];
+
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'organization_permissions_response',
+            data: { permissions }
+          }));
+        } catch (error) {
+          const permError = await ErrorHandler.handleError(
+            error,
+            'organization_permissions',
+            (ws as any).userContext?.userId
+          );
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'organization_permissions_response',
+            error: permError.userMessage
+          }));
+        }
+        break;
+
       default:
         ws.send(JSON.stringify({
           id: message.id,

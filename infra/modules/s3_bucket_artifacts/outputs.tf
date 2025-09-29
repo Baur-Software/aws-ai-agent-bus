@@ -1,6 +1,5 @@
-output "bucket_name" {
-  description = "S3 bucket name"
-  value       = aws_s3_bucket.artifacts.bucket
+output "artifacts_bucket_name" {
+  value = aws_s3_bucket.artifacts.bucket
 }
 
 output "bucket_arn" {

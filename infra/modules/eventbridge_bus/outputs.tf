@@ -1,6 +1,5 @@
-output "bus_name" {
-  description = "EventBridge bus name"
-  value       = aws_cloudwatch_event_bus.mesh.name
+output "eventbridge_bus_name" {
+  value = aws_cloudwatch_event_bus.main.name
 }
 
 output "bus_arn" {

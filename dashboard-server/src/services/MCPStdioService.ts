@@ -76,18 +76,8 @@ export class MCPStdioService {
         cwd = effectiveConfig.cwd || process.cwd();
         env = { ...process.env, ...effectiveConfig.env };
       } else {
-        // Default configuration (original MCP server)
-        const projectRoot = process.cwd();
-        const mcpServerPath = path.resolve(projectRoot, '../mcp-server');
-        const serverScript = path.join(mcpServerPath, 'src/server.js');
-
-        command = 'node';
-        args = [serverScript];
-        cwd = mcpServerPath;
-        env = { ...process.env, NODE_ENV: 'development' };
-
-        // Store default config for reconnection
-        this.config = { command, args, cwd, env };
+        // No fallback configuration - all MCP servers must be explicitly configured
+        throw new Error('No MCP server configuration provided. MCP servers must be explicitly configured through MCPServerConfig.');
       }
 
       this.logger.info(`Starting MCP server: ${command} ${args.join(' ')}`);

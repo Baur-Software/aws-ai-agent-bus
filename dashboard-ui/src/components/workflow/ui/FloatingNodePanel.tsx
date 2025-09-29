@@ -5,6 +5,7 @@ import { useDragDrop, useDragSource } from '../../../contexts/DragDropContext';
 import { useIntegrations } from '../../../contexts/IntegrationsContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { listAgents } from '../../../api/agents'; // new API import
+import IntegrationsGrid from '../../IntegrationsGrid';
 
 interface FloatingNodePanelProps {
   onDragStart: (nodeType: string, e: DragEvent) => void;
@@ -30,7 +31,7 @@ interface NodeCategory {
     description: string;
     icon: string;
     color: string;
-    requiresIntegration?: string;
+    requiresConnectedApp?: string;
   }[];
 }
 
@@ -105,7 +106,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   const [agentName, setAgentName] = createSignal('');
   const [agentDescription, setAgentDescription] = createSignal('');
   const [agentSpecialty, setAgentSpecialty] = createSignal('');
-  const [showIntegrations, setShowIntegrations] = createSignal(false);
+  const [showConnectedApps, setShowConnectedApps] = createSignal(false);
   const [currentView, setCurrentView] = createSignal<'nodes' | 'details'>('nodes');
   const [agents, setAgents] = createSignal<Agent[]>([]);
 
@@ -151,7 +152,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
               description: `Use ${appConfig.name} ${capability} capability`,
               icon: <appConfig.icon class="w-4 h-4" />,
               color: appConfig.color,
-              requiresIntegration: appId
+              requiresConnectedApp: appId
             });
           });
         }
@@ -629,9 +630,9 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
         icon: '🔌',
         nodes: [
           // Static app nodes
-          { type: 'ga-top-pages', name: 'GA Top Pages', description: 'Get top performing pages', icon: '📊', color: 'bg-blue-600', requiresIntegration: 'google-analytics' },
-          { type: 'trello-create-card', name: 'Trello Card', description: 'Create Trello card', icon: '📝', color: 'bg-blue-500', requiresIntegration: 'trello' },
-          { type: 'slack-message', name: 'Slack Message', description: 'Send Slack message', icon: '💬', color: 'bg-green-500', requiresIntegration: 'slack' },
+          { type: 'ga-top-pages', name: 'GA Top Pages', description: 'Get top performing pages', icon: '📊', color: 'bg-blue-600', requiresConnectedApp: 'google-analytics' },
+          { type: 'trello-create-card', name: 'Trello Card', description: 'Create Trello card', icon: '📝', color: 'bg-blue-500', requiresConnectedApp: 'trello' },
+          { type: 'slack-message', name: 'Slack Message', description: 'Send Slack message', icon: '💬', color: 'bg-green-500', requiresConnectedApp: 'slack' },
 
           // Dynamic app nodes based on connected integrations
           ...generateDynamicAppNodes()
@@ -920,9 +921,9 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
             <Show when={!isPinned()}>
               <GripVertical class="w-4 h-4 text-gray-400 dark:text-gray-500" />
             </Show>
-            <Show when={showIntegrations()}>
+            <Show when={showConnectedApps()}>
               <button
-                onClick={() => setShowIntegrations(false)}
+                onClick={() => setShowConnectedApps(false)}
                 class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-500 dark:text-gray-400 mr-2"
               >
                 <ArrowLeft class="w-4 h-4" />
@@ -937,7 +938,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
               </button>
             </Show>
             <span class="font-medium text-gray-900 dark:text-white text-sm">
-              {showIntegrations()
+              {showConnectedApps()
                 ? 'Connect Apps'
                 : currentView() === 'details' && props.selectedNode
                   ? `Configure: ${props.selectedNode.title || props.selectedNode.type}`
@@ -968,7 +969,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
         {/* Main Content - Show nodes, integrations, or details */}
         <div class="flex-1 overflow-hidden">
           <Show
-            when={showIntegrations()}
+            when={showConnectedApps()}
             fallback={
               <Show
                 when={currentView() === 'details' && props.selectedNode}
@@ -1025,14 +1026,14 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                           <Show when={!searchQuery() || category.id === activeCategory() || searchQuery()}>
                             <div class={searchQuery() ? '' : (category.id === activeCategory() ? '' : 'hidden')}>
                               <Show
-                                when={!(category.id === 'apps' && activeCategory() === 'apps' && props.connectedIntegrations.length === 0)}
+                                when={!(category.id === 'apps' && activeCategory() === 'apps' && props.connectedApps.length === 0)}
                                 fallback={
                                   <div class="text-center p-4">
                                     <div class="text-gray-500 dark:text-gray-400 text-sm mb-3">
                                       No apps connected yet
                                     </div>
                                     <button
-                                      onClick={() => setShowIntegrations(true)}
+                                      onClick={() => setShowConnectedApps(true)}
                                       class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                                     >
                                       Connect Apps →
@@ -1066,8 +1067,8 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                                 fallback={
                                   <For each={category.nodes}>
                                     {(node) => {
-                                      const isConnected = !node.requiresIntegration ||
-                                        props.connectedIntegrations.includes(node.requiresIntegration);
+                                      const isConnected = !node.requiresConnectedApp ||
+                                        (props.connectedApps?.includes(node.requiresConnectedApp) ?? false);
 
                                       return (
                                         <div
@@ -1090,12 +1091,12 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                                             <div class="text-xs text-gray-500 dark:text-gray-400 truncate">
                                               {node.description}
                                             </div>
-                                            <Show when={node.requiresIntegration && !isConnected}>
+                                            <Show when={node.requiresConnectedApp && !isConnected}>
                                               <button
-                                                onClick={() => setShowIntegrations(true)}
+                                                onClick={() => setShowConnectedApps(true)}
                                                 class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                                               >
-                                                Connect {node.requiresIntegration}
+                                                Connect {node.requiresConnectedApp}
                                               </button>
                                             </Show>
                                           </div>
@@ -1185,7 +1186,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
             </Show>
           }
         >
-          {/* Integrations View */}
+          {/* Connected Apps View */}
           <div class="flex-1 overflow-y-auto p-4">
             <IntegrationsGrid integrations={APP_CONFIGS} />
           </div>

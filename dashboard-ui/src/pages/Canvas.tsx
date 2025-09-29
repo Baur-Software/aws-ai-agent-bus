@@ -5,6 +5,7 @@ import { useOverlay } from '../contexts/OverlayContext';
 import WorkflowCanvasManager from '../components/workflow/core/WorkflowCanvasManager';
 import FloatingNavigation from '../components/workflow/ui/FloatingNavigation';
 import WorkflowBrowser from './WorkflowBrowser';
+import AppsTab from '../components/apps/AppsTab';
 
 export default function Canvas() {
   const params = useParams();
@@ -43,6 +44,13 @@ export default function Canvas() {
   const handleNavigation = (page: string) => {
     if (page === 'workflows') {
       handleOpenWorkflowBrowser();
+    } else if (page === 'apps') {
+      openOverlay({
+        id: 'apps-catalog',
+        component: () => <AppsTab />,
+        title: 'MCP Apps',
+        size: 'full'
+      });
     } else {
       console.log('Navigating to:', page);
     }

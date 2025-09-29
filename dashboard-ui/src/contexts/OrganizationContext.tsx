@@ -83,13 +83,17 @@ export function OrganizationProvider(props: OrganizationProviderProps) {
         setLoading(true);
         setError(null);
 
-        // Set tokens for the service
-        const tokens = localStorage.getItem('auth_tokens');
-        if (tokens) {
-          orgService().setTokens(JSON.parse(tokens));
+        // Request organizations via WebSocket event
+        const result = await dashboardServer.sendMessageWithResponse({
+          type: 'organization_list',
+          data: {}
+        });
+
+        if (result?.error) {
+          throw new Error(result.error);
         }
 
-        const orgs = await orgService().getOrganizations();
+        const orgs = result.data?.organizations || [];
 
         // Set current org if none selected
         if (!currentOrgId() && orgs.length > 0) {
@@ -113,7 +117,18 @@ export function OrganizationProvider(props: OrganizationProviderProps) {
       if (!orgId || !auth.isAuthenticated()) return [];
 
       try {
-        return await orgService().getMembers(orgId);
+        // Request members via WebSocket event
+        const result = await dashboardServer.sendMessageWithResponse({
+          type: 'organization_members',
+          data: { organizationId: orgId }
+        });
+
+        if (result?.error) {
+          console.warn('Failed to load members:', result.error);
+          return [];
+        }
+
+        return result.data?.members || [];
       } catch (err) {
         console.error('Failed to load members:', err);
         return [];
@@ -127,12 +142,31 @@ export function OrganizationProvider(props: OrganizationProviderProps) {
       if (!orgId || !auth.isAuthenticated()) return [];
 
       try {
-        return await orgService().getUserPermissions(orgId);
+        // Request user permissions via WebSocket event
+        const result = await dashboardServer.sendMessageWithResponse({
+          type: 'organization_permissions',
+          data: { organizationId: orgId }
+        });
+
+        if (result?.error) {
+          console.warn('Failed to load permissions:', result.error);
+          // Fall back to admin permissions for demo
+          return [{
+            resource: '*',
+            action: '*',
+            granted: true
+          }];
+        }
+
+        return result.data?.permissions || [];
       } catch (err) {
         console.error('Failed to load permissions:', err);
-        // Fall back to role-based permissions
-        const currentOrg = currentOrganization();
-        return currentOrg ? orgService().getRolePermissions(currentOrg.userRole) : [];
+        // Fall back to admin permissions for demo
+        return [{
+          resource: '*',
+          action: '*',
+          granted: true
+        }];
       }
     }
   );

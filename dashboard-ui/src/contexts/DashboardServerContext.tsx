@@ -20,6 +20,7 @@ interface DashboardServerContextValue {
 
   // Raw WebSocket access for custom messages
   sendMessage: (message: any) => void;
+  sendMessageWithResponse: (message: any) => Promise<any>;
 
   // MCP tool calls with promise-based responses
   callMCPTool: (tool: string, params?: any) => Promise<any>;
@@ -265,6 +266,45 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
     }
   };
 
+  // Promise-based sendMessage for request/response patterns
+  const sendMessageWithResponse = (message: any): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      const websocket = ws();
+      if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+        reject(new Error('Dashboard server WebSocket not connected'));
+        return;
+      }
+
+      const messageId = message.id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Set up timeout
+      const timeout = setTimeout(() => {
+        pendingRequests.delete(messageId);
+        reject(new Error(`Request '${message.type}' timed out`));
+      }, 15000); // 15 second timeout
+
+      // Store the pending request
+      pendingRequests.set(messageId, {
+        resolve: (response: any) => {
+          clearTimeout(timeout);
+          resolve(response);
+        },
+        reject: (error: any) => {
+          clearTimeout(timeout);
+          reject(error);
+        },
+        timeout
+      });
+
+      // Send the message
+      websocket.send(JSON.stringify({
+        ...message,
+        id: messageId,
+        userId: userId()
+      }));
+    });
+  };
+
   const handleMessage = (message: any) => {
     console.log('📨 Dashboard server message:', message.type, message);
 
@@ -358,6 +398,16 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
             }
           });
         }
+        break;
+
+      // TODO: Remove these logging-only handlers post-troubleshooting
+      case 'mcp_catalog_list_response':
+      case 'event_send_response':
+      case 'organization_list_response':
+      case 'organization_members_response':
+      case 'organization_permissions_response':
+        // These responses are handled by sendMessage promise resolution
+        // Logging cases can be removed once debugging is complete
         break;
 
       default:
@@ -610,6 +660,7 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
 
     // Raw WebSocket access
     sendMessage,
+    sendMessageWithResponse,
 
     // MCP tool calls
     callMCPTool,

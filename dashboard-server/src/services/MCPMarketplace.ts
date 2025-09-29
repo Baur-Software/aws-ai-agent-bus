@@ -14,18 +14,33 @@ export interface MCPServerListing {
 }
 
 export class MCPMarketplace {
-  private baseUrl = 'https://mcpservers.org';
+  private awesomeListUrl = 'https://raw.githubusercontent.com/wong2/awesome-mcp-servers/main/README.md';
+  private tensorBlockUrl = 'https://raw.githubusercontent.com/TensorBlock/awesome-mcp-servers/main/README.md';
 
   async searchServers(searchQuery: string = ''): Promise<MCPServerListing[]> {
     try {
-      const url = `${this.baseUrl}?query=${encodeURIComponent(searchQuery)}`;
-      const response = await fetch(url);
-      const html = await response.text();
+      // Fetch from wong2/awesome-mcp-servers (more curated)
+      const response = await fetch(this.awesomeListUrl);
+      const markdown = await response.text();
 
-      return this.parseServerListings(html);
+      const servers = this.parseMarkdownServers(markdown);
+
+      // Filter by search query if provided
+      if (searchQuery && searchQuery.trim() !== '') {
+        const query = searchQuery.toLowerCase();
+        return servers.filter(server =>
+          server.name.toLowerCase().includes(query) ||
+          server.description.toLowerCase().includes(query) ||
+          server.category.toLowerCase().includes(query) ||
+          server.tags.some(tag => tag.toLowerCase().includes(query))
+        );
+      }
+
+      return servers;
     } catch (error) {
-      console.error('Failed to fetch MCP servers:', error);
-      return [];
+      console.error('Failed to fetch MCP servers from GitHub:', error);
+      // Fallback to sample servers
+      return this.getSampleServers();
     }
   }
 
@@ -39,19 +54,60 @@ export class MCPMarketplace {
     }
   }
 
-  private parseServerListings(html: string): MCPServerListing[] {
-    console.log(`Parsing HTML response (${html.length} chars)`);
+  private parseMarkdownServers(markdown: string): MCPServerListing[] {
+    console.log(`Parsing markdown response (${markdown.length} chars)`);
 
-    // Since mcpservers.org is a client-side React app, the server listings
-    // are not available in the initial HTML. For demo purposes, return
-    // sample MCP servers that would commonly be searched for.
+    const servers: MCPServerListing[] = [];
+    const lines = markdown.split('\n');
 
-    // In production, this would either:
-    // 1. Use a headless browser to render the React app
-    // 2. Call an API endpoint if available
-    // 3. Maintain a curated list of popular MCP servers
+    let currentCategory = 'General';
+    let serverCount = 0;
 
-    return this.getSampleServers();
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // Detect category headers (## Category Name)
+      if (line.startsWith('##') && !line.includes('Table of Contents')) {
+        currentCategory = line.replace(/^##\s*/, '').replace(/[🔥🚀📊🎯🔧⚡🌐🎨💼🔒🤖💡📱🎮🏢]+/g, '').trim();
+        continue;
+      }
+
+      // Parse server entries (- [Name](url) - Description)
+      const serverMatch = line.match(/^-\s*\[([^\]]+)\]\(([^)]+)\)\s*-?\s*(.*)/);
+      if (serverMatch) {
+        const [, name, url, description] = serverMatch;
+
+        // Extract GitHub repository if it's a GitHub URL
+        const githubMatch = url.match(/github\.com\/([^\/]+\/[^\/]+)/);
+        const repository = githubMatch ? url : undefined;
+
+        // Generate tags from name and description
+        const tags = [
+          ...name.toLowerCase().split(/[-_\s]+/),
+          ...description.toLowerCase().split(/\s+/).slice(0, 3)
+        ].filter(tag => tag.length > 2);
+
+        servers.push({
+          id: `mcp-${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+          name,
+          description: description || 'MCP Server',
+          author: githubMatch ? githubMatch[1].split('/')[0] : 'Community',
+          category: currentCategory,
+          tags: [...new Set(tags)], // Remove duplicates
+          repository,
+          rating: 4.5 + Math.random() * 0.5, // Random rating between 4.5-5.0
+          downloads: Math.floor(Math.random() * 10000) + 1000
+        });
+
+        serverCount++;
+
+        // Limit to prevent too many servers
+        if (serverCount >= 100) break;
+      }
+    }
+
+    console.log(`Parsed ${servers.length} MCP servers from GitHub awesome list`);
+    return servers.length > 0 ? servers : this.getSampleServers();
   }
 
   private getSampleServers(): MCPServerListing[] {

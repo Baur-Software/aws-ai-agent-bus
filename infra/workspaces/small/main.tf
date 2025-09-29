@@ -6,103 +6,86 @@ terraform {
       version = "~> 5.0"
     }
   }
-}
-
-provider "aws" {
-  region = var.aws_region
-
-  default_tags {
-    tags = var.tags
+  backend "s3" {
+    bucket  = "baursoftware-terraform-state"
+    key     = "infra/workspaces/small/terraform.tfstate"
+    region  = "us-west-2"
+    profile = "baursoftware"
+    encrypt = true
   }
 }
 
-# Core KV storage
-module "kv_store" {
-  source = "../../modules/dynamodb_kv"
-
-  env = var.env
+provider "aws" {
+  region  = var.aws_region
+  profile = var.aws_profile
 }
 
-# Event bus for system coordination
-module "event_bus" {
-  source = "../../modules/eventbridge_bus"
-
-  env = var.env
+module "state_bucket" {
+  source = "../../modules/state_bucket"
 }
 
-# Event monitoring system
-module "events_monitoring" {
-  source = "../../modules/dynamodb_events"
-
-  env = var.env
-}
-
-# Secrets storage
-module "secrets" {
-  source = "../../modules/secrets_min"
-
-  env = var.env
-}
-
-# Artifacts bucket
-module "artifacts_bucket" {
-  source = "../../modules/s3_artifacts"
-
-  env = var.env
-}
-
-# Timeline store
-module "timeline_store" {
-  source = "../../modules/dynamodb_timeline"
-
-  env = var.env
-}
-
-# Cognito authentication
-module "cognito_auth" {
-  source = "../../modules/cognito_auth"
-
-  name = local.name
-  tags = var.tags
-
-  # Development-friendly configuration
-  callback_urls        = var.cognito_callback_urls
-  logout_urls         = var.cognito_logout_urls
-  enable_hosted_ui    = var.cognito_enable_hosted_ui
-  enable_identity_pool = var.cognito_enable_identity_pool
-}
-
-# Dashboard service with all dependencies
+# Dashboard service module
 module "dashboard_service" {
-  source = "../../modules/ecs_dashboard_service"
+  source = "../../modules/dashboard_service"
+
+  name                      = "dashboard-service-${var.env}"
+  dashboard_lambda_role_arn = aws_iam_role.dashboard_lambda_role.arn
 
   env = var.env
 
-  # Small workspace configuration - balanced cost/performance
-  cpu_units     = var.dashboard_cpu_units
-  memory_mb     = var.dashboard_memory_mb
-  enable_spot   = var.dashboard_enable_spot
-  desired_count = var.dashboard_desired_count
-  create_alb    = var.dashboard_create_alb
+  # Resource configuration for small workspace
+  cpu_units     = var.cpu_units
+  memory_mb     = var.memory_mb
+  enable_spot   = var.enable_spot
+  desired_count = var.desired_count
+  create_alb    = var.create_alb
 
   # Container configuration
-  container_image = var.dashboard_container_image
-  container_port  = var.dashboard_container_port
+  container_image = var.container_image
+  container_port  = var.container_port
 
-  # Network configuration
+  # Network configuration (optional overrides)
   vpc_id     = var.vpc_id
   subnet_ids = var.subnet_ids
 
-  # Dependencies - direct module references
-  kv_table_name  = module.kv_store.table_name
-  kv_table_arn   = module.kv_store.table_arn
-  event_bus_name = module.event_bus.bus_name
-  event_bus_arn  = module.event_bus.bus_arn
-  secrets_arn    = module.secrets.secret_arn
+  # Dependencies from other components
+  kv_table_name  = data.terraform_remote_state.dynamodb_kv.outputs.table_name
+  kv_table_arn   = data.terraform_remote_state.dynamodb_kv.outputs.table_arn
+  secrets_arn    = data.terraform_remote_state.secrets.outputs.secret_arn
+  event_bus_arn  = data.terraform_remote_state.eventbridge_bus.outputs.bus_arn
+  event_bus_name = data.terraform_remote_state.eventbridge_bus.outputs.bus_name
+}
 
-  depends_on = [
-    module.kv_store,
-    module.event_bus,
-    module.secrets
-  ]
+module "dashboard_ui" {
+  source = "../../modules/dashboard_ui"
+
+  env = var.env
+
+  # Cognito configuration
+  user_pool_id        = var.cognito_user_pool_id
+  user_pool_client_id = var.cognito_user_pool_client_id
+  region              = var.aws_region
+  callback_urls       = var.cognito_callback_urls
+
+  # Dashboard service ALB DNS (if created)
+  dashboard_alb_dns = var.create_alb ? module.dashboard_service.alb_dns_name : ""
+}
+
+resource "aws_iam_role" "dashboard_lambda_role" {
+  name = "dashboard-lambda-role-${var.env}"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      },
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "dashboard_lambda_basic" {
+  role       = aws_iam_role.dashboard_lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
