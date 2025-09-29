@@ -19,7 +19,8 @@ import {
   PinOff,
   MessageCircle,
   ChevronDown,
-  Building
+  Building,
+  Grid3X3
 } from 'lucide-solid';
 
 // Lazy load the pages as overlays
@@ -28,6 +29,7 @@ const KVStore = lazy(() => import('../../../pages/KVStore'));
 const Artifacts = lazy(() => import('../../../pages/Artifacts'));
 const Events = lazy(() => import('../../../pages/Events'));
 const SettingsPage = lazy(() => import('../../../pages/Settings'));
+const AppsTab = lazy(() => import('../../apps/AppsTab'));
 
 interface FloatingNavigationProps {
   currentPage?: string;
@@ -111,6 +113,7 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
 
   const navItems: NavItem[] = [
     { id: 'workflows', label: 'Workflows', icon: Workflow, path: '/' },
+    { id: 'apps', label: 'Apps', icon: Grid3X3, path: '/apps' },
     { id: 'overview', label: 'Stats', icon: Home, path: '/dashboard' },
     { id: 'kv-store', label: 'KV Store', icon: Database, path: '/kv-store' },
     { id: 'artifacts', label: 'Artifacts & S3', icon: Archive, path: '/artifacts' },
@@ -123,6 +126,8 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
     switch (itemId) {
       case 'overview':
         return Dashboard;
+      case 'apps':
+        return AppsTab;
       case 'kv-store':
         return KVStore;
       case 'artifacts':
@@ -140,6 +145,8 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
     switch (itemId) {
       case 'overview':
         return 'large';
+      case 'apps':
+        return 'full';
       case 'settings':
         return 'medium';
       case 'kv-store':

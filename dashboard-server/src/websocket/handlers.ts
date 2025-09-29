@@ -6,6 +6,7 @@ import { AgentHandler } from '../handlers/agents.js';
 import AuthMiddleware, { UserContext } from '../middleware/auth.js';
 import { MCPWebSocketHandler, MCP_MESSAGE_TYPES } from './mcpHandlers.js';
 import ErrorHandler from '../utils/ErrorHandler.js';
+import { EventsHandler } from '../handlers/events.js';
 
 interface Dependencies {
   metricsAggregator: any;
@@ -447,6 +448,113 @@ async function handleWebSocketMessage(ws: WebSocket, message: any, { metricsAggr
         }));
         break;
 
+      // MCP Catalog operations
+      case 'mcp_catalog_list':
+        try {
+          const catalogResult = await getMCPServers();
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'mcp_catalog_list_response',
+            data: catalogResult
+          }));
+        } catch (error) {
+          const catalogError = await ErrorHandler.handleError(
+            error,
+            'mcp_catalog_list',
+            (ws as any).userContext?.userId
+          );
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'mcp_catalog_list_response',
+            error: catalogError.userMessage
+          }));
+        }
+        break;
+
+      case 'mcp_server_connect':
+        try {
+          const userContext = (ws as any).userContext as UserContext;
+          const connectResult = await connectMCPServer(
+            message.data.serverId,
+            message.data.serverConfig,
+            userContext
+          );
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'mcp_server_connect_response',
+            data: connectResult
+          }));
+        } catch (error) {
+          const connectError = await ErrorHandler.handleError(
+            error,
+            'mcp_server_connect',
+            (ws as any).userContext?.userId
+          );
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'mcp_server_connect_response',
+            error: connectError.userMessage
+          }));
+        }
+        break;
+
+      case 'mcp_server_disconnect':
+        try {
+          const userContext = (ws as any).userContext as UserContext;
+          const disconnectResult = await disconnectMCPServer(
+            message.data.serverId,
+            userContext
+          );
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'mcp_server_disconnect_response',
+            data: disconnectResult
+          }));
+        } catch (error) {
+          const disconnectError = await ErrorHandler.handleError(
+            error,
+            'mcp_server_disconnect',
+            (ws as any).userContext?.userId
+          );
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'mcp_server_disconnect_response',
+            error: disconnectError.userMessage
+          }));
+        }
+        break;
+
+      case 'event_send':
+        try {
+          const userContext = (ws as any).userContext as UserContext;
+          await EventsHandler.send({
+            source: message.data.source,
+            detailType: message.data.detailType,
+            detail: {
+              ...message.data.detail,
+              userId: userContext.userId,
+              organizationId: userContext.organizationId
+            }
+          });
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'event_send_response',
+            data: { success: true }
+          }));
+        } catch (error) {
+          const eventError = await ErrorHandler.handleError(
+            error,
+            'event_send',
+            (ws as any).userContext?.userId
+          );
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'event_send_response',
+            error: eventError.userMessage
+          }));
+        }
+        break;
+
       default:
         ws.send(JSON.stringify({
           id: message.id,
@@ -479,4 +587,224 @@ async function handleWebSocketMessage(ws: WebSocket, message: any, { metricsAggr
       retryInfo: errorResponse.retryInfo
     }));
   }
+}
+
+// MCP Catalog Helper Functions
+async function getMCPServers() {
+  // Mock MCP catalog data for now - in production this would call the MCPCatalogService
+  const mockServers = [
+    {
+      id: 'github-official',
+      name: 'GitHub',
+      description: 'Official GitHub MCP server for repository management, issue tracking, and code collaboration',
+      publisher: 'GitHub Inc.',
+      version: '1.2.0',
+      isOfficial: true,
+      isSigned: true,
+      verificationBadges: ['official', 'signed'],
+      repository: 'https://github.com/github/mcp-server',
+      documentation: 'https://docs.github.com/mcp',
+      downloadCount: 150000,
+      starCount: 1200,
+      lastUpdated: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+      category: 'Development',
+      tags: ['git', 'repositories', 'issues', 'collaboration'],
+      configurationSchema: [
+        {
+          key: 'token',
+          label: 'GitHub Personal Access Token',
+          type: 'password',
+          required: true,
+          description: 'GitHub personal access token with repo and user permissions',
+          sensitive: true
+        },
+        {
+          key: 'baseUrl',
+          label: 'GitHub Base URL',
+          type: 'url',
+          required: false,
+          description: 'Base URL for GitHub Enterprise (leave empty for github.com)',
+          defaultValue: 'https://api.github.com'
+        }
+      ],
+      authMethods: ['api_key'],
+      toolCount: 15,
+      capabilities: ['repository-management', 'issue-tracking', 'pull-requests', 'user-management'],
+      installCommand: 'npm install -g @github/mcp-server'
+    },
+    {
+      id: 'atlassian-jira',
+      name: 'Atlassian Jira',
+      description: 'Connect to Jira for issue management, project tracking, and agile workflows',
+      publisher: 'Atlassian',
+      version: '2.1.5',
+      isOfficial: true,
+      isSigned: true,
+      verificationBadges: ['official', 'signed', 'popular'],
+      repository: 'https://github.com/atlassian/mcp-jira',
+      documentation: 'https://developer.atlassian.com/mcp',
+      downloadCount: 89000,
+      starCount: 890,
+      lastUpdated: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+      category: 'Enterprise',
+      tags: ['project-management', 'issues', 'agile', 'workflows'],
+      configurationSchema: [
+        {
+          key: 'instanceUrl',
+          label: 'Jira Instance URL',
+          type: 'url',
+          required: true,
+          description: 'Your Jira instance URL (e.g., https://company.atlassian.net)',
+          validation: '^https?://.+\\.atlassian\\.net/?$'
+        },
+        {
+          key: 'email',
+          label: 'Email Address',
+          type: 'text',
+          required: true,
+          description: 'Your Jira account email address'
+        },
+        {
+          key: 'apiToken',
+          label: 'API Token',
+          type: 'password',
+          required: true,
+          description: 'Jira API token from your account settings',
+          sensitive: true
+        }
+      ],
+      authMethods: ['api_key', 'oauth2'],
+      toolCount: 22,
+      capabilities: ['issue-management', 'project-tracking', 'workflow-automation', 'reporting'],
+      installCommand: 'npm install -g @atlassian/mcp-jira',
+      npmPackage: '@atlassian/mcp-jira'
+    },
+    {
+      id: 'hubspot-crm',
+      name: 'HubSpot CRM',
+      description: 'Integration with HubSpot for customer relationship management, marketing automation, and sales tracking',
+      publisher: 'HubSpot',
+      version: '3.0.2',
+      isOfficial: true,
+      isSigned: true,
+      verificationBadges: ['official', 'signed', 'popular'],
+      repository: 'https://github.com/hubspot/mcp-hubspot',
+      documentation: 'https://developers.hubspot.com/docs/api/mcp',
+      downloadCount: 67000,
+      starCount: 445,
+      lastUpdated: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1 week ago
+      category: 'CRM',
+      tags: ['crm', 'marketing', 'sales', 'contacts', 'automation'],
+      configurationSchema: [
+        {
+          key: 'accessToken',
+          label: 'HubSpot Access Token',
+          type: 'password',
+          required: true,
+          description: 'HubSpot private app access token',
+          sensitive: true
+        },
+        {
+          key: 'portalId',
+          label: 'Portal ID',
+          type: 'number',
+          required: true,
+          description: 'Your HubSpot portal (account) ID'
+        }
+      ],
+      authMethods: ['oauth2', 'api_key'],
+      toolCount: 28,
+      capabilities: ['contact-management', 'deal-tracking', 'email-marketing', 'analytics'],
+      installCommand: 'npm install -g @hubspot/mcp-server',
+      npmPackage: '@hubspot/mcp-server'
+    },
+    {
+      id: 'elasticsearch-search',
+      name: 'Elasticsearch',
+      description: 'Search and analytics engine integration for full-text search, data analysis, and real-time insights',
+      publisher: 'Elastic',
+      version: '1.8.1',
+      isOfficial: false,
+      isSigned: true,
+      verificationBadges: ['signed', 'popular'],
+      repository: 'https://github.com/elastic/mcp-elasticsearch',
+      documentation: 'https://www.elastic.co/guide/en/mcp/current/index.html',
+      downloadCount: 34000,
+      starCount: 278,
+      lastUpdated: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 2 weeks ago
+      category: 'Database',
+      tags: ['search', 'analytics', 'indexing', 'data'],
+      configurationSchema: [
+        {
+          key: 'host',
+          label: 'Elasticsearch Host',
+          type: 'url',
+          required: true,
+          description: 'Elasticsearch cluster endpoint',
+          defaultValue: 'http://localhost:9200'
+        },
+        {
+          key: 'username',
+          label: 'Username',
+          type: 'text',
+          required: false,
+          description: 'Username for authentication (if required)'
+        },
+        {
+          key: 'password',
+          label: 'Password',
+          type: 'password',
+          required: false,
+          description: 'Password for authentication (if required)',
+          sensitive: true
+        }
+      ],
+      authMethods: ['basic', 'api_key', 'none'],
+      toolCount: 12,
+      capabilities: ['full-text-search', 'data-analytics', 'indexing', 'aggregations'],
+      installCommand: 'npm install -g @elastic/mcp-elasticsearch',
+      dockerImage: 'elastic/mcp-elasticsearch:latest'
+    }
+  ];
+
+  return {
+    servers: mockServers,
+    total: mockServers.length,
+    registries: [
+      {
+        name: 'Official MCP Registry',
+        url: 'https://mcpservers.org',
+        description: 'Official registry of verified MCP servers',
+        isOfficial: true
+      }
+    ]
+  };
+}
+
+async function connectMCPServer(serverId: string, serverConfig: any, userContext: UserContext) {
+  // Mock connection for now - in production this would actually configure and connect to the MCP server
+  console.log(`Connecting to MCP server ${serverId} for user ${userContext.userId}`);
+
+  // Simulate connection delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  return {
+    success: true,
+    serverId,
+    connectionId: `conn_${Date.now()}`,
+    message: `Successfully connected to ${serverConfig.name || serverId}`,
+    timestamp: new Date().toISOString()
+  };
+}
+
+async function disconnectMCPServer(serverId: string, userContext: UserContext) {
+  // Mock disconnection for now
+  console.log(`Disconnecting MCP server ${serverId} for user ${userContext.userId}`);
+
+  return {
+    success: true,
+    serverId,
+    message: `Successfully disconnected from ${serverId}`,
+    timestamp: new Date().toISOString()
+  };
 }
