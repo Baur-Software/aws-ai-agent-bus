@@ -614,37 +614,10 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
 
     const target = e.target as HTMLElement;
 
-    // Don't prevent default for UI elements - let them handle their own events
-    const isUIElement = target.closest(`
-      button,
-      .floating-panel,
-      .node-details,
-      [role="dialog"],
-      [role="menu"],
-      [role="button"],
-      .pointer-events-auto,
-      [data-drag-handle],
-      input,
-      textarea,
-      select,
-      [contenteditable],
-      .modal,
-      .overlay,
-      .dropdown,
-      .tooltip,
-      .popover,
-      [class*="modal"],
-      [class*="overlay"],
-      [class*="dropdown"],
-      [class*="floating"],
-      [class*="panel"]
-    `.replace(/\s+/g, ' ').trim()) !== null;
-
-    if (isUIElement) {
-      return; // Let UI elements handle their own events
+    // Let UI elements handle their own events - trust the browser
+    if (target.closest('.floating-panel, .pointer-events-auto, [role="dialog"]')) {
+      return;
     }
-
-    e.preventDefault(); // Only prevent default for canvas interactions
 
     // Close connection toolbar if clicking outside
     if (selectedConnection()) {
@@ -869,6 +842,28 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
 
   // Zoom handling
   const handleWheel = (e: WheelEvent) => {
+    const target = e.target as HTMLElement;
+
+    // Don't zoom if user is interacting with form inputs or scrollable UI elements
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+      return;
+    }
+
+    // Don't zoom if scrolling in a panel or other scrollable container
+    const isInScrollableUI = target.closest(`
+      .floating-panel,
+      .overflow-y-auto,
+      .overflow-auto,
+      [role="dialog"],
+      [role="menu"],
+      .modal,
+      .dropdown
+    `.replace(/\s+/g, ' ').trim()) !== null;
+
+    if (isInScrollableUI) {
+      return;
+    }
+
     e.preventDefault();
     const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
     const newZoom = Math.max(0.1, Math.min(3, zoom() * zoomFactor));
@@ -1243,6 +1238,43 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
           }}
         </For>
 
+        {/* Arrow marker definitions */}
+        <defs>
+          <marker
+            id="arrowhead-temp"
+            markerWidth="10"
+            markerHeight="10"
+            refX="9"
+            refY="3"
+            orient="auto"
+            markerUnits="strokeWidth"
+          >
+            <path d="M0,0 L0,6 L9,3 z" fill="#6366f1" />
+          </marker>
+          <marker
+            id="arrowhead-valid"
+            markerWidth="10"
+            markerHeight="10"
+            refX="9"
+            refY="3"
+            orient="auto"
+            markerUnits="strokeWidth"
+          >
+            <path d="M0,0 L0,6 L9,3 z" fill="#10b981" />
+          </marker>
+          <marker
+            id="arrowhead-invalid"
+            markerWidth="10"
+            markerHeight="10"
+            refX="9"
+            refY="3"
+            orient="auto"
+            markerUnits="strokeWidth"
+          >
+            <path d="M0,0 L0,6 L9,3 z" fill="#ef4444" />
+          </marker>
+        </defs>
+
         {/* Temporary connection while dragging */}
         <Show when={tempConnection()}>
           {(conn) => {
@@ -1274,51 +1306,74 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
                 nearbyPort.type
               ) : false;
 
+            const pathId = `M ${from.x} ${from.y}
+                     C ${fromControl.x} ${fromControl.y}
+                       ${toControl.x} ${toControl.y}
+                       ${to.x} ${to.y}`;
+
+            const markerUrl = isValidTarget ? 'url(#arrowhead-valid)' :
+                            nearbyPort && !isValidTarget ? 'url(#arrowhead-invalid)' :
+                            'url(#arrowhead-temp)';
+
             return (
               <g>
                 {/* Glowing effect for valid connections */}
                 {isValidTarget && (
                   <path
-                    d={`M ${from.x} ${from.y}
-                       C ${fromControl.x} ${fromControl.y}
-                         ${toControl.x} ${toControl.y}
-                         ${to.x} ${to.y}`}
+                    d={pathId}
                     stroke="#10b981"
-                    stroke-width="6"
+                    stroke-width="8"
                     fill="none"
-                    class="opacity-30 animate-pulse"
+                    class="opacity-25 animate-pulse"
                     style={{
                       'stroke-linecap': 'round',
-                      'pointer-events': 'none' // Temp connections shouldn't be clickable
+                      'pointer-events': 'none'
                     }}
                   />
                 )}
-                {/* Main temp connection */}
+                {/* Main temp connection with arrow */}
                 <path
-                  d={`M ${from.x} ${from.y}
-                     C ${fromControl.x} ${fromControl.y}
-                       ${toControl.x} ${toControl.y}
-                       ${to.x} ${to.y}`}
+                  d={pathId}
                   stroke={isValidTarget ? "#10b981" : nearbyPort && !isValidTarget ? "#ef4444" : "#6366f1"}
-                  stroke-width="2"
-                  stroke-dasharray="5,5"
+                  stroke-width="3"
+                  stroke-dasharray="8,4"
                   fill="none"
-                  class="opacity-80"
+                  marker-end={markerUrl}
+                  class="opacity-90"
                   style={{
                     'stroke-linecap': 'round',
-                    'pointer-events': 'none' // Temp connections shouldn't be clickable
+                    'pointer-events': 'none',
+                    'transition': 'stroke 0.2s ease-in-out'
                   }}
                 />
-                {/* Connection direction indicator */}
+                {/* Animated flow indicator along the path */}
                 {distance > 50 && (
-                  <circle
-                    cx={from.x + (to.x - from.x) * 0.8}
-                    cy={from.y + (to.y - from.y) * 0.8}
-                    r="3"
-                    fill={isValidTarget ? "#10b981" : nearbyPort && !isValidTarget ? "#ef4444" : "#6366f1"}
-                    class="animate-pulse"
-                    style={{ 'pointer-events': 'none' }} // Direction indicator shouldn't be clickable
-                  />
+                  <>
+                    <circle
+                      cx={from.x + (to.x - from.x) * 0.3}
+                      cy={from.y + (to.y - from.y) * 0.3}
+                      r="4"
+                      fill={isValidTarget ? "#10b981" : nearbyPort && !isValidTarget ? "#ef4444" : "#6366f1"}
+                      class="opacity-60"
+                      style={{ 'pointer-events': 'none', 'animation': 'pulse 1.5s ease-in-out infinite' }}
+                    />
+                    <circle
+                      cx={from.x + (to.x - from.x) * 0.6}
+                      cy={from.y + (to.y - from.y) * 0.6}
+                      r="4"
+                      fill={isValidTarget ? "#10b981" : nearbyPort && !isValidTarget ? "#ef4444" : "#6366f1"}
+                      class="opacity-60"
+                      style={{ 'pointer-events': 'none', 'animation': 'pulse 1.5s ease-in-out infinite 0.3s' }}
+                    />
+                    <circle
+                      cx={from.x + (to.x - from.x) * 0.85}
+                      cy={from.y + (to.y - from.y) * 0.85}
+                      r="4"
+                      fill={isValidTarget ? "#10b981" : nearbyPort && !isValidTarget ? "#ef4444" : "#6366f1"}
+                      class="opacity-60"
+                      style={{ 'pointer-events': 'none', 'animation': 'pulse 1.5s ease-in-out infinite 0.6s' }}
+                    />
+                  </>
                 )}
               </g>
             );
@@ -1513,20 +1568,41 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
 
                     return (
                       <div
-                        class={`port absolute rounded-full cursor-crosshair transition-all duration-200 ${
-                          isHovered ? 'w-5 h-5 bg-green-400 border-2 border-white shadow-lg scale-110' :
-                          isCompatible ? 'w-4 h-4 bg-blue-400 border-2 border-white shadow-md' :
-                          isConnecting ? 'w-3 h-3 bg-gray-400 border-2 border-white opacity-50' :
-                          'w-3 h-3 bg-blue-500 border-2 border-white hover:bg-blue-600 hover:scale-110'
-                        }`}
+                        class="absolute port-container cursor-crosshair"
                         style={{
-                          left: `${portSpacing * (index() + 1) - (isHovered ? 10 : isCompatible ? 8 : 6)}px`,
-                          top: isHovered ? '-10px' : isCompatible ? '-8px' : '-6px'
+                          left: `${portSpacing * (index() + 1) - 16}px`,
+                          top: '-16px',
+                          width: '32px',
+                          height: '32px',
+                          'z-index': isConnecting ? '100' : '10'
                         }}
                         data-node-id={node.id}
                         data-port={input}
                         data-port-type="input"
                         title={`Input: ${input}`}
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          // Trigger connection start by simulating port click
+                          const startNode = node;
+                          if (startNode) {
+                            const startPos = getPortPosition(startNode, input, 'input');
+                            setDragState({
+                              isDragging: true,
+                              dragType: 'connection',
+                              startPos: { x: e.clientX, y: e.clientY },
+                              currentPos: { x: e.clientX, y: e.clientY },
+                              dragNode: null,
+                              connectionStart: { nodeId: node.id, port: input, type: 'input' }
+                            });
+                            setTempConnection({
+                              from: startPos,
+                              to: { x: startPos.x, y: startPos.y },
+                              fromNode: node.id,
+                              fromPort: input,
+                              portType: 'input'
+                            });
+                          }
+                        }}
                         onMouseEnter={() => {
                           if (isConnecting) {
                             setHoveredPort({ nodeId: node.id, port: input, type: 'input' });
@@ -1537,7 +1613,22 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
                             setHoveredPort(null);
                           }
                         }}
-                      />
+                      >
+                        {/* Visual port indicator */}
+                        <div
+                          class={`port absolute rounded-full cursor-crosshair transition-all duration-200 pointer-events-none ${
+                            isHovered ? 'w-5 h-5 bg-green-400 border-2 border-white shadow-lg ring-4 ring-green-200' :
+                            isCompatible ? 'w-5 h-5 bg-blue-400 border-2 border-white shadow-md ring-2 ring-blue-200' :
+                            isConnecting ? 'w-4 h-4 bg-gray-400 border-2 border-white opacity-50' :
+                            'w-3 h-3 bg-blue-500 border-2 border-white hover:bg-blue-600 hover:w-4 hover:h-4'
+                          }`}
+                          style={{
+                            left: '50%',
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)'
+                          }}
+                        />
+                      </div>
                     );
                   }}
                 </For>
@@ -1560,20 +1651,41 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
 
                     return (
                       <div
-                        class={`port absolute rounded-full cursor-crosshair transition-all duration-200 ${
-                          isHovered ? 'w-5 h-5 bg-green-400 border-2 border-white shadow-lg scale-110' :
-                          isCompatible ? 'w-4 h-4 bg-green-400 border-2 border-white shadow-md' :
-                          isConnecting ? 'w-3 h-3 bg-gray-400 border-2 border-white opacity-50' :
-                          'w-3 h-3 bg-green-500 border-2 border-white hover:bg-green-600 hover:scale-110'
-                        }`}
+                        class="absolute port-container cursor-crosshair"
                         style={{
-                          left: `${portSpacing * (index() + 1) - (isHovered ? 10 : isCompatible ? 8 : 6)}px`,
-                          bottom: isHovered ? '-10px' : isCompatible ? '-8px' : '-6px'
+                          left: `${portSpacing * (index() + 1) - 16}px`,
+                          bottom: '-16px',
+                          width: '32px',
+                          height: '32px',
+                          'z-index': isConnecting ? '100' : '10'
                         }}
                         data-node-id={node.id}
                         data-port={output}
                         data-port-type="output"
                         title={`Output: ${output}`}
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          // Trigger connection start
+                          const startNode = node;
+                          if (startNode) {
+                            const startPos = getPortPosition(startNode, output, 'output');
+                            setDragState({
+                              isDragging: true,
+                              dragType: 'connection',
+                              startPos: { x: e.clientX, y: e.clientY },
+                              currentPos: { x: e.clientX, y: e.clientY },
+                              dragNode: null,
+                              connectionStart: { nodeId: node.id, port: output, type: 'output' }
+                            });
+                            setTempConnection({
+                              from: startPos,
+                              to: { x: startPos.x, y: startPos.y },
+                              fromNode: node.id,
+                              fromPort: output,
+                              portType: 'output'
+                            });
+                          }
+                        }}
                         onMouseEnter={() => {
                           if (isConnecting) {
                             setHoveredPort({ nodeId: node.id, port: output, type: 'output' });
@@ -1584,7 +1696,22 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
                             setHoveredPort(null);
                           }
                         }}
-                      />
+                      >
+                        {/* Visual port indicator */}
+                        <div
+                          class={`port absolute rounded-full cursor-crosshair transition-all duration-200 pointer-events-none ${
+                            isHovered ? 'w-5 h-5 bg-green-400 border-2 border-white shadow-lg ring-4 ring-green-200' :
+                            isCompatible ? 'w-5 h-5 bg-green-400 border-2 border-white shadow-md ring-2 ring-green-200' :
+                            isConnecting ? 'w-4 h-4 bg-gray-400 border-2 border-white opacity-50' :
+                            'w-3 h-3 bg-green-500 border-2 border-white hover:bg-green-600 hover:w-4 hover:h-4'
+                          }`}
+                          style={{
+                            left: '50%',
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)'
+                          }}
+                        />
+                      </div>
                     );
                   }}
                 </For>

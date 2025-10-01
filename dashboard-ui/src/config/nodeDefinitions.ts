@@ -11,7 +11,17 @@ export interface NodeDefinition {
   icon?: string;
   color?: string;
   defaultConfig?: Record<string, any>;
+
+  // Schema-based output definition (preferred)
+  outputSchema?: {
+    type: 'object';
+    properties: Record<string, any>;
+    required?: string[];
+  };
+
+  // Legacy: hardcoded sample output (will be replaced by schema)
   defaultSampleOutput?: any;
+
   configFields?: {
     key: string;
     label: string;
@@ -100,15 +110,19 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
     configFields: [
       { key: 'key', label: 'Key', type: 'text', required: true }
     ],
-    defaultSampleOutput: {
-      key: 'user-preferences',
-      value: {
-        theme: 'dark',
-        language: 'en',
-        notifications: true
+    outputSchema: {
+      type: 'object',
+      properties: {
+        key: { type: 'string', description: 'The key that was retrieved' },
+        value: {
+          type: 'object',
+          description: 'The stored value (can be any JSON)',
+          additionalProperties: true
+        },
+        ttl: { type: 'number', description: 'Time to live in seconds' },
+        timestamp: { type: 'string', format: 'date-time' }
       },
-      ttl: 3600,
-      timestamp: '2025-09-30T10:30:00Z'
+      required: ['key', 'value']
     }
   },
   {
@@ -390,6 +404,100 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
     }
   },
 
+  // Agents
+  {
+    type: 'agent',
+    name: 'Agent',
+    description: 'AI agent task executor',
+    category: 'agents',
+    icon: '🤖',
+    color: 'bg-purple-600',
+    configFields: [
+      { key: 'agentId', label: 'Agent', type: 'select', required: true },
+      { key: 'prompt', label: 'Additional Instructions', type: 'textarea' },
+      { key: 'model', label: 'Model', type: 'select', options: [
+        { label: 'Claude 3.5 Sonnet', value: 'claude-3-5-sonnet-20241022' },
+        { label: 'Claude 3 Opus', value: 'claude-3-opus-20240229' },
+        { label: 'Claude 3 Haiku', value: 'claude-3-haiku-20240307' }
+      ]},
+      { key: 'temperature', label: 'Temperature', type: 'number', defaultValue: 0.7 }
+    ],
+    outputSchema: {
+      type: 'object',
+      properties: {
+        agentId: { type: 'string', description: 'Agent identifier' },
+        result: {
+          type: 'object',
+          properties: {
+            status: { type: 'string', enum: ['completed', 'failed', 'partial'] },
+            output: { type: 'string', description: 'Agent output text' },
+            artifacts: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Generated artifacts/files'
+            },
+            thinking: { type: 'string', description: 'Agent reasoning process' }
+          },
+          required: ['status', 'output']
+        },
+        tokensUsed: { type: 'number', description: 'LLM tokens consumed' },
+        duration: { type: 'number', description: 'Execution time in seconds' }
+      },
+      required: ['agentId', 'result']
+    }
+  },
+  {
+    type: 'agent-conductor',
+    name: 'Conductor Agent',
+    description: 'Goal-driven planning and task delegation',
+    category: 'agents',
+    icon: '🎯',
+    color: 'bg-indigo-500',
+    configFields: [
+      { key: 'task', label: 'Task Description', type: 'textarea', required: true },
+      { key: 'priority', label: 'Priority', type: 'select', defaultValue: 'medium', options: [
+        { label: 'Low', value: 'low' },
+        { label: 'Medium', value: 'medium' },
+        { label: 'High', value: 'high' }
+      ]},
+      { key: 'timeoutSeconds', label: 'Timeout (seconds)', type: 'number', defaultValue: 300 },
+      { key: 'includeWorkflowContext', label: 'Include Workflow Context', type: 'select', defaultValue: 'true', options: [
+        { label: 'Yes', value: 'true' },
+        { label: 'No', value: 'false' }
+      ]},
+      { key: 'delegation.maxAgents', label: 'Max Agents', type: 'number', defaultValue: 3 },
+      { key: 'delegation.preferredAgents', label: 'Preferred Agents', type: 'text' },
+      { key: 'delegation.excludeAgents', label: 'Exclude Agents', type: 'text' },
+      { key: 'context', label: 'Additional Context', type: 'json' }
+    ],
+    outputSchema: {
+      type: 'object',
+      properties: {
+        agentType: { type: 'string', enum: ['conductor'] },
+        task: { type: 'string' },
+        status: { type: 'string', enum: ['completed', 'failed', 'partial'] },
+        result: { type: 'object' },
+        plan: {
+          type: 'object',
+          properties: {
+            steps: { type: 'array' },
+            estimatedDuration: { type: 'number' },
+            complexity: { type: 'string' }
+          }
+        },
+        execution: {
+          type: 'object',
+          properties: {
+            duration: { type: 'number' },
+            tokensUsed: { type: 'number' },
+            agentsInvolved: { type: 'array' },
+            confidence: { type: 'number' }
+          }
+        }
+      }
+    }
+  },
+
   // Output
   {
     type: 'output',
@@ -420,7 +528,17 @@ export function getNodeDefinition(type: string): NodeDefinition | undefined {
 // Helper to get default sample output for a node type
 export function getDefaultSampleOutput(type: string): any | undefined {
   const def = getNodeDefinition(type);
+  // Prefer schema-based generation over hardcoded samples
+  if (def?.outputSchema) {
+    return undefined; // Signal to use SampleDataGenerator
+  }
   return def?.defaultSampleOutput;
+}
+
+// Helper to get output schema for a node type
+export function getNodeOutputSchema(type: string): any | undefined {
+  const def = getNodeDefinition(type);
+  return def?.outputSchema;
 }
 
 // Helper to apply default config and sample output to a node

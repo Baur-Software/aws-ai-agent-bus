@@ -4,13 +4,19 @@ import { useDashboardServer } from '../../../contexts/DashboardServerContext';
 import { useDragDrop, useDragSource } from '../../../contexts/DragDropContext';
 import { useIntegrations } from '../../../contexts/IntegrationsContext';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useArtifactService } from '../../../services/ArtifactService';
+import { useAgentDefinitionService } from '../../../services/AgentDefinitionService';
 import { listAgents } from '../../../api/agents'; // new API import
 import IntegrationsGrid from '../../IntegrationsGrid';
 import { mcpRegistry } from '../../../services/MCPCapabilityRegistry';
 import { agentRegistryInitializer } from '../../../services/AgentRegistryInitializer';
 import { mcpToolService, MCPServerTools } from '../../../services/MCPToolService';
+import { CreateAgentWizard } from '../../CreateAgentWizard';
 import { Agent } from 'http';
 import { WorkflowNode } from './WorkflowNodeDetails';
+import { useNavigate } from '@solidjs/router';
+import { NODE_DEFINITIONS } from '../../../config/nodeDefinitions';
+import NodeConfigRenderer from './NodeConfigRenderer';
 
 interface FloatingNodePanelProps {
   onDragStart: (nodeType: string, e: DragEvent) => void;
@@ -41,61 +47,19 @@ interface NodeCategory {
   }[];
 }
 
-// App configuration templates
-const APP_CONFIGS = [
-  {
-    id: 'google-analytics',
-    name: 'Google Analytics',
-    icon: ChartColumn,
-    color: 'bg-orange-500',
-    description: 'Connect Google Analytics for website metrics and reporting',
-    type: 'oauth2',
-    oauth2_config: {
-      auth_url: 'https://accounts.google.com/o/oauth2/auth',
-      token_url: 'https://oauth2.googleapis.com/token',
-      scopes: ['https://www.googleapis.com/auth/analytics.readonly'],
-      redirect_uri: 'http://localhost:3000/oauth/callback'
-    },
-    ui_fields: [
-      { key: 'client_id', label: 'Client ID', type: 'text', required: true },
-      { key: 'client_secret', label: 'Client Secret', type: 'password', required: true },
-      { key: 'property_id', label: 'GA4 Property ID', type: 'text', required: true }
-    ],
-    workflow_capabilities: [
-      'ga-top-pages', 'ga-search-data', 'ga-opportunities', 'ga-calendar'
-    ],
-    docsUrl: 'https://developers.google.com/analytics/devguides/config/mgmt/v3/quickstart/web-js'
-  },
-  {
-    id: 'google-search-console',
-    name: 'Google Search Console',
-    icon: Globe,
-    color: 'bg-blue-500',
-    description: 'Access search performance and indexing data',
-    docsUrl: 'https://developers.google.com/webmaster-tools/search-console-api/v1/quickstart',
-    fields: [
-      { key: 'client_id', label: 'Client ID', type: 'text', required: true },
-      { key: 'client_secret', label: 'Client Secret', type: 'password', required: true },
-      { key: 'site_url', label: 'Site URL', type: 'url', required: true }
-    ],
-    scopes: ['https://www.googleapis.com/auth/webmasters.readonly']
-  },
-  {
-    id: 'stripe',
-    name: 'Stripe',
-    icon: CreditCard,
-    color: 'bg-purple-500',
-    description: 'Process payments and manage subscriptions',
-    docsUrl: 'https://stripe.com/docs/api',
-    fields: [
-      { key: 'secret_key', label: 'Secret Key', type: 'password', required: true },
-      { key: 'publishable_key', label: 'Publishable Key', type: 'text', required: true }
-    ]
-  }
-];
-
 export default function FloatingNodePanel(props: FloatingNodePanelProps) {
-  const [position, setPosition] = createSignal(props.initialPosition || { x: window.innerWidth - 320, y: 0 });
+  // Calculate initial position that avoids toolbar collision
+  const getSafeInitialPosition = () => {
+    if (props.initialPosition) return props.initialPosition;
+
+    // Default to right edge, below toolbar (80px for toolbar + 20px margin)
+    return {
+      x: window.innerWidth - 320,
+      y: 100 // Safe distance below top toolbar
+    };
+  };
+
+  const [position, setPosition] = createSignal(getSafeInitialPosition());
   const [isDragging, setIsDragging] = createSignal(false);
   const [isResizing, setIsResizing] = createSignal(false);
   const [panelWidth, setPanelWidth] = createSignal(320);
@@ -117,6 +81,8 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   const [agents, setAgents] = createSignal<Agent[]>([]);
   const [mcpServerTools, setMcpServerTools] = createSignal<MCPServerTools[]>([]);
   const [loadingMcpTools, setLoadingMcpTools] = createSignal(false);
+  const [availableModels, setAvailableModels] = createSignal<Array<{ id: string; name: string }>>([]);
+  const navigate = useNavigate();
 
   // Auto-switch to details view when a node is selected
   createEffect(() => {
@@ -128,7 +94,10 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   // Get contexts
   const { user } = useAuth();
   const dashboardServer = useDashboardServer();
+  const { callMCPTool } = dashboardServer;
   const integrations = useIntegrations();
+  const artifactService = useArtifactService();
+  const agentService = useAgentDefinitionService(artifactService, { callMCPTool });
 
   // Fetch agents for current org/user
   createEffect(async () => {
@@ -146,26 +115,14 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     const connectedApps = integrations.getAllConnections();
     const dynamicNodes = [];
 
-    // Create nodes for each connected app
-    Object.entries(connectedApps).forEach(([appId, connections]) => {
-      if (connections.length > 0) {
-        // Find the app config for this integration
-        const appConfig = APP_CONFIGS.find(config => config.id === appId);
-        if (appConfig && appConfig.workflow_capabilities) {
-          // Create nodes for each workflow capability
-          appConfig.workflow_capabilities.forEach(capability => {
-            dynamicNodes.push({
-              type: capability,
-              name: `${appConfig.name} ${capability.split('-').pop()?.toUpperCase()}`,
-              description: `Use ${appConfig.name} ${capability} capability`,
-              icon: <appConfig.icon class="w-4 h-4" />,
-              color: appConfig.color,
-              requiresConnectedApp: appId
-            });
-          });
-        }
-      }
-    });
+    // TODO: Load integration configs dynamically from KV store (integration-{serviceId})
+    // For now, no dynamic nodes from integrations until we have real connections
+    // Object.entries(connectedApps).forEach(([appId, connections]) => {
+    //   if (connections.length > 0) {
+    //     // Would need to: await callMCPTool('kv_get', { key: `integration-${appId}` })
+    //     // to get workflow_capabilities, name, icon, color
+    //   }
+    // });
 
     // Add MCP app nodes from the registry
     const mcpNodes = mcpRegistry.getNodes();
@@ -556,6 +513,35 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     }
   };
 
+  // Load available models from system configuration
+  const loadAvailableModels = async () => {
+    try {
+      const result = await callMCPTool('kv_get', { key: 'system-available-models' });
+      if (result?.value) {
+        const models = JSON.parse(result.value);
+        setAvailableModels(models);
+      } else {
+        // Fallback: Default hosted models + common alternatives
+        setAvailableModels([
+          // Hosted Bedrock (default execution path)
+          { id: 'bedrock:anthropic.claude-3-5-sonnet-20241022-v2:0', name: 'Claude 3.5 Sonnet v2 (Default)' },
+          { id: 'bedrock:anthropic.claude-3-5-sonnet-20240620-v1:0', name: 'Claude 3.5 Sonnet' },
+          { id: 'bedrock:anthropic.claude-3-opus-20240229-v1:0', name: 'Claude 3 Opus' },
+          { id: 'bedrock:anthropic.claude-3-haiku-20240307-v1:0', name: 'Claude 3 Haiku' }
+        ]);
+      }
+    } catch (error) {
+      console.warn('Failed to load available models:', error);
+      // Use same fallback
+      setAvailableModels([
+        { id: 'bedrock:anthropic.claude-3-5-sonnet-20241022-v2:0', name: 'Claude 3.5 Sonnet v2 (Default)' },
+        { id: 'bedrock:anthropic.claude-3-5-sonnet-20240620-v1:0', name: 'Claude 3.5 Sonnet' },
+        { id: 'bedrock:anthropic.claude-3-opus-20240229-v1:0', name: 'Claude 3 Opus' },
+        { id: 'bedrock:anthropic.claude-3-haiku-20240307-v1:0', name: 'Claude 3 Haiku' }
+      ]);
+    }
+  };
+
   // Load agents on mount
   onMount(async () => {
     loadAgents();
@@ -563,6 +549,8 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     await mcpRegistry.loadFromKVStore();
     // Load MCP tools from connected servers
     await loadMcpTools();
+    // Load available Bedrock models
+    await loadAvailableModels();
   });
 
   // Panel drag handling
@@ -570,13 +558,19 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   let dragStart = { x: 0, y: 0, panelX: 0, panelY: 0 };
 
   const handleMouseDown = (e: MouseEvent) => {
-    if (e.target !== e.currentTarget && !(e.target as Element).closest('[data-drag-handle]') || isPinned()) {
+    const target = e.target as HTMLElement;
+
+    // Don't drag if clicking on form inputs or interactive elements
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.tagName === 'BUTTON') {
       return;
     }
 
-    // Prevent text selection and default browser behavior
-    e.preventDefault();
-    e.stopPropagation();
+    // Only allow dragging from header or drag handle
+    if (e.target !== e.currentTarget && !(target.closest('[data-drag-handle]')) || isPinned()) {
+      return;
+    }
+
+    e.preventDefault(); // Only prevent default when actually dragging
 
     setIsDragging(true);
     const pos = position();
@@ -587,20 +581,20 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
       panelY: pos.y
     };
 
-    // Disable text selection on body during drag
-    document.body.style.userSelect = 'none';
-    document.body.style.webkitUserSelect = 'none';
+    let rafId: number | null = null;
+    let lastMouseEvent: MouseEvent | null = null;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      e.preventDefault();
-      const newX = dragStart.panelX + (e.clientX - dragStart.x);
-      const newY = dragStart.panelY + (e.clientY - dragStart.y);
+    const updatePosition = () => {
+      if (!lastMouseEvent) return;
+
+      const newX = dragStart.panelX + (lastMouseEvent.clientX - dragStart.x);
+      const newY = dragStart.panelY + (lastMouseEvent.clientY - dragStart.y);
 
       // Keep panel within viewport bounds - more generous constraints
       const panelWidth = 320;
-      const gutterSpace = 20; // Minimum space from edges
-      const maxX = window.innerWidth - gutterSpace; // Allow panel to go almost to right edge
-      const minX = gutterSpace; // Allow panel to move across entire screen
+      const gutterSpace = 20;
+      const maxX = window.innerWidth - gutterSpace;
+      const minX = gutterSpace;
       const maxY = window.innerHeight - 100;
 
       const clampedPos = {
@@ -610,15 +604,23 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
 
       setPosition(clampedPos);
       props.onPositionChange?.(clampedPos.x, clampedPos.y);
+
+      rafId = null;
+      lastMouseEvent = null;
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      lastMouseEvent = e;
+      if (!rafId) {
+        rafId = requestAnimationFrame(updatePosition);
+      }
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
-
-      // Re-enable text selection
-      document.body.style.userSelect = '';
-      document.body.style.webkitUserSelect = '';
-
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
@@ -651,59 +653,46 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   const handleResizeMouseDown = (e: MouseEvent) => {
     if (isPinned()) return; // Only allow resize when unpinned
 
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); // Prevent text selection on drag start
 
     setIsResizing(true);
     const startWidth = panelWidth();
     const startHeight = panelHeight();
     const startX = e.clientX;
     const startY = e.clientY;
-    const startPosition = position(); // Store initial position
 
-    // Disable text selection during resize - more comprehensive approach
-    document.body.style.userSelect = 'none';
-    document.body.style.webkitUserSelect = 'none';
-    document.body.style.mozUserSelect = 'none';
-    document.body.style.msUserSelect = 'none';
-    document.documentElement.style.userSelect = 'none';
+    let rafId: number | null = null;
+    let lastMouseEvent: MouseEvent | null = null;
 
-    const handleResizeMove = (e: MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
+    const updateSize = () => {
+      if (!lastMouseEvent) return;
 
-      const deltaX = e.clientX - startX;
-      const deltaY = e.clientY - startY;
+      const deltaX = lastMouseEvent.clientX - startX;
+      const deltaY = lastMouseEvent.clientY - startY;
 
       // Calculate new dimensions with constraints
-      const newWidth = Math.max(280, Math.min(600, startWidth + deltaX)); // Min 280px, max 600px
-      const newHeight = Math.max(200, Math.min(800, startHeight + deltaY)); // Min 200px, max 800px
-
-      // Calculate the actual changes (accounting for constraints)
-      const actualWidthChange = newWidth - startWidth;
+      const newWidth = Math.max(280, Math.min(600, startWidth + deltaX));
+      const newHeight = Math.max(200, Math.min(800, startHeight + deltaY));
 
       setPanelWidth(newWidth);
       setPanelHeight(newHeight);
 
-      // Adjust position to keep right edge in same place using the original position
-      const newPosition = {
-        x: startPosition.x - actualWidthChange,
-        y: startPosition.y
-      };
-      setPosition(newPosition);
-      props.onPositionChange?.(newPosition.x, newPosition.y);
+      rafId = null;
+      lastMouseEvent = null;
+    };
+
+    const handleResizeMove = (e: MouseEvent) => {
+      lastMouseEvent = e;
+      if (!rafId) {
+        rafId = requestAnimationFrame(updateSize);
+      }
     };
 
     const handleResizeUp = () => {
       setIsResizing(false);
-
-      // Re-enable text selection
-      document.body.style.userSelect = '';
-      document.body.style.webkitUserSelect = '';
-      document.body.style.mozUserSelect = '';
-      document.body.style.msUserSelect = '';
-      document.documentElement.style.userSelect = '';
-
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
       document.removeEventListener('mousemove', handleResizeMove);
       document.removeEventListener('mouseup', handleResizeUp);
     };
@@ -817,127 +806,47 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     const [showPassword, setShowPassword] = createSignal(false);
     const [validationErrors, setValidationErrors] = createSignal<string[]>([]);
 
-    // Get node configuration
-    const getNodeConfig = (nodeType: string) => {
-      const configs = {
-        'agent-conductor': {
-          title: 'Conductor Agent',
-          description: 'Goal-driven planning and task delegation',
-          icon: '🎯',
-          color: 'bg-indigo-500',
-          fields: [
-            { key: 'goal', label: 'Goal Description', type: 'textarea', required: true },
-            { key: 'context', label: 'Context', type: 'textarea' },
-            { key: 'maxSubtasks', label: 'Max Subtasks', type: 'number', default: 5 }
-          ],
-          agentConfig: true
-        },
-        'heart': {
-          title: 'Heart Shape',
-          description: 'Heart shape for favorites and highlights',
-          icon: '❤️',
-          color: 'bg-red-500',
-          fields: [
-            { key: 'text', label: 'Text', type: 'text' },
-            { key: 'color', label: 'Color', type: 'text', default: '#ef4444' }
-          ]
-        },
-        'sticky-note': {
-          title: 'Sticky Note',
-          description: 'Note with custom text and colors',
-          icon: '📝',
-          color: 'bg-yellow-300',
-          fields: [
-            { key: 'text', label: 'Note Text', type: 'textarea', required: true },
-            { key: 'backgroundColor', label: 'Background Color', type: 'text', default: '#fef08a' },
-            { key: 'textColor', label: 'Text Color', type: 'text', default: '#374151' },
-            { key: 'fontFamily', label: 'Font', type: 'select', options: ['Inter', 'Comic Sans MS', 'Brush Script MT', 'cursive'] }
-          ]
-        }
-      };
-
-      return configs[nodeType] || {
-        title: nodeType,
-        description: 'Custom node configuration',
+    // Get node configuration from NODE_DEFINITIONS
+    const getNodeDefinition = (nodeType: string) => {
+      return NODE_DEFINITIONS.find(def => def.type === nodeType) || {
+        type: nodeType,
+        name: nodeType,
+        description: 'Custom node',
+        category: 'custom',
         icon: '⚙️',
         color: 'bg-gray-500',
-        fields: []
+        configFields: []
       };
     };
 
-    // Update configuration
+    // Update configuration (supports nested keys like "delegation.maxAgents")
     const updateConfig = (key: string, value: any) => {
       const node = localNode();
-      setLocalNode({
-        ...node,
-        config: {
-          ...node.config,
-          [key]: value
-        }
-      });
-    };
 
-    // Render field input
-    const renderField = (field: any) => {
-      const node = localNode();
-      const value = node.config[field.key] ?? field.default ?? '';
-
-      switch (field.type) {
-        case 'text':
-          return (
-            <input
-              type="text"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md text-sm focus:ring-2 focus:ring-blue-500"
-              value={value}
-              onInput={(e) => updateConfig(field.key, e.currentTarget.value)}
-            />
-          );
-
-        case 'textarea':
-          return (
-            <textarea
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md text-sm focus:ring-2 focus:ring-blue-500"
-              rows="3"
-              value={value}
-              onInput={(e) => updateConfig(field.key, e.currentTarget.value)}
-            />
-          );
-
-        case 'number':
-          return (
-            <input
-              type="number"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md text-sm focus:ring-2 focus:ring-blue-500"
-              value={value}
-              onInput={(e) => updateConfig(field.key, Number(e.currentTarget.value))}
-            />
-          );
-
-        case 'select':
-          return (
-            <select
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md text-sm focus:ring-2 focus:ring-blue-500"
-              value={value}
-              onChange={(e) => updateConfig(field.key, e.currentTarget.value)}
-            >
-              <option value="">Select...</option>
-              <For each={field.options}>
-                {(option) => <option value={option}>{option}</option>}
-              </For>
-            </select>
-          );
-
-        default:
-          return (
-            <input
-              type="text"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md text-sm focus:ring-2 focus:ring-blue-500"
-              value={value}
-              onInput={(e) => updateConfig(field.key, e.currentTarget.value)}
-            />
-          );
+      // Handle nested keys (e.g., "delegation.maxAgents")
+      if (key.includes('.')) {
+        const [parent, child] = key.split('.');
+        setLocalNode({
+          ...node,
+          config: {
+            ...node.config,
+            [parent]: {
+              ...(node.config[parent] || {}),
+              [child]: value
+            }
+          }
+        });
+      } else {
+        setLocalNode({
+          ...node,
+          config: {
+            ...node.config,
+            [key]: value
+          }
+        });
       }
     };
+
 
     // Save changes
     const saveChanges = () => {
@@ -945,7 +854,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
       setCurrentView('nodes'); // Go back to nodes view
     };
 
-    const nodeConfig = getNodeConfig(props.node.type);
+    const nodeDefinition = getNodeDefinition(props.node.type);
 
     return (
       <div class="flex-1 overflow-y-auto">
@@ -959,7 +868,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
               </label>
               <input
                 type="text"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md text-sm focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md text-sm focus:ring-2 focus:ring-blue-500 pointer-events-auto"
                 value={localNode().title || ''}
                 onInput={(e) => setLocalNode({ ...localNode(), title: e.currentTarget.value })}
               />
@@ -970,7 +879,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                 Description
               </label>
               <textarea
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md text-sm focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md text-sm focus:ring-2 focus:ring-blue-500 pointer-events-auto"
                 rows="2"
                 value={localNode().description || ''}
                 onInput={(e) => setLocalNode({ ...localNode(), description: e.currentTarget.value })}
@@ -978,18 +887,12 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
             </div>
           </div>
 
-          {/* Type-specific Fields */}
-          <For each={nodeConfig.fields}>
-            {(field) => (
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {field.label}
-                  {field.required && <span class="text-red-500 ml-1">*</span>}
-                </label>
-                {renderField(field)}
-              </div>
-            )}
-          </For>
+          {/* Type-specific Fields - Now using NodeConfigRenderer */}
+          <NodeConfigRenderer
+            nodeDefinition={nodeDefinition}
+            config={localNode().config}
+            onConfigChange={updateConfig}
+          />
         </div>
 
         {/* Footer Actions */}
@@ -1153,7 +1056,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                                       No apps connected yet
                                     </div>
                                     <button
-                                      onClick={() => props.onNavigate?.('apps')}
+                                      onClick={() => navigate('apps')}
                                       class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                                     >
                                       Connect Apps →
@@ -1355,92 +1258,27 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
         </button>
       </Show>
 
-      {/* Create Agent Modal */}
+      {/* Create Agent Wizard */}
       <Show when={showCreateAgent()}>
-        <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
-          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-md mx-4">
-            {/* Modal Header */}
-            <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <div class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Sparkles class="w-4 h-4 text-white" />
-                </div>
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                  Create AI Agent
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowCreateAgent(false)}
-                class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-              >
-                <X class="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div class="p-4 space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Agent Name
-                </label>
-                <input
-                  type="text"
-                  value={agentName()}
-                  onInput={(e) => setAgentName(e.currentTarget.value)}
-                  placeholder="e.g., Email Marketing Expert"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={agentDescription()}
-                  onInput={(e) => setAgentDescription(e.currentTarget.value)}
-                  placeholder="Describe what this agent will do..."
-                  rows="3"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 resize-none"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Specialty/Domain
-                </label>
-                <input
-                  type="text"
-                  value={agentSpecialty()}
-                  onInput={(e) => setAgentSpecialty(e.currentTarget.value)}
-                  placeholder="e.g., Email automation, Content creation, Data analysis"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div class="flex items-center justify-end gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => setShowCreateAgent(false)}
-                class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                disabled={creatingAgent()}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={createAgent}
-                disabled={creatingAgent() || !agentName().trim() || !agentDescription().trim()}
-                class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-all flex items-center gap-2"
-              >
-                <Show when={creatingAgent()}>
-                  <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                </Show>
-                {creatingAgent() ? 'Creating...' : 'Create Agent'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <CreateAgentWizard
+          onClose={() => setShowCreateAgent(false)}
+          onCreated={async (agent) => {
+            console.log('Agent created:', agent);
+            // Reload agent list
+            try {
+              const organizedAgents = await agentRegistryInitializer.initialize();
+              // TODO: Update local agent list state if needed
+            } catch (err) {
+              console.error('Failed to reload agents:', err);
+            }
+            setShowCreateAgent(false);
+          }}
+          agentService={agentService}
+          mcpClient={{ callMCPTool }}
+          existingAgents={[]} // TODO: Pass actual agent list for icon extraction
+          connectedApps={integrations?.connectedApps || []}
+          availableModels={availableModels()}
+        />
       </Show>
     </Show>
   );

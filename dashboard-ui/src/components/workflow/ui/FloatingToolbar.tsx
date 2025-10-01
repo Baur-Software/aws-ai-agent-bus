@@ -164,10 +164,7 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
   });
 
   // Override the pin handler to use proper centered positioning for toolbar
-  const handleToolbarPin = (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
+  const handleToolbarPin = () => {
     const willBePinned = !panelState.isPinned();
     panelState.setIsPinned(willBePinned);
 
@@ -202,15 +199,12 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
     return isOn ? `${gridType} (On)` : 'Grid (Off)';
   };
 
-  const handleGridClick = (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleGridClick = () => {
     props.onToggleGrid?.();
   };
 
   const handleGridRightClick = (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); // Prevent context menu
     props.onToggleGridOff?.();
   };
 
