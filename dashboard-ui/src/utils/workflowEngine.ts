@@ -149,6 +149,13 @@ export class WorkflowEngine {
 
   // Get node schema from registry
   getNodeSchema(nodeType) {
+    // First check static node definitions
+    const { getNodeOutputSchema } = require('../config/nodeDefinitions');
+    const staticSchema = getNodeOutputSchema(nodeType);
+    if (staticSchema) {
+      return { outputSchema: staticSchema };
+    }
+
     // If nodeRegistry provided (contains MCP tool definitions, custom nodes, etc)
     if (this.nodeRegistry) {
       // Try to find node in registry

@@ -1,8 +1,10 @@
-import { createSignal, createEffect, lazy, onMount, onCleanup } from 'solid-js';
+import { createSignal, createEffect, lazy, onMount, onCleanup, Show } from 'solid-js';
 import { useParams, useNavigate, useLocation } from '@solidjs/router';
 import { usePageHeader } from '../contexts/HeaderContext';
 import { useOverlay } from '../contexts/OverlayContext';
 import { useWorkflow } from '../contexts/WorkflowContext';
+import { YjsWorkflowProvider } from '../contexts/YjsWorkflowContext';
+import { useAuth } from '../contexts/AuthContext';
 import WorkflowCanvasManager from '../components/workflow/core/WorkflowCanvasManager';
 import FloatingNavigation from '../components/workflow/ui/FloatingNavigation';
 import WorkflowBrowser from './WorkflowBrowser';
@@ -162,7 +164,7 @@ export default function Canvas() {
     });
   };
 
-  return (
+  const canvasContent = () => (
     <div class="h-full bg-gray-50 dark:bg-gray-900">
       {/* Floating Navigation - now handles its own navigation */}
       <FloatingNavigation
@@ -187,5 +189,20 @@ export default function Canvas() {
         }}
       />
     </div>
+  );
+
+  // Wrap with Yjs provider if we have a workflow ID
+  return (
+    <Show
+      when={params.id}
+      fallback={canvasContent()}
+    >
+      <YjsWorkflowProvider
+        workflowId={params.id!}
+        wsUrl={`ws://localhost:3001/workflow/${params.id}`}
+      >
+        {canvasContent()}
+      </YjsWorkflowProvider>
+    </Show>
   );
 }
