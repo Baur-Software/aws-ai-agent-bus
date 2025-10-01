@@ -4,6 +4,7 @@ import { useKVStore } from './KVStoreContext';
 import { useOrganization } from './OrganizationContext';
 import { useNotifications } from './NotificationContext';
 import { useDashboardServer } from './DashboardServerContext';
+import { WorkflowVersioningService, WorkflowVersion, WorkflowCommand } from '../services/WorkflowVersioning';
 
 export interface WorkflowNode {
   id: string;
@@ -105,15 +106,27 @@ interface WorkflowContextType {
 
   // Actions
   loadWorkflow: (id: string) => Promise<void>;
-  saveWorkflow: () => Promise<void>;
+  saveWorkflow: (message?: string) => Promise<void>;
   createNewWorkflow: () => Promise<void>;
   importWorkflow: () => Promise<void>;
+
+  // Version control
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
+  getVersionHistory: () => Promise<WorkflowVersion[]>;
+  rollbackToVersion: (version: number) => Promise<void>;
+  getVersionDiff: (fromVersion: number, toVersion: number) => Promise<any>;
 
   // State setters (for components that need direct access)
   setNodes: (nodes: WorkflowNode[]) => void;
   setConnections: (connections: WorkflowConnection[]) => void;
   setStoryboards: (storyboards: Storyboard[]) => void;
   setHasUnsavedChanges: (hasChanges: boolean) => void;
+
+  // Command recording for undo/redo
+  recordCommand: (command: WorkflowCommand) => void;
 }
 
 const WorkflowContext = createContext<WorkflowContextType>();
@@ -144,6 +157,16 @@ export const WorkflowProvider: ParentComponent = (props) => {
   const { user, currentOrganization } = useOrganization();
   const { success, error } = useNotifications();
   // const dashboard = useDashboard(); // Removed - using DashboardServerContext instead
+
+  // Initialize versioning service
+  let versioningService: WorkflowVersioningService | null = null;
+  createEffect(() => {
+    const userId = user()?.userId;
+    const orgId = currentOrganization()?.id;
+    if (userId) {
+      versioningService = new WorkflowVersioningService(kvStore, userId, orgId);
+    }
+  });
 
   // Load workflows on mount
   createEffect(() => {
@@ -272,19 +295,27 @@ export const WorkflowProvider: ParentComponent = (props) => {
         const savedWorkflows = await kvStore.get(workflowListKey);
 
         if (savedWorkflows) {
-          // Handle both JSON strings and objects returned from KV store
-          if (typeof savedWorkflows === 'string') {
+          // Handle multiple KV store response formats
+          let workflowData = savedWorkflows;
+
+          // If it's an object with a 'value' property, extract it
+          if (typeof savedWorkflows === 'object' && !Array.isArray(savedWorkflows) && savedWorkflows.value) {
+            workflowData = savedWorkflows.value;
+          }
+
+          // Now handle the actual workflow data
+          if (typeof workflowData === 'string') {
             try {
-              workflowSummaries = JSON.parse(savedWorkflows);
+              workflowSummaries = JSON.parse(workflowData);
             } catch (parseErr) {
               console.warn('Failed to parse workflows JSON string:', parseErr);
               throw new Error('Invalid workflows data format');
             }
-          } else if (Array.isArray(savedWorkflows)) {
-            // Direct object/array - use as is
-            workflowSummaries = savedWorkflows;
+          } else if (Array.isArray(workflowData)) {
+            // Direct array - use as is
+            workflowSummaries = workflowData;
           } else {
-            console.warn('Unexpected workflows data format:', typeof savedWorkflows);
+            console.warn('Unexpected workflows data format:', typeof workflowData, workflowData);
             throw new Error('Unexpected workflows data format');
           }
           console.log(`📂 Loaded ${workflowSummaries.length} workflows from KV store`);
@@ -474,48 +505,81 @@ export const WorkflowProvider: ParentComponent = (props) => {
 
       setCurrentWorkflow(metadata);
 
-      // Add sample nodes for testing if workflow is empty
-      const sampleNodes = [
-        {
-          id: 'sample-trigger-1',
-          type: 'trigger',
-          x: 100,
-          y: 100,
-          inputs: [],
-          outputs: ['output'],
-          config: { triggerType: 'manual' },
-          title: 'Start Process',
-          description: 'Manual trigger to start the workflow',
-          enabled: true
-        },
-        {
-          id: 'sample-process-1',
-          type: 'lead-qualification',
-          x: 300,
-          y: 100,
-          inputs: ['input'],
-          outputs: ['qualified', 'unqualified'],
-          config: { criteria: 'basic qualification' },
-          title: 'Qualify Lead',
-          description: 'Evaluate and qualify incoming leads',
-          enabled: true
-        },
-        {
-          id: 'sample-action-1',
-          type: 'email',
-          x: 500,
-          y: 50,
-          inputs: ['input'],
-          outputs: ['sent', 'failed'],
-          config: { template: 'welcome-email' },
-          title: 'Send Welcome Email',
-          description: 'Send welcome email to qualified leads',
-          enabled: true
-        }
-      ];
+      // Try to load workflow data from KV store
+      const kvKey = `workflow-${workflowId}`;
 
-      setCurrentNodes(sampleNodes); // TODO: Load actual nodes from storage
-      setCurrentConnections([]); // TODO: Load actual connections
+      try {
+        const savedWorkflow = await kvStore.get(kvKey);
+
+        if (savedWorkflow) {
+          let workflowData;
+          if (typeof savedWorkflow === 'string') {
+            workflowData = JSON.parse(savedWorkflow);
+          } else if (typeof savedWorkflow === 'object' && savedWorkflow.value) {
+            // Handle KV store format with value property
+            workflowData = typeof savedWorkflow.value === 'string'
+              ? JSON.parse(savedWorkflow.value)
+              : savedWorkflow.value;
+          } else {
+            workflowData = savedWorkflow;
+          }
+
+          // Load nodes and connections from KV store
+          setCurrentNodes(workflowData.nodes || []);
+          setCurrentConnections(workflowData.connections || []);
+          setCurrentStoryboards(workflowData.storyboards || []);
+          console.log(`✅ Loaded workflow from KV store: ${workflowData.nodes?.length || 0} nodes`);
+        } else {
+          // No saved workflow found - this is a new workflow, use sample nodes
+          console.log('📝 New workflow - initializing with sample nodes');
+          const sampleNodes = [
+            {
+              id: 'sample-trigger-1',
+              type: 'trigger',
+              x: 100,
+              y: 100,
+              inputs: [],
+              outputs: ['output'],
+              config: { triggerType: 'manual' },
+              title: 'Start Process',
+              description: 'Manual trigger to start the workflow',
+              enabled: true
+            },
+            {
+              id: 'sample-process-1',
+              type: 'lead-qualification',
+              x: 300,
+              y: 100,
+              inputs: ['input'],
+              outputs: ['qualified', 'unqualified'],
+              config: { criteria: 'basic qualification' },
+              title: 'Qualify Lead',
+              description: 'Evaluate and qualify incoming leads',
+              enabled: true
+            },
+            {
+              id: 'sample-action-1',
+              type: 'email',
+              x: 500,
+              y: 50,
+              inputs: ['input'],
+              outputs: ['sent', 'failed'],
+              config: { template: 'welcome-email' },
+              title: 'Send Welcome Email',
+              description: 'Send welcome email to qualified leads',
+              enabled: true
+            }
+          ];
+
+          setCurrentNodes(sampleNodes);
+          setCurrentConnections([]);
+        }
+      } catch (kvErr) {
+        console.warn('Could not load workflow from KV store, using empty workflow:', kvErr);
+        setCurrentNodes([]);
+        setCurrentConnections([]);
+      }
+
       setHasUnsavedChanges(false);
 
       // Save as last opened
@@ -539,27 +603,43 @@ export const WorkflowProvider: ParentComponent = (props) => {
     }
   };
 
-  const saveWorkflow = async () => {
+  const saveWorkflow = async (commitMessage?: string) => {
     const workflow = currentWorkflow();
     if (!workflow) return;
 
     try {
-      console.log('💾 Saving workflow to real storage:', workflow.name);
+      console.log('💾 Saving workflow to KV store with versioning:', workflow.name);
 
-      // Prepare workflow data for storage
-      const workflowData = {
-        metadata: workflow,
-        nodes: currentNodes(),
-        connections: currentConnections(),
-        storyboards: currentStoryboards(),
-        lastSaved: new Date().toISOString()
-      };
+      const nodes = currentNodes();
+      const connections = currentConnections();
+      const storyboards = currentStoryboards();
 
-      // Save to dashboard KV store for persistence
-      const kvKey = `workflow-${workflow.id}`;
-      await kvStore.set(kvKey, JSON.stringify(workflowData));
+      // Save version using versioning service
+      if (versioningService) {
+        const version = await versioningService.saveVersion(
+          workflow.id,
+          nodes,
+          connections,
+          storyboards,
+          workflow,
+          commitMessage
+        );
+        console.log(`📝 Created version ${version.version} with checksum ${version.checksum.slice(0, 8)}...`);
+      } else {
+        // Fallback: save directly to KV store if versioning not initialized
+        console.warn('⚠️ Versioning service not initialized, saving without version control');
+        const workflowData = {
+          metadata: workflow,
+          nodes,
+          connections,
+          storyboards,
+          lastSaved: new Date().toISOString()
+        };
+        const kvKey = `workflow-${workflow.id}`;
+        await kvStore.set(kvKey, JSON.stringify(workflowData));
+      }
 
-      // Also save workflow metadata to workflows list
+      // Also save workflow summary to workflows list
       const workflowListKey = `workflows-${currentOrganization()?.id || 'personal'}`;
       try {
         const existingWorkflows = await kvStore.get(workflowListKey);
@@ -754,6 +834,107 @@ export const WorkflowProvider: ParentComponent = (props) => {
     });
   };
 
+  // Undo/Redo operations
+  const undo = () => {
+    const workflow = currentWorkflow();
+    if (!workflow || !versioningService) return;
+
+    const command = versioningService.undo(workflow.id);
+    if (command) {
+      applyCommand(command);
+      setHasUnsavedChanges(true);
+    }
+  };
+
+  const redo = () => {
+    const workflow = currentWorkflow();
+    if (!workflow || !versioningService) return;
+
+    const command = versioningService.redo(workflow.id);
+    if (command) {
+      applyCommand(command);
+      setHasUnsavedChanges(true);
+    }
+  };
+
+  const canUndo = () => {
+    const workflow = currentWorkflow();
+    return workflow && versioningService ? versioningService.canUndo(workflow.id) : false;
+  };
+
+  const canRedo = () => {
+    const workflow = currentWorkflow();
+    return workflow && versioningService ? versioningService.canRedo(workflow.id) : false;
+  };
+
+  const recordCommand = (command: WorkflowCommand) => {
+    const workflow = currentWorkflow();
+    if (workflow && versioningService) {
+      versioningService.recordCommand(workflow.id, command);
+    }
+  };
+
+  const applyCommand = (command: WorkflowCommand) => {
+    switch (command.type) {
+      case 'add_node':
+        setCurrentNodes([...currentNodes(), command.data]);
+        break;
+      case 'remove_node':
+        setCurrentNodes(currentNodes().filter(n => n.id !== command.data.id));
+        break;
+      case 'update_node':
+        setCurrentNodes(currentNodes().map(n =>
+          n.id === command.data.id ? command.data : n
+        ));
+        break;
+      case 'move_node':
+        setCurrentNodes(currentNodes().map(n =>
+          n.id === command.data.id ? { ...n, position: command.data.position } : n
+        ));
+        break;
+      case 'add_connection':
+        setCurrentConnections([...currentConnections(), command.data]);
+        break;
+      case 'remove_connection':
+        setCurrentConnections(currentConnections().filter(c => c.id !== command.data.id));
+        break;
+    }
+  };
+
+  // Version control operations
+  const getVersionHistory = async (): Promise<WorkflowVersion[]> => {
+    const workflow = currentWorkflow();
+    if (!workflow || !versioningService) return [];
+
+    return versioningService.getVersionHistory(workflow.id);
+  };
+
+  const rollbackToVersion = async (version: number) => {
+    const workflow = currentWorkflow();
+    if (!workflow || !versioningService) return;
+
+    try {
+      const restoredVersion = await versioningService.rollbackToVersion(workflow.id, version);
+
+      // Update current state
+      setCurrentNodes(restoredVersion.nodes);
+      setCurrentConnections(restoredVersion.connections);
+      setCurrentStoryboards(restoredVersion.storyboards || []);
+
+      setHasUnsavedChanges(false);
+      success(`Rolled back to version ${version}`);
+    } catch (err: any) {
+      console.error('Failed to rollback:', err);
+      error(`Failed to rollback: ${err.message}`);
+    }
+  };
+
+  const getVersionDiff = async (fromVersion: number, toVersion: number) => {
+    const workflow = currentWorkflow();
+    if (!workflow || !versioningService) return null;
+
+    return versioningService.getVersionDiff(workflow.id, fromVersion, toVersion);
+  };
 
   const contextValue: WorkflowContextType = {
     currentWorkflow,
@@ -767,6 +948,14 @@ export const WorkflowProvider: ParentComponent = (props) => {
     saveWorkflow,
     createNewWorkflow,
     importWorkflow,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    getVersionHistory,
+    rollbackToVersion,
+    getVersionDiff,
+    recordCommand,
     setNodes: setCurrentNodes,
     setConnections: setCurrentConnections,
     setStoryboards: setCurrentStoryboards,
