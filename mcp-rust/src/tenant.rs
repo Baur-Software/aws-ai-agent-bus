@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::RwLock;
+use tracing::{info, warn};
 use uuid::Uuid;
 
 #[derive(Error, Debug)]
@@ -209,7 +210,10 @@ impl TenantManager {
             let demo_context = TenantContext {
                 tenant_id: "demo-tenant".to_string(),
                 user_id: "user-demo-123".to_string(),
-                context_type: ContextType::Organizational, // Fixed: was Personal but has org_id
+                context_type: ContextType::Organization {
+                    org_id: "org-demo-456".to_string(),
+                    org_name: "Demo Organization".to_string(),
+                },
                 organization_id: "org-demo-456".to_string(),
                 role: UserRole::Admin,
                 permissions: vec![
