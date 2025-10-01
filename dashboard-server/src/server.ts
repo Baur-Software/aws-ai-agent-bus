@@ -12,6 +12,7 @@ import { S3Client } from '@aws-sdk/client-s3';
 // Dashboard-specific imports
 import { setupDashboardRoutes } from './routes/dashboard.js';
 import { setupWebSocketHandlers } from './websocket/handlers.js';
+import { YjsWebSocketHandler } from './websocket/yjsHandler.js';
 import { EventSubscriber } from './events/subscriber.js';
 import { MetricsAggregator } from './services/metrics.js';
 import { MCPServiceRegistry } from './services/MCPServiceRegistry.js';
@@ -65,6 +66,13 @@ const wss: WebSocketServer = new WebSocketServer({ server });
 const metricsAggregator = new MetricsAggregator(dynamodb, s3);
 const eventSubscriber = new EventSubscriber(eventBridge, wss);
 const mcpRegistry = new MCPServiceRegistry();
+
+// Yjs handler for collaborative workflows
+const yjsHandler = new YjsWebSocketHandler(wss, {
+  eventBridge,
+  eventBusName: process.env.EVENT_BUS_NAME || 'agent-mesh-events',
+  gcInterval: 60000 // 1 minute
+});
 
 // Initialize MCP servers
 async function initializeMCPServers() {
@@ -120,14 +128,19 @@ app.use('/api/auth', setupAuthRoutes({ dynamodb, eventBridge }));
 // Setup webhook routes
 app.use('/api/webhooks', setupWebhookRoutes({ dynamodb, eventBridge }));
 
-// Setup WebSocket handlers
+// Setup WebSocket handlers (Yjs-based collaborative workflows)
 const { broadcast, cleanup: cleanupWebSocket } = setupWebSocketHandlers(wss, {
   metricsAggregator,
   eventSubscriber
-});
+}, yjsHandler);
 
 // Make WebSocket broadcaster globally available for routes
 app.locals.wsBroadcast = broadcast;
+
+// Subscribe to agent execution completion events
+eventSubscriber.on('agent.execute.completed', async (event: any) => {
+  await yjsHandler.handleExecutionComplete(event);
+});
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {

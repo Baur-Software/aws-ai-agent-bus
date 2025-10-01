@@ -14,11 +14,25 @@ interface Dependencies {
   eventSubscriber: any;
 }
 
-export function setupWebSocketHandlers(wss: WebSocketServer, { metricsAggregator, eventSubscriber }: Dependencies) {
+export function setupWebSocketHandlers(wss: WebSocketServer, { metricsAggregator, eventSubscriber }: Dependencies, yjsHandler?: any) {
   // MCP service initialization disabled - will use Lambda/nginx proxy later
   const mcpService = null;
 
   wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
+    const url = req.url || '';
+
+    // Route Yjs workflow connections to Yjs handler
+    if (url.includes('/workflow/') && yjsHandler) {
+      console.log('🔄 Yjs workflow connection');
+      const userContext = AuthMiddleware.authenticateWebSocket(ws, req);
+      if (!userContext) {
+        ws.close(1008, 'Authentication failed');
+        return;
+      }
+      yjsHandler.handleConnection(ws, req, userContext);
+      return;
+    }
+
     console.log('📱 Dashboard client attempting to connect');
 
     // Authenticate the WebSocket connection

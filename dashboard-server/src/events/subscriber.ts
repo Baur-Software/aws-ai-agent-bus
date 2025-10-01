@@ -13,7 +13,9 @@ export class EventSubscriber {
     this.eventBus = process.env.AGENT_MESH_EVENT_BUS || 'agent-mesh-events';
     this.callbacks = {
       metricsUpdate: [],
-      activityUpdate: []
+      activityUpdate: [],
+      // Generic event callbacks
+      events: {}
     };
   }
 
@@ -44,6 +46,28 @@ export class EventSubscriber {
 
   onActivityUpdate(callback) {
     this.callbacks.activityUpdate.push(callback);
+  }
+
+  // Generic event listener
+  on(eventType, callback) {
+    if (!this.callbacks.events[eventType]) {
+      this.callbacks.events[eventType] = [];
+    }
+    this.callbacks.events[eventType].push(callback);
+    return () => {
+      // Return unsubscribe function
+      const idx = this.callbacks.events[eventType].indexOf(callback);
+      if (idx > -1) {
+        this.callbacks.events[eventType].splice(idx, 1);
+      }
+    };
+  }
+
+  // Emit generic event
+  emit(eventType, data) {
+    if (this.callbacks.events[eventType]) {
+      this.callbacks.events[eventType].forEach(callback => callback(data));
+    }
   }
 
   // Simulate real-time events (in production, this would be EventBridge events)

@@ -15,7 +15,10 @@ export const MCP_SERVERS: Record<string, MCPServerConfig> = {
       AGENT_MESH_KV_TABLE: process.env.AGENT_MESH_KV_TABLE || 'agent-mesh-dev-kv',
       AGENT_MESH_ARTIFACTS_BUCKET: process.env.AGENT_MESH_ARTIFACTS_BUCKET || 'agent-mesh-dev-artifacts-a6b7e7a7',
       AGENT_MESH_EVENT_BUS: process.env.AGENT_MESH_EVENT_BUS || 'agent-mesh-dev-events',
-      AGENT_MESH_ENV: process.env.AGENT_MESH_ENV || 'dev'
+      AGENT_MESH_ENV: process.env.AGENT_MESH_ENV || 'dev',
+      // Dev mode tenant context (respects .env file)
+      DEFAULT_TENANT_ID: process.env.DEV_ORG_ID,
+      DEFAULT_USER_ID: process.env.DEV_USER_ID
     }
   }
 
