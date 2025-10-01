@@ -25,7 +25,10 @@
     "@solidjs/router": "^0.14.7",
     "lucide-solid": "^0.542.0",
     "solid-flow": "^1.0.4",
-    "solid-js": "^1.9.9"
+    "solid-js": "^1.9.9",
+    "y-indexeddb": "^9.0.12",
+    "y-websocket": "^3.0.0",
+    "yjs": "^13.6.27"
   },
   "devDependencies": {
     "@solidjs/testing-library": "^0.8.10",

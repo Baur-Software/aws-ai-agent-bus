@@ -9,13 +9,15 @@
       "Bash(npm run dev:*)",
       "Bash(git add:*)",
       "Bash(cargo build:*)",
-      "Bash(touch:*)"
+      "Bash(touch:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []
   },
+  "enableAllProjectMcpServers": false,
   "enabledMcpjsonServers": [
     "agent-mesh"
-  ],
-  "enableAllProjectMcpServers": false
+  ]
 }
