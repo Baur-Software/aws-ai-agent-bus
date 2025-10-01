@@ -229,16 +229,17 @@ impl MCPServer {
         &self,
         request: &MCPRequest,
     ) -> Result<Arc<TenantSession>, MCPError> {
+        // Require tenant_id and user_id in requests (no hardcoded defaults)
         let tenant_id = request
             .tenant_id
             .as_ref()
-            .unwrap_or(&"demo-tenant".to_string()) // replace default value with config if needed
+            .ok_or_else(|| MCPError::InvalidRequest("tenant_id is required".to_string()))?
             .clone();
 
         let user_id = request
             .user_id
             .as_ref()
-            .unwrap_or(&"user-demo-123".to_string()) // replace default value with config if needed
+            .ok_or_else(|| MCPError::InvalidRequest("user_id is required".to_string()))?
             .clone();
 
         // Validate tenant access
