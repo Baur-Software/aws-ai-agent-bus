@@ -292,16 +292,42 @@ impl TenantManager {
         tenant_id: &str,
         user_id: &str,
     ) -> Result<(), TenantError> {
-        let configs = self.tenant_configs.read().await;
-        let context = configs
-            .get(tenant_id)
-            .ok_or_else(|| TenantError::NotFound(tenant_id.to_string()))?;
-
-        if context.user_id != user_id {
-            return Err(TenantError::Unauthorized(tenant_id.to_string()));
+        // Check if tenant already exists
+        {
+            let configs = self.tenant_configs.read().await;
+            if let Some(context) = configs.get(tenant_id) {
+                // Tenant exists, validate user
+                if context.user_id != user_id {
+                    return Err(TenantError::Unauthorized(tenant_id.to_string()));
+                }
+                return Ok(());
+            }
         }
 
-        Ok(())
+        // Tenant doesn't exist - auto-register in dev mode (when DEFAULT_TENANT_ID is set)
+        if std::env::var("DEFAULT_TENANT_ID").is_ok() {
+            info!("Auto-registering tenant '{}' for user '{}' (dev mode)", tenant_id, user_id);
+            let context = TenantContext {
+                tenant_id: tenant_id.to_string(),
+                user_id: user_id.to_string(),
+                context_type: ContextType::Organization {
+                    org_id: tenant_id.to_string(),
+                    org_name: tenant_id.to_string(),
+                },
+                organization_id: tenant_id.to_string(),
+                role: UserRole::Admin,
+                permissions: vec![Permission::Admin],
+                aws_region: std::env::var("AWS_REGION").unwrap_or_else(|_| "us-west-2".to_string()),
+                resource_limits: ResourceLimits::default(),
+            };
+
+            let mut configs = self.tenant_configs.write().await;
+            configs.insert(tenant_id.to_string(), context);
+            Ok(())
+        } else {
+            // Production mode - reject unknown tenants
+            Err(TenantError::NotFound(tenant_id.to_string()))
+        }
     }
 }
 

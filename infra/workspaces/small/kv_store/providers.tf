@@ -18,6 +18,9 @@ terraform {
 }
 
 provider "aws" {
+  region  = "us-west-2"
+  profile = "baursoftware"
+
   default_tags {
     tags = {
       ManagedBy = "terraform"

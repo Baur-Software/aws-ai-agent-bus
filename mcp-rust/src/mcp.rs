@@ -229,18 +229,18 @@ impl MCPServer {
         &self,
         request: &MCPRequest,
     ) -> Result<Arc<TenantSession>, MCPError> {
-        // Require tenant_id and user_id in requests (no hardcoded defaults)
-        let tenant_id = request
-            .tenant_id
-            .as_ref()
-            .ok_or_else(|| MCPError::InvalidRequest("tenant_id is required".to_string()))?
-            .clone();
+        // Use environment defaults if not provided in request (for local dev)
+        let tenant_id = match &request.tenant_id {
+            Some(id) => id.clone(),
+            None => std::env::var("DEFAULT_TENANT_ID")
+                .map_err(|_| MCPError::InvalidRequest("tenant_id is required (set DEFAULT_TENANT_ID env var for local dev)".to_string()))?,
+        };
 
-        let user_id = request
-            .user_id
-            .as_ref()
-            .ok_or_else(|| MCPError::InvalidRequest("user_id is required".to_string()))?
-            .clone();
+        let user_id = match &request.user_id {
+            Some(id) => id.clone(),
+            None => std::env::var("DEFAULT_USER_ID")
+                .map_err(|_| MCPError::InvalidRequest("user_id is required (set DEFAULT_USER_ID env var for local dev)".to_string()))?,
+        };
 
         // Validate tenant access
         self.tenant_manager

@@ -55,14 +55,23 @@ impl AwsService {
     pub async fn new(region: &str) -> Result<Self, AwsError> {
         let clients = Arc::new(AwsClients::new(region).await?);
 
+        let kv_table = std::env::var("AGENT_MESH_KV_TABLE")
+            .unwrap_or_else(|_| "agent-mesh-kv".to_string());
+        let artifacts_bucket = std::env::var("AGENT_MESH_ARTIFACTS_BUCKET")
+            .unwrap_or_else(|_| "agent-mesh-artifacts".to_string());
+        let event_bus = std::env::var("AGENT_MESH_EVENT_BUS")
+            .unwrap_or_else(|_| "agent-mesh-events".to_string());
+
+        eprintln!("[MCP Server] AWS Configuration:");
+        eprintln!("[MCP Server]   KV Table: {}", kv_table);
+        eprintln!("[MCP Server]   Artifacts Bucket: {}", artifacts_bucket);
+        eprintln!("[MCP Server]   Event Bus: {}", event_bus);
+
         Ok(Self {
             clients,
-            kv_table: std::env::var("AGENT_MESH_KV_TABLE")
-                .unwrap_or_else(|_| "agent-mesh-kv".to_string()),
-            artifacts_bucket: std::env::var("AGENT_MESH_ARTIFACTS_BUCKET")
-                .unwrap_or_else(|_| "agent-mesh-artifacts".to_string()),
-            event_bus: std::env::var("AGENT_MESH_EVENT_BUS")
-                .unwrap_or_else(|_| "agent-mesh-events".to_string()),
+            kv_table,
+            artifacts_bucket,
+            event_bus,
         })
     }
 

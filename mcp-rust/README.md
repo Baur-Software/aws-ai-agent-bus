@@ -87,6 +87,7 @@ RUST_LOG=info
 ### Default Tenant
 
 For development, a demo tenant is automatically created:
+
 - **Tenant ID**: `demo-tenant`
 - **User ID**: `user-demo-123`
 - **Role**: Admin (all permissions)
