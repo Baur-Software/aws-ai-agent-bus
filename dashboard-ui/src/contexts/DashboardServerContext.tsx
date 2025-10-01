@@ -292,7 +292,10 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
   };
 
   const handleMessage = (message: any) => {
-    console.log('📨 Dashboard server message:', message.type, message);
+    // Skip logging if message.type is undefined (likely a raw MCP response)
+    if (message.type) {
+      console.log('📨 Dashboard server message:', message.type, message);
+    }
 
     // Handle MCP tool responses first
     if (message.id && pendingRequests.has(message.id)) {
@@ -395,6 +398,8 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
       // TODO: Remove these logging-only handlers post-troubleshooting
       case 'mcp_catalog_list_response':
       case 'event_send_response':
+      case 'event_published':
+      case 'subscription_confirmed':
       case 'organization_list_response':
       case 'organization_members_response':
       case 'organization_permissions_response':
@@ -482,11 +487,11 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
     return new Promise((resolve, reject) => {
       const messageId = `mcp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // Set up timeout
+      // Set up timeout (30 seconds for MCP tools to handle slow operations)
       const timeout = setTimeout(() => {
         pendingRequests.delete(messageId);
-        reject(new Error(`MCP tool call '${tool}' timed out`));
-      }, 10000);
+        reject(new Error(`MCP tool call '${tool}' timed out after 30s`));
+      }, 30000);
 
       // Store the pending request
       pendingRequests.set(messageId, { resolve, reject, timeout });

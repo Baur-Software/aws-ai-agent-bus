@@ -146,6 +146,42 @@ function createDefaultEventEmitter(): EventEmitter {
 }
 
 /**
+ * Create an EventEmitter that publishes to EventBridge via dashboard-server
+ * @param sendMessage - Dashboard server sendMessage function from useDashboardServer()
+ * @returns EventEmitter that publishes to EventBridge + local listeners
+ */
+export function createDashboardEventEmitter(sendMessage: (msg: any) => void): EventEmitter {
+  const baseEmitter = createDefaultEventEmitter();
+
+  return {
+    emit: (event: string, data: any) => {
+      // Emit to local listeners first
+      baseEmitter.emit(event, data);
+
+      // Publish to EventBridge via dashboard-server
+      try {
+        sendMessage({
+          type: 'publish_event',
+          event: {
+            detailType: event,
+            source: 'workflow-engine',
+            detail: {
+              ...data,
+              timestamp: new Date().toISOString()
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Failed to publish workflow event to EventBridge:', error);
+      }
+    },
+
+    on: baseEmitter.on,
+    off: baseEmitter.off
+  };
+}
+
+/**
  * Migration helper to replace the old WorkflowEngine
  */
 export function replaceOldWorkflowEngine(
