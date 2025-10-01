@@ -3,7 +3,13 @@ import { sampleDataGenerator } from './sampleDataGenerator.js';
 
 // Simple workflow execution engine for MCP tools
 export class WorkflowEngine {
-  constructor(mcpClient, eventEmitter = null, useMockData = false, nodeRegistry = null) {
+  private mcpClient: any;
+  private executionHistory: any[];
+  private eventEmitter: ((event: any) => void) | null;
+  private useMockData: boolean;
+  private nodeRegistry: any;
+
+  constructor(mcpClient: any, eventEmitter: ((event: any) => void) | null = null, useMockData = false, nodeRegistry: any = null) {
     this.mcpClient = mcpClient;
     this.executionHistory = [];
     this.eventEmitter = eventEmitter; // Dashboard server sendMessage function
@@ -527,10 +533,10 @@ export class WorkflowEngine {
     }
   }
 
-  filterData(data, filterExpression) {
+  filterData(data: any, filterExpression: string) {
     try {
       if (Array.isArray(data)) {
-        const func = new Function('item', 'index', `return ${filterExpression};`);
+        const func = new Function('item', 'index', `return ${filterExpression};`) as (item: any, index: number) => boolean;
         return data.filter(func);
       }
       return data;
@@ -569,7 +575,7 @@ export class WorkflowEngine {
         ...context.data?.headers
       };
       
-      const requestOptions = {
+      const requestOptions: RequestInit = {
         method,
         headers
       };
