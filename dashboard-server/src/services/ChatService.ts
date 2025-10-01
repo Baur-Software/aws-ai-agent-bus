@@ -2,6 +2,7 @@ import { Logger } from '../utils/Logger.js';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { EventBridgeClient } from '@aws-sdk/client-eventbridge';
 import { MCPServiceRegistry } from './MCPServiceRegistry.js';
+import { JWTPayload } from '../middleware/auth.js';
 
 interface ChatMessage {
   id: string;
@@ -153,7 +154,11 @@ export class ChatService {
       role: 'user',
       content: request.message,
       timestamp: new Date().toISOString(),
-      context: request.context
+      context: {
+        ...request.context,
+        userId: request.userId,
+        organizationId: request.organizationId
+      }
     };
 
     session.messages.push(userMessage);
@@ -169,7 +174,11 @@ export class ChatService {
         role: 'assistant',
         content: response.content,
         timestamp: response.timestamp,
-        context: response.context,
+        context: {
+          ...response.context,
+          userId: request.userId,
+          organizationId: request.organizationId
+        },
         metadata: { usage: response.usage }
       };
 
@@ -249,6 +258,16 @@ export class ChatService {
         // Simple tool detection - in production, use more sophisticated routing
         if (content.toLowerCase().includes('analytics') || content.toLowerCase().includes('data')) {
           try {
+            // Create minimal JWT payload for MCP tool execution
+            const jwt: JWTPayload = {
+              userId: request.userId,
+              email: '', // Not available in ChatRequest
+              name: '', // Not available in ChatRequest
+              organizationMemberships: [],
+              personalNamespace: request.userId,
+              organizationId: request.organizationId
+            };
+
             const toolResult = await this.mcpRegistry.executeTool(
               'ga-top-pages',
               {
@@ -256,7 +275,7 @@ export class ChatService {
                 start_date: '30daysAgo',
                 end_date: 'today'
               },
-              { userId: request.userId, organizationId: request.organizationId },
+              jwt,
               request.organizationId
             );
             mcpCalls.push({ tool: 'ga-top-pages', result: toolResult });
