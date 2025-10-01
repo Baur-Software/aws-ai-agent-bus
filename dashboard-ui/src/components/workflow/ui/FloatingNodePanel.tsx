@@ -1,11 +1,16 @@
 import { createSignal, createEffect, Show, For, onMount } from 'solid-js';
-import { Search, GripVertical, X, Pin, PinOff, Plus, Sparkles, ArrowLeft, ChartColumn, Globe, CreditCard, Shield, Users, Building, Square, Circle, Triangle, ArrowRight, Diamond, Hexagon, Star, Heart, Settings } from 'lucide-solid';
+import { Search, GripVertical, X, Pin, PinOff, Plus, Sparkles, ArrowLeft, ChartColumn, Globe, CreditCard, Shield, Users, Building, Square, Circle, Triangle, ArrowRight, Diamond, Hexagon, Star, Heart, Settings, RefreshCw } from 'lucide-solid';
 import { useDashboardServer } from '../../../contexts/DashboardServerContext';
 import { useDragDrop, useDragSource } from '../../../contexts/DragDropContext';
 import { useIntegrations } from '../../../contexts/IntegrationsContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { listAgents } from '../../../api/agents'; // new API import
 import IntegrationsGrid from '../../IntegrationsGrid';
+import { mcpRegistry } from '../../../services/MCPCapabilityRegistry';
+import { agentRegistryInitializer } from '../../../services/AgentRegistryInitializer';
+import { mcpToolService, MCPServerTools } from '../../../services/MCPToolService';
+import { Agent } from 'http';
+import { WorkflowNode } from './WorkflowNodeDetails';
 
 interface FloatingNodePanelProps {
   onDragStart: (nodeType: string, e: DragEvent) => void;
@@ -110,6 +115,8 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   const [showConnectedApps, setShowConnectedApps] = createSignal(false);
   const [currentView, setCurrentView] = createSignal<'nodes' | 'details'>('nodes');
   const [agents, setAgents] = createSignal<Agent[]>([]);
+  const [mcpServerTools, setMcpServerTools] = createSignal<MCPServerTools[]>([]);
+  const [loadingMcpTools, setLoadingMcpTools] = createSignal(false);
 
   // Auto-switch to details view when a node is selected
   createEffect(() => {
@@ -134,7 +141,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     setAgents(agentList);
   });
 
-  // Generate dynamic app nodes based on connected integrations
+  // Generate dynamic app nodes based on connected integrations and MCP tools
   const generateDynamicAppNodes = () => {
     const connectedApps = integrations.getAllConnections();
     const dynamicNodes = [];
@@ -160,6 +167,40 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
       }
     });
 
+    // Add MCP app nodes from the registry
+    const mcpNodes = mcpRegistry.getNodes();
+    mcpNodes.forEach(node => {
+      dynamicNodes.push({
+        type: node.type,
+        name: node.name,
+        description: node.description,
+        icon: node.icon,
+        color: node.color,
+        requiresConnectedApp: node.serverId,
+        inputs: node.inputs,
+        outputs: node.outputs
+      });
+    });
+
+    // Add MCP tool nodes from connected servers
+    const serverTools = mcpServerTools();
+    serverTools.forEach(server => {
+      const toolNodes = mcpToolService.convertToWorkflowNodes(server.tools, server.serverId, server.serverName);
+      toolNodes.forEach(node => {
+        dynamicNodes.push({
+          type: node.type,
+          name: `${server.serverName}: ${node.name}`,
+          description: node.description,
+          icon: node.icon,
+          color: node.color,
+          requiresConnectedApp: false, // MCP tools don't require app connection
+          category: 'mcp-tools',
+          inputs: node.inputs,
+          outputs: node.outputs
+        });
+      });
+    });
+
     return dynamicNodes;
   };
 
@@ -168,51 +209,68 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     try {
       setLoading(true);
 
-      // Use dashboard server WebSocket to call the agent list tool
-      const messageId = `agents_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // First, try to initialize agents using AgentRegistryInitializer
+      // This will load existing agents from .claude/agents and organize them
+      try {
+        const organizedAgents = await agentRegistryInitializer.initialize();
 
-      // Create a promise to wait for the response
-      const result = await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('Agent list request timed out'));
-        }, 10000);
-
-        // Listen for the response message
-        const handleMessage = (event: MessageEvent) => {
-          try {
-            const message = JSON.parse(event.data);
-            if (message.id === messageId) {
-              clearTimeout(timeout);
-              window.removeEventListener('message', handleMessage);
-              if (message.error) {
-                reject(new Error(message.error));
-              } else {
-                resolve(message.result || message.data);
-              }
-            }
-          } catch (error) {
-            // Ignore parsing errors for other messages
-          }
+        // Convert organized agents to the format expected by the panel
+        const agentGroups: Record<string, any[]> = {
+          'orchestrators': organizedAgents.orchestrators || [],
+          'core': organizedAgents.core || [],
+          'specialized-aws': organizedAgents.specialized?.aws || [],
+          'specialized-frameworks': organizedAgents.specialized?.frameworks || [],
+          'specialized-devops': organizedAgents.specialized?.devops || [],
+          'specialized-integrations': organizedAgents.specialized?.integrations || [],
+          'specialized-other': organizedAgents.specialized?.other || [],
+          'universal': organizedAgents.universal || [],
+          'mcp-apps': organizedAgents['mcp-apps'] || []
         };
 
-        window.addEventListener('message', handleMessage);
-
-        // Send the request using kv_get to retrieve tenant's registered agents
-        dashboardServer.sendMessage({
-          id: messageId,
-          type: 'mcp_call',
-          tool: 'kv_get',
-          arguments: {
-            key: 'tenant-agents-registry'
-          }
+        // Add any MCP app agents from the registry
+        const mcpAgents = mcpRegistry.getAgents();
+        if (mcpAgents.length > 0 && !agentGroups['mcp-apps']) {
+          agentGroups['mcp-apps'] = [];
+        }
+        mcpAgents.forEach(agent => {
+          agentGroups['mcp-apps'].push({
+            type: agent.id,
+            name: agent.name,
+            description: agent.description,
+            icon: agent.icon,
+            color: agent.color,
+            group: 'mcp-apps'
+          });
         });
+
+        setAgentNodes(agentGroups);
+        return;
+      } catch (initError) {
+        console.log('Could not initialize from agent registry, trying KV store fallback');
+      }
+
+      // Fallback to KV store if initialization fails
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Agent load timeout')), 3000)
+      );
+
+      const fetchPromise = dashboardServer.sendMessageWithResponse({
+        type: 'mcp_call',
+        tool: 'kv_get',
+        arguments: {
+          key: 'tenant-agents-registry'
+        }
       });
 
-      if (result.agents) {
-        console.log('Raw agents from MCP:', result.agents);
-        console.log('Total raw agents:', result.agents.length);
+      // Race between fetch and timeout
+      const result = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
-        const filteredAgents = result.agents
+      // Check if we have a valid response with agents data
+      if (result && result.data && result.data.agents && Array.isArray(result.data.agents) && result.data.agents.length > 0) {
+        console.log('Raw agents from MCP:', result.data.agents);
+        console.log('Total raw agents:', result.data.agents.length);
+
+        const filteredAgents = result.data.agents
           .filter((agent: string) =>
             !agent.includes('README') &&
             !agent.includes('AGENT_') &&
@@ -228,11 +286,12 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
         console.log('Total filtered agents:', filteredAgents.length);
 
         // Group agents by directory structure
-        const agentGroups = {
+        const agentGroups: Record<string, any[]> = {
           'orchestrators': [],
           'specialized': [],
           'universal': [],
           'core': [],
+          'mcp-apps': [],
           'other': []
         };
 
@@ -258,12 +317,41 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
           }
         });
 
+        // Add MCP app agents to the groups
+        const mcpAgents = mcpRegistry.getAgents();
+        if (mcpAgents.length > 0) {
+          if (!agentGroups['mcp-apps']) {
+            agentGroups['mcp-apps'] = [];
+          }
+          mcpAgents.forEach(agent => {
+            agentGroups['mcp-apps'].push({
+              type: agent.id,
+              name: agent.name,
+              description: agent.description,
+              icon: agent.icon,
+              color: agent.color,
+              group: 'mcp-apps'
+            });
+          });
+        }
+
         setAgentNodes(agentGroups);
+      } else {
+        // Key exists but no agents found, use defaults silently
+        console.log('Agent registry empty, using default agents');
       }
-    } catch (error) {
-      console.warn('Failed to load agents, using fallback:', error);
-      // Use fallback agents on any error with grouped structure
-      setAgentNodes({
+    } catch (error: any) {
+      // Check if it's just a missing key or timeout (expected conditions)
+      if (error?.message?.includes('not found') ||
+          error?.message?.includes('does not exist') ||
+          error?.message?.includes('timed out') ||
+          error?.message?.includes('timeout')) {
+        console.log('Agent registry not available, using default agents');
+      } else {
+        console.warn('Unexpected error loading agents:', error);
+      }
+      // Use fallback agents with grouped structure
+      const fallbackGroups: Record<string, any[]> = {
         'orchestrators': [
           { type: 'agent-conductor', name: 'Conductor', description: 'Goal-driven planner and delegator', icon: '🎯', color: 'bg-indigo-500', group: 'orchestrators' },
           { type: 'agent-critic', name: 'Critic', description: 'Safety and verification agent', icon: '🔍', color: 'bg-red-500', group: 'orchestrators' },
@@ -274,8 +362,26 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
         ],
         'universal': [],
         'core': [],
+        'mcp-apps': [],
         'other': []
-      });
+      };
+
+      // Add MCP app agents even in fallback
+      const mcpAgents = mcpRegistry.getAgents();
+      if (mcpAgents.length > 0) {
+        mcpAgents.forEach(agent => {
+          fallbackGroups['mcp-apps'].push({
+            type: agent.id,
+            name: agent.name,
+            description: agent.description,
+            icon: agent.icon,
+            color: agent.color,
+            group: 'mcp-apps'
+          });
+        });
+      }
+
+      setAgentNodes(fallbackGroups);
     } finally {
       setLoading(false);
     }
@@ -437,9 +543,26 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     }
   };
 
+  // Load MCP tools from connected servers
+  const loadMcpTools = async () => {
+    try {
+      setLoadingMcpTools(true);
+      const tools = await mcpToolService.fetchAllConnectedTools();
+      setMcpServerTools(tools);
+    } catch (error) {
+      console.warn('Failed to load MCP tools:', error);
+    } finally {
+      setLoadingMcpTools(false);
+    }
+  };
+
   // Load agents on mount
-  onMount(() => {
+  onMount(async () => {
     loadAgents();
+    // Load any persisted MCP apps from KV store
+    await mcpRegistry.loadFromKVStore();
+    // Load MCP tools from connected servers
+    await loadMcpTools();
   });
 
   // Panel drag handling
@@ -597,10 +720,8 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
         name: 'Input/Output',
         icon: '⚡',
         nodes: [
-          { type: 'trigger', name: 'Trigger', description: 'Start workflow execution', icon: '▶️', color: 'bg-green-500' },
           { type: 'webhook', name: 'Webhook', description: 'HTTP webhook trigger', icon: '🔗', color: 'bg-blue-500' },
           { type: 'schedule', name: 'Schedule', description: 'Time-based trigger', icon: '⏰', color: 'bg-yellow-500' },
-          { type: 'output', name: 'Output', description: 'Final workflow result', icon: '📤', color: 'bg-purple-500' },
           { type: 'send-email', name: 'Send Email', description: 'Send email notification', icon: '📧', color: 'bg-red-500' },
           { type: 'notification', name: 'Notification', description: 'Push notification', icon: '🔔', color: 'bg-orange-500' }
         ]
@@ -610,6 +731,8 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
         name: 'Shapes',
         icon: '🔷',
         nodes: [
+          { type: 'trigger', name: 'Trigger', description: 'Visually represent the start of a workflow execution', icon: '▶️', color: 'bg-green-500' },
+          { type: 'output', name: 'Output', description: 'Visually represent the final workflow result', icon: '📤', color: 'bg-purple-500' },
           { type: 'rectangle', name: 'Rectangle', description: 'Basic rectangle shape', icon: <Square class="w-4 h-4" />, color: 'bg-gray-500' },
           { type: 'circle', name: 'Circle', description: 'Basic circle shape', icon: <Circle class="w-4 h-4" />, color: 'bg-blue-500' },
           { type: 'triangle', name: 'Triangle', description: 'Basic triangle shape', icon: <Triangle class="w-4 h-4" />, color: 'bg-yellow-500' },
@@ -632,12 +755,6 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
         name: 'Apps',
         icon: '🔌',
         nodes: [
-          // Static app nodes
-          { type: 'ga-top-pages', name: 'GA Top Pages', description: 'Get top performing pages', icon: '📊', color: 'bg-blue-600', requiresConnectedApp: 'google-analytics' },
-          { type: 'trello-create-card', name: 'Trello Card', description: 'Create Trello card', icon: '📝', color: 'bg-blue-500', requiresConnectedApp: 'trello' },
-          { type: 'slack-message', name: 'Slack Message', description: 'Send Slack message', icon: '💬', color: 'bg-green-500', requiresConnectedApp: 'slack' },
-
-          // Dynamic app nodes based on connected integrations
           ...generateDynamicAppNodes()
         ]
       }
@@ -1044,6 +1161,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                                   </div>
                                 }
                               >
+
                               {/* Special handling for AI Agents category - add create button first */}
                               <Show when={category.id === 'ai-agents'}>
                                 <button
@@ -1124,11 +1242,21 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                                             }
                                             setCollapsedGroups(new Set(collapsed));
                                           }}
-                                          class="flex items-center justify-between w-full p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors mb-2"
+                                          class={`flex items-center justify-between w-full p-2 rounded-lg hover:opacity-90 transition-all mb-2 ${
+                                            groupName.includes('orchestrators') ? 'bg-indigo-100 dark:bg-indigo-900/30' :
+                                            groupName.includes('core') ? 'bg-gray-100 dark:bg-gray-700' :
+                                            groupName.includes('aws') ? 'bg-orange-100 dark:bg-orange-900/30' :
+                                            groupName.includes('frameworks') ? 'bg-blue-100 dark:bg-blue-900/30' :
+                                            groupName.includes('devops') ? 'bg-purple-100 dark:bg-purple-900/30' :
+                                            groupName.includes('integrations') ? 'bg-pink-100 dark:bg-pink-900/30' :
+                                            groupName.includes('universal') ? 'bg-green-100 dark:bg-green-900/30' :
+                                            groupName.includes('mcp-apps') ? 'bg-cyan-100 dark:bg-cyan-900/30' :
+                                            'bg-gray-100 dark:bg-gray-700'
+                                          }`}
                                         >
                                           <div class="flex items-center gap-2">
                                             <span class="text-sm font-medium text-gray-900 dark:text-white capitalize">
-                                              {groupName.replace('-', ' ')}
+                                              {groupName.replace(/-/g, ' ').replace('specialized ', 'Specialized: ')}
                                             </span>
                                             <span class="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded-full">
                                               {groupAgents.length}
@@ -1191,7 +1319,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
         >
           {/* Connected Apps View */}
           <div class="flex-1 overflow-y-auto p-4">
-            <IntegrationsGrid integrations={APP_CONFIGS} />
+            <IntegrationsGrid integrations={[]} />
           </div>
         </Show>
         </div>

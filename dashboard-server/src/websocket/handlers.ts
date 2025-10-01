@@ -67,7 +67,7 @@ export function setupWebSocketHandlers(wss: WebSocketServer, { metricsAggregator
           await mcpHandler.handleMessage(mcpMessage);
         } else {
           // Handle other WebSocket messages
-          await handleWebSocketMessage(ws, message, { metricsAggregator, eventSubscriber, mcpService });
+          await handleWebSocketMessage(ws, message, { metricsAggregator, eventSubscriber, mcpService, userContext });
         }
       } catch (error) {
         console.error('WebSocket message error:', error);
@@ -80,6 +80,11 @@ export function setupWebSocketHandlers(wss: WebSocketServer, { metricsAggregator
 
     // Handle disconnection
     ws.on('close', () => {
+      // Cleanup event subscriptions
+      const clientId = (ws as any).clientId;
+      if (clientId) {
+        EventsHandler.unsubscribe(clientId);
+      }
       console.log('📱 Dashboard client disconnected');
     });
 
@@ -156,7 +161,7 @@ interface HandleMessageDeps {
   mcpService?: MCPStdioService | null;
 }
 
-async function handleWebSocketMessage(ws: WebSocket, message: any, { metricsAggregator, eventSubscriber, mcpService }: HandleMessageDeps) {
+async function handleWebSocketMessage(ws: WebSocket, message: any, { metricsAggregator, eventSubscriber, mcpService, userContext }: HandleMessageDeps & { userContext: UserContext }) {
   try {
     switch (message.type) {
       // MCP-specific message types
@@ -376,10 +381,40 @@ async function handleWebSocketMessage(ws: WebSocket, message: any, { metricsAggr
 
       // Existing dashboard message types
       case 'subscribe_events':
-        await eventSubscriber.subscribe(message.eventTypes);
+        // New EventsHandler subscription (full pub/sub)
+        const clientId = `ws_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        (ws as any).clientId = clientId;
+
+        EventsHandler.subscribe({
+          clientId,
+          ws,
+          userId: userContext.userId,
+          organizationId: userContext.organizationId,
+          eventTypes: message.eventTypes || ['*'],
+          filters: message.filters
+        });
+
         ws.send(JSON.stringify({
           type: 'subscription_confirmed',
-          eventTypes: message.eventTypes
+          clientId,
+          eventTypes: message.eventTypes || ['*'],
+          filters: message.filters
+        }));
+        break;
+
+      case 'publish_event':
+        // Publish event through EventsHandler hub
+        const publishResult = await EventsHandler.publish({
+          ...message.event,
+          userId: userContext.userId,
+          organizationId: userContext.organizationId
+        });
+
+        ws.send(JSON.stringify({
+          type: 'event_published',
+          eventId: publishResult.eventId,
+          success: publishResult.success,
+          timestamp: publishResult.timestamp
         }));
         break;
 

@@ -201,32 +201,36 @@ export function OrganizationProvider(props: OrganizationProviderProps) {
       setLoading(true);
       setError(null);
 
-      const result = await orgService().switchOrganization(orgId);
-      if (result.success) {
-        setCurrentOrgId(orgId);
+      // Send switch_context event via WebSocket (event-driven, no REST endpoint)
+      dashboardServer.sendMessage({
+        type: 'switch_context',
+        userId: auth.user()?.userId,
+        organizationId: orgId
+      });
 
-        // Emit organization switch event
-        await dashboardServer.sendMessage({
-          type: 'event_send',
-          data: {
-            source: 'agent-mesh.organization',
-            detailType: 'Organization Switched',
-            detail: {
-              userId: auth.user()?.userId,
-              fromOrgId: currentOrgId(),
-              toOrgId: orgId,
-              orgName: org.name,
-              timestamp: new Date().toISOString()
-            }
+      // Update local state
+      setCurrentOrgId(orgId);
+
+      // Emit organization switch event for logging/analytics
+      dashboardServer.sendMessage({
+        type: 'publish_event',
+        event: {
+          detailType: 'organization.context_switched',
+          source: 'agent-mesh.ui',
+          detail: {
+            userId: auth.user()?.userId,
+            fromOrgId: currentOrgId(),
+            toOrgId: orgId,
+            orgName: org.name,
+            timestamp: new Date().toISOString()
           }
-        });
+        }
+      });
 
-        // Refresh members for new organization
-        refetchMembers();
+      // Refresh members for new organization
+      refetchMembers();
 
-        return true;
-      }
-      return false;
+      return true;
     } catch (err) {
       console.error('Failed to switch organization:', err);
       setError(err instanceof Error ? err.message : 'Failed to switch organization');

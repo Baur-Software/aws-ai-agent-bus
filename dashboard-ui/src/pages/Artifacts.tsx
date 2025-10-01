@@ -13,7 +13,7 @@ interface ArtifactItem {
 
 function Artifacts() {
   // Set page-specific header
-  usePageHeader('Artifacts', 'S3 file and content management');
+  usePageHeader('Artifacts', 'File and content management');
 
   const { executeTool, isConnected } = useDashboardServer();
   const [selectedFile, setSelectedFile] = createSignal<ArtifactItem | null>(null);

@@ -7,9 +7,10 @@ import MCPServerCard from './MCPServerCard';
 import ServerFilters from './ServerFilters';
 import ServerCatalogSkeleton from './ServerCatalogSkeleton';
 import MCPOAuthManager from './MCPOAuthManager';
+import { mcpRegistry } from '../../services/MCPCapabilityRegistry';
 
 export default function AppsTab() {
-  usePageHeader('MCP Apps', 'Discover and connect MCP servers for enhanced AI capabilities');
+  usePageHeader('Connect Apps', 'Discover and connect your apps for enhanced AI capabilities');
 
   const dashboardServer = useDashboardServer();
   const { addNotification } = useNotifications();
@@ -21,9 +22,11 @@ export default function AppsTab() {
 
   // Filter/search state
   const [searchQuery, setSearchQuery] = createSignal('');
-  const [selectedCategory, setSelectedCategory] = createSignal<string>('all');
+  const [selectedTags, setSelectedTags] = createSignal<Set<string>>(new Set());
+  const [tagSearchQuery, setTagSearchQuery] = createSignal('');
   const [selectedVerification, setSelectedVerification] = createSignal<'all' | 'official' | 'signed' | 'popular'>('all');
   const [sortBy, setSortBy] = createSignal<'name' | 'downloadCount' | 'lastUpdated' | 'starCount'>('downloadCount');
+  const [showOnlyFeatured, setShowOnlyFeatured] = createSignal(false);
 
   // Tab state
   const [activeTab, setActiveTab] = createSignal<'my-servers' | 'catalog' | 'oauth'>('catalog');
@@ -36,12 +39,61 @@ export default function AppsTab() {
   const [currentPage, setCurrentPage] = createSignal(1);
   const itemsPerPage = 12;
 
-  // Featured SaaS platforms (top platforms with MCP servers)
+  // Top 100 most popular SaaS platforms with MCP servers (prioritized by enterprise usage)
   const featuredPlatformIds = [
+    // Cloud Infrastructure & Compute
     'mcp-aws-core', 'mcp-aws-bedrock-kb-retrieval', 'mcp-aws-cdk', 'mcp-aws-cost-analysis',
-    'mcp-azure-devops', 'mcp-cloudflare', 'mcp-box', 'mcp-clickhouse',
-    'mcp-apify', 'mcp-chargebee', 'mcp-aiven', 'mcp-browserbase',
-    'mcp-stripe', 'mcp-buildkite', 'mcp-circleci', 'mcp-github'
+    'mcp-azure-devops', 'mcp-google-cloud', 'mcp-cloudflare', 'mcp-digital-ocean',
+    'mcp-vercel', 'mcp-netlify', 'mcp-heroku', 'mcp-railway',
+
+    // Developer Tools & CI/CD
+    'mcp-github', 'mcp-gitlab', 'mcp-bitbucket', 'mcp-circleci',
+    'mcp-jenkins', 'mcp-buildkite', 'mcp-travis-ci', 'mcp-docker',
+    'mcp-kubernetes', 'mcp-terraform', 'mcp-ansible', 'mcp-datadog',
+
+    // Database & Data Tools
+    'mcp-mongodb', 'mcp-postgresql', 'mcp-mysql', 'mcp-redis',
+    'mcp-elasticsearch', 'mcp-clickhouse', 'mcp-snowflake', 'mcp-databricks',
+    'mcp-bigquery', 'mcp-redshift', 'mcp-dynamodb', 'mcp-firebase',
+
+    // Communication & Collaboration
+    'mcp-slack', 'mcp-discord', 'mcp-microsoft-teams', 'mcp-zoom',
+    'mcp-notion', 'mcp-linear', 'mcp-jira', 'mcp-confluence',
+    'mcp-asana', 'mcp-monday', 'mcp-clickup', 'mcp-basecamp',
+
+    // Business & Finance
+    'mcp-stripe', 'mcp-paypal', 'mcp-square', 'mcp-chargebee',
+    'mcp-quickbooks', 'mcp-xero', 'mcp-freshbooks', 'mcp-braintree',
+    'mcp-plaid', 'mcp-wise', 'mcp-coinbase', 'mcp-binance',
+
+    // Marketing & Analytics
+    'mcp-google-analytics', 'mcp-segment', 'mcp-mixpanel', 'mcp-amplitude',
+    'mcp-hubspot', 'mcp-salesforce', 'mcp-mailchimp', 'mcp-sendgrid',
+    'mcp-twilio', 'mcp-intercom', 'mcp-zendesk', 'mcp-freshdesk',
+
+    // Content & Media
+    'mcp-youtube', 'mcp-vimeo', 'mcp-spotify', 'mcp-soundcloud',
+    'mcp-wordpress', 'mcp-contentful', 'mcp-strapi', 'mcp-sanity',
+    'mcp-cloudinary', 'mcp-imgix', 'mcp-mux', 'mcp-wistia',
+
+    // AI & Machine Learning
+    'mcp-openai', 'mcp-anthropic', 'mcp-huggingface', 'mcp-replicate',
+    'mcp-cohere', 'mcp-stability-ai', 'mcp-midjourney', 'mcp-elevenlabs',
+
+    // Storage & File Management
+    'mcp-box', 'mcp-dropbox', 'mcp-google-drive', 'mcp-onedrive',
+    'mcp-s3', 'mcp-backblaze', 'mcp-wasabi', 'mcp-aiven',
+
+    // Security & Authentication
+    'mcp-auth0', 'mcp-okta', 'mcp-onelogin', 'mcp-duo',
+    'mcp-1password', 'mcp-lastpass', 'mcp-vault', 'mcp-cyberark',
+
+    // E-commerce & Retail
+    'mcp-shopify', 'mcp-woocommerce', 'mcp-magento', 'mcp-bigcommerce',
+
+    // Automation & Integration
+    'mcp-zapier', 'mcp-make', 'mcp-n8n', 'mcp-ifttt',
+    'mcp-apify', 'mcp-browserbase', 'mcp-puppeteer', 'mcp-playwright'
   ];
 
   const featuredServers = createMemo(() => {
@@ -49,19 +101,47 @@ export default function AppsTab() {
   });
 
   // Derived state with memos
-  const categories = createMemo(() => {
-    const uniqueCategories = new Set(
-      servers().map(server => server.category)
-    );
-    return ['all', ...Array.from(uniqueCategories).sort()];
+  const allTags = createMemo(() => {
+    const tags = new Set<string>();
+    servers().forEach(server => {
+      // Add category as a tag
+      if (server.category) tags.add(server.category);
+      // Add all server tags
+      server.tags?.forEach(tag => tags.add(tag));
+    });
+    return Array.from(tags).sort();
+  });
+
+  const filteredTags = createMemo(() => {
+    const query = tagSearchQuery().toLowerCase();
+    if (!query) return [];
+    return allTags().filter(tag =>
+      tag.toLowerCase().includes(query)
+    ).slice(0, 10); // Limit to 10 suggestions
+  });
+
+  const popularTags = createMemo(() => {
+    // Common categories that should be shown as quick filter buttons
+    const commonTags = [
+      'AI', 'Database', 'Analytics', 'Communication', 'Developer Tools',
+      'Cloud', 'Storage', 'Security', 'Finance', 'Marketing',
+      'Automation', 'E-commerce', 'Media', 'Productivity'
+    ];
+    return commonTags.filter(tag => allTags().includes(tag));
   });
 
   const filteredServers = createMemo(() => {
     const query = searchQuery().toLowerCase();
-    const category = selectedCategory();
+    const tags = selectedTags();
     const verification = selectedVerification();
+    const featured = showOnlyFeatured();
 
     return servers().filter(server => {
+      // Featured filter
+      if (featured && !featuredPlatformIds.includes(server.id)) {
+        return false;
+      }
+
       // Search filter
       const matchesSearch = query === '' ||
         server.name.toLowerCase().includes(query) ||
@@ -69,8 +149,10 @@ export default function AppsTab() {
         server.publisher.toLowerCase().includes(query) ||
         server.tags.some(tag => tag.toLowerCase().includes(query));
 
-      // Category filter
-      const matchesCategory = category === 'all' || server.category === category;
+      // Tag filter - if tags are selected, server must have at least one
+      const matchesTags = tags.size === 0 ||
+        (server.category && tags.has(server.category)) ||
+        server.tags.some(tag => tags.has(tag));
 
       // Verification filter
       const matchesVerification = verification === 'all' ||
@@ -78,7 +160,7 @@ export default function AppsTab() {
         (verification === 'signed' && server.isSigned) ||
         (verification === 'popular' && server.verificationBadges.includes('popular'));
 
-      return matchesSearch && matchesCategory && matchesVerification;
+      return matchesSearch && matchesTags && matchesVerification;
     });
   });
 
@@ -228,8 +310,19 @@ export default function AppsTab() {
     setSearchQuery(query);
   };
 
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category);
+  const handleToggleTag = (tag: string) => {
+    const tags = new Set(selectedTags());
+    if (tags.has(tag)) {
+      tags.delete(tag);
+    } else {
+      tags.add(tag);
+    }
+    setSelectedTags(tags);
+  };
+
+  const handleClearTags = () => {
+    setSelectedTags(new Set<string>());
+    setShowOnlyFeatured(false);
   };
 
   const handleVerificationFilter = (verification: 'all' | 'official' | 'signed' | 'popular') => {
@@ -312,6 +405,9 @@ export default function AppsTab() {
       setConnectedServers(newConnectedServers);
       await persistConnectedServers(newConnectedServers);
 
+      // Register the app with the MCP capability registry to create agents and nodes
+      await mcpRegistry.registerApp(server, result.capabilities);
+
       // Emit connection established event
       await dashboardServer.sendMessage({
         type: 'event_send',
@@ -383,6 +479,9 @@ export default function AppsTab() {
       newConnectedServers.delete(serverId);
       setConnectedServers(newConnectedServers);
       await persistConnectedServers(newConnectedServers);
+
+      // Unregister the app from the MCP capability registry
+      await mcpRegistry.unregisterApp(serverId);
 
       // Emit disconnection event
       await dashboardServer.sendMessage({
@@ -557,21 +656,27 @@ export default function AppsTab() {
           <div class="mb-6">
             <ServerFilters
             searchQuery={searchQuery()}
-            selectedCategory={selectedCategory()}
+            selectedTags={selectedTags()}
+            tagSearchQuery={tagSearchQuery()}
+            filteredTags={filteredTags()}
+            popularTags={popularTags()}
             selectedVerification={selectedVerification()}
             sortBy={sortBy()}
-            categories={categories()}
+            showOnlyFeatured={showOnlyFeatured()}
             serverCount={filteredServers().length}
             totalCount={servers().length}
             onSearch={handleSearch}
-            onCategoryChange={handleCategoryChange}
+            onToggleTag={handleToggleTag}
+            onClearTags={handleClearTags}
+            onTagSearch={setTagSearchQuery}
             onVerificationFilter={handleVerificationFilter}
             onSortChange={handleSortChange}
+            onToggleFeatured={setShowOnlyFeatured}
           />
         </div>
 
         {/* Featured SaaS Platforms Section */}
-        <Show when={featuredServers().length > 0 && searchQuery() === '' && selectedCategory() === 'all'}>
+        <Show when={featuredServers().length > 0 && !showOnlyFeatured() && searchQuery() === '' && selectedTags().size === 0}>
           <div class="mb-8">
             <div class="flex items-center gap-3 mb-6">
               <div class="flex-shrink-0">
@@ -583,11 +688,11 @@ export default function AppsTab() {
               </div>
               <div>
                 <h2 class="text-xl font-semibold text-slate-900 dark:text-white">Featured SaaS Platforms</h2>
-                <p class="text-sm text-slate-600 dark:text-slate-400">Top enterprise platforms with official MCP integrations</p>
+                <p class="text-sm text-slate-600 dark:text-slate-400">Top 100 most popular enterprise platforms with MCP integrations</p>
               </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              <For each={featuredServers()}>
+              <For each={featuredServers().slice(0, 8)}>
                 {(server) => (
                   <MCPServerCard
                     server={server}
@@ -600,6 +705,16 @@ export default function AppsTab() {
                 )}
               </For>
             </div>
+            <Show when={featuredServers().length > 8}>
+              <div class="mt-4 text-center">
+                <button
+                  class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                  onClick={() => setShowOnlyFeatured(true)}
+                >
+                  View all {featuredServers().length} featured platforms →
+                </button>
+              </div>
+            </Show>
           </div>
         </Show>
 
@@ -608,7 +723,8 @@ export default function AppsTab() {
           <div class="mb-6">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-lg font-medium text-slate-900 dark:text-white">
-                {searchQuery() !== '' || selectedCategory() !== 'all' ? 'Search Results' : 'All Apps'}
+                {showOnlyFeatured() ? 'Featured Platforms' :
+                 searchQuery() !== '' || selectedTags().size > 0 ? 'Search Results' : 'All Apps'}
               </h3>
               <div class="text-sm text-slate-600 dark:text-slate-400">
                 Page {currentPage()} of {totalPages()} • {sortedServers().length} apps
@@ -687,8 +803,9 @@ export default function AppsTab() {
               class="btn btn-secondary"
               onClick={() => {
                 setSearchQuery('');
-                setSelectedCategory('all');
+                setSelectedTags(new Set<string>());
                 setSelectedVerification('all');
+                setShowOnlyFeatured(false);
               }}
             >
               Clear Filters

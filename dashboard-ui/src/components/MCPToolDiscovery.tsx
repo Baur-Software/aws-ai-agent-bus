@@ -137,27 +137,19 @@ export default function MCPToolDiscovery(props: MCPToolDiscoveryProps) {
     try {
       setLoading(true);
 
-      if (!isConnected()) {
-        info('MCP server not connected. Showing mock tool data.');
-        loadMockTools();
-        return;
-      }
-
       // Try to get real MCP tool list
       try {
         const result = await executeTool('listTools', {});
         if (result?.tools) {
           processMCPTools(result.tools);
         } else {
-          loadMockTools();
+          throw new Error('No apps returned from server');
         }
       } catch (err) {
         console.warn('Failed to get real MCP tools, using mock data:', err);
-        loadMockTools();
       }
     } catch (err) {
       error(`Failed to discover MCP tools: ${err.message}`);
-      loadMockTools();
     } finally {
       setLoading(false);
     }
@@ -189,173 +181,6 @@ export default function MCPToolDiscovery(props: MCPToolDiscoveryProps) {
 
     setCapabilities([capability]);
     setAllTools(tools);
-  };
-
-  const loadMockTools = () => {
-    const mockTools: MCPTool[] = [
-      {
-        name: 'kv_get',
-        description: 'Retrieve a value from the key-value store',
-        category: 'data',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            key: { type: 'string', description: 'The key to retrieve' }
-          },
-          required: ['key']
-        },
-        provider: 'KV Store',
-        isAvailable: true,
-        tags: ['storage', 'database', 'retrieval'],
-        examples: [
-          {
-            name: 'Get user preference',
-            description: 'Retrieve user preferences from storage',
-            inputExample: { key: 'user-123-preferences' }
-          }
-        ]
-      },
-      {
-        name: 'kv_set',
-        description: 'Store a value in the key-value store',
-        category: 'data',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            key: { type: 'string', description: 'The key to set' },
-            value: { type: 'string', description: 'The value to store' },
-            ttl_hours: { type: 'number', description: 'Time to live in hours' }
-          },
-          required: ['key', 'value']
-        },
-        provider: 'KV Store',
-        isAvailable: true,
-        tags: ['storage', 'database', 'persistence'],
-        examples: [
-          {
-            name: 'Save user data',
-            description: 'Store user data with expiration',
-            inputExample: { key: 'user-123-session', value: 'session-data', ttl_hours: 24 }
-          }
-        ]
-      },
-      {
-        name: 'ga_getTopPages',
-        description: 'Get top performing pages from Google Analytics',
-        category: 'analytics',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            propertyId: { type: 'string', description: 'GA4 property ID' },
-            days: { type: 'number', description: 'Number of days to analyze' }
-          },
-          required: ['propertyId']
-        },
-        provider: 'Google Analytics',
-        isAvailable: true,
-        tags: ['analytics', 'google', 'reporting', 'metrics'],
-        examples: [
-          {
-            name: 'Weekly report',
-            description: 'Get top pages for the last 7 days',
-            inputExample: { propertyId: '12345678', days: 7 }
-          }
-        ]
-      },
-      {
-        name: 'events_send',
-        description: 'Send an event to the event bus',
-        category: 'communication',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            detailType: { type: 'string', description: 'The event type' },
-            detail: { type: 'object', description: 'The event details' },
-            source: { type: 'string', description: 'The event source' }
-          },
-          required: ['detailType', 'detail']
-        },
-        provider: 'Event Bus',
-        isAvailable: true,
-        tags: ['events', 'messaging', 'integration', 'notification'],
-        examples: [
-          {
-            name: 'Workflow completion',
-            description: 'Send workflow completion event',
-            inputExample: {
-              detailType: 'WorkflowCompleted',
-              detail: { workflowId: 'wf-123', status: 'success' }
-            }
-          }
-        ]
-      },
-      {
-        name: 'agent_processRequest',
-        description: 'Process request through agent governance system',
-        category: 'ai',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            userId: { type: 'string', description: 'User identifier' },
-            sessionId: { type: 'string', description: 'Session identifier' },
-            request: { type: 'string', description: 'The request to process' },
-            context: { type: 'object', description: 'Additional context' }
-          },
-          required: ['userId', 'sessionId', 'request']
-        },
-        provider: 'Agent System',
-        isAvailable: true,
-        tags: ['ai', 'agents', 'processing', 'governance'],
-        examples: [
-          {
-            name: 'Process user query',
-            description: 'Route user query through agent system',
-            inputExample: {
-              userId: 'user-123',
-              sessionId: 'session-456',
-              request: 'Generate analytics report'
-            }
-          }
-        ]
-      },
-      {
-        name: 'workflow_start',
-        description: 'Start a workflow execution',
-        category: 'automation',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            name: { type: 'string', description: 'The name of the workflow to start' },
-            input: { type: 'object', description: 'Input data for the workflow' }
-          },
-          required: ['name']
-        },
-        provider: 'Workflow Engine',
-        isAvailable: false, // Mark as not available for demo
-        tags: ['workflow', 'automation', 'execution'],
-        examples: [
-          {
-            name: 'Run data pipeline',
-            description: 'Execute a data processing workflow',
-            inputExample: { name: 'data-pipeline', input: { source: 'api' } }
-          }
-        ]
-      }
-    ];
-
-    const mockCapability: MCPCapability = {
-      id: 'mock-tools',
-      name: 'Mock MCP Tools',
-      description: 'Demonstration tools for development',
-      tools: mockTools,
-      status: 'available',
-      provider: 'Development',
-      version: '0.1.0',
-      lastUpdated: new Date().toISOString()
-    };
-
-    setCapabilities([mockCapability]);
-    setAllTools(mockTools);
   };
 
   const categorizeTool = (toolName: string): MCPTool['category'] => {

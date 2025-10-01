@@ -2,29 +2,36 @@ import { createSignal, For, Show } from 'solid-js';
 
 interface ServerFiltersProps {
   searchQuery: string;
-  selectedCategory: string;
+  selectedTags: Set<string>;
+  tagSearchQuery: string;
+  filteredTags: string[];
+  popularTags: string[];
   selectedVerification: 'all' | 'official' | 'signed' | 'popular';
   sortBy: 'name' | 'downloadCount' | 'lastUpdated' | 'starCount';
-  categories: string[];
+  showOnlyFeatured: boolean;
   serverCount: number;
   totalCount: number;
   onSearch: (query: string) => void;
-  onCategoryChange: (category: string) => void;
+  onToggleTag: (tag: string) => void;
+  onClearTags: () => void;
+  onTagSearch: (query: string) => void;
   onVerificationFilter: (verification: 'all' | 'official' | 'signed' | 'popular') => void;
   onSortChange: (sort: 'name' | 'downloadCount' | 'lastUpdated' | 'starCount') => void;
+  onToggleFeatured: (featured: boolean) => void;
 }
 
 export default function ServerFilters(props: ServerFiltersProps) {
   const [showAdvancedFilters, setShowAdvancedFilters] = createSignal(false);
+  const [showTagSearch, setShowTagSearch] = createSignal(false);
 
   const handleSearchInput = (e: Event) => {
     const input = e.target as HTMLInputElement;
     props.onSearch(input.value);
   };
 
-  const handleCategorySelect = (e: Event) => {
-    const select = e.target as HTMLSelectElement;
-    props.onCategoryChange(select.value);
+  const handleTagSearchInput = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    props.onTagSearch(input.value);
   };
 
   const handleVerificationSelect = (e: Event) => {
@@ -39,21 +46,22 @@ export default function ServerFilters(props: ServerFiltersProps) {
 
   const isFiltered = () => {
     return props.searchQuery !== '' ||
-           props.selectedCategory !== 'all' ||
-           props.selectedVerification !== 'all';
+           props.selectedTags.size > 0 ||
+           props.selectedVerification !== 'all' ||
+           props.showOnlyFeatured;
   };
 
   const clearAllFilters = () => {
     props.onSearch('');
-    props.onCategoryChange('all');
+    props.onClearTags();
     props.onVerificationFilter('all');
+    props.onToggleFeatured(false);
   };
 
   return (
     <div class="space-y-4">
-      {/* Search and Primary Filters */}
+      {/* Search Box */}
       <div class="flex flex-col sm:flex-row gap-4">
-        {/* Search Box */}
         <div class="flex-1">
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -81,22 +89,20 @@ export default function ServerFilters(props: ServerFiltersProps) {
           </div>
         </div>
 
-        {/* Category Filter */}
-        <div class="sm:w-48">
-          <select
-            class="block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            value={props.selectedCategory}
-            onChange={handleCategorySelect}
-          >
-            <For each={props.categories}>
-              {(category) => (
-                <option value={category}>
-                  {category === 'all' ? 'All Categories' : category}
-                </option>
-              )}
-            </For>
-          </select>
-        </div>
+        {/* Featured Toggle */}
+        <button
+          class={`px-4 py-2 rounded-md font-medium transition-colors ${
+            props.showOnlyFeatured
+              ? 'bg-blue-600 text-white hover:bg-blue-700'
+              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
+          }`}
+          onClick={() => props.onToggleFeatured(!props.showOnlyFeatured)}
+        >
+          <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          Featured
+        </button>
 
         {/* Advanced Filters Toggle */}
         <button
@@ -113,6 +119,91 @@ export default function ServerFilters(props: ServerFiltersProps) {
             </span>
           </Show>
         </button>
+      </div>
+
+      {/* Category Tag Buttons Row */}
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">Filter by Tags</h3>
+          <button
+            class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+            onClick={() => setShowTagSearch(!showTagSearch())}
+          >
+            {showTagSearch() ? 'Hide search' : '+ Add custom tag'}
+          </button>
+        </div>
+
+        {/* Popular Tag Buttons */}
+        <div class="flex flex-wrap gap-2">
+          <For each={props.popularTags}>
+            {(tag) => (
+              <button
+                class={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  props.selectedTags.has(tag)
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600'
+                }`}
+                onClick={() => props.onToggleTag(tag)}
+              >
+                {tag}
+              </button>
+            )}
+          </For>
+
+          {/* Show selected non-popular tags */}
+          <For each={Array.from(props.selectedTags).filter(tag => !props.popularTags.includes(tag))}>
+            {(tag) => (
+              <button
+                class="px-3 py-1.5 rounded-full text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                onClick={() => props.onToggleTag(tag)}
+              >
+                {tag}
+                <svg class="w-4 h-4 ml-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </For>
+
+          <Show when={props.selectedTags.size > 0}>
+            <button
+              class="px-3 py-1.5 rounded-full text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              onClick={props.onClearTags}
+            >
+              Clear tags
+            </button>
+          </Show>
+        </div>
+
+        {/* Tag Search Input */}
+        <Show when={showTagSearch()}>
+          <div class="relative">
+            <input
+              type="text"
+              placeholder="Search for tags..."
+              class="block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={props.tagSearchQuery}
+              onInput={handleTagSearchInput}
+            />
+            <Show when={props.filteredTags.length > 0}>
+              <div class="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md shadow-lg max-h-60 overflow-auto">
+                <For each={props.filteredTags}>
+                  {(tag) => (
+                    <button
+                      class="w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                      onClick={() => {
+                        props.onToggleTag(tag);
+                        props.onTagSearch('');
+                      }}
+                    >
+                      {tag}
+                    </button>
+                  )}
+                </For>
+              </div>
+            </Show>
+          </div>
+        </Show>
       </div>
 
       {/* Advanced Filters */}
@@ -159,7 +250,7 @@ export default function ServerFilters(props: ServerFiltersProps) {
               onClick={clearAllFilters}
               disabled={!isFiltered()}
             >
-              Clear Filters
+              Clear All
             </button>
           </div>
         </div>
@@ -186,54 +277,6 @@ export default function ServerFilters(props: ServerFiltersProps) {
           </button>
         </Show>
       </div>
-
-      {/* Active Filter Tags */}
-      <Show when={isFiltered()}>
-        <div class="flex flex-wrap gap-2">
-          <Show when={props.searchQuery}>
-            <span class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm rounded-full">
-              Search: "{props.searchQuery}"
-              <button
-                class="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
-                onClick={() => props.onSearch('')}
-              >
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </span>
-          </Show>
-
-          <Show when={props.selectedCategory !== 'all'}>
-            <span class="inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-sm rounded-full">
-              Category: {props.selectedCategory}
-              <button
-                class="hover:bg-green-200 dark:hover:bg-green-800 rounded-full p-0.5"
-                onClick={() => props.onCategoryChange('all')}
-              >
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </span>
-          </Show>
-
-          <Show when={props.selectedVerification !== 'all'}>
-            <span class="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm rounded-full">
-              {props.selectedVerification === 'official' ? 'Official' :
-               props.selectedVerification === 'signed' ? 'Code-signed' : 'Popular'}
-              <button
-                class="hover:bg-purple-200 dark:hover:bg-purple-800 rounded-full p-0.5"
-                onClick={() => props.onVerificationFilter('all')}
-              >
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </span>
-          </Show>
-        </div>
-      </Show>
     </div>
   );
 }

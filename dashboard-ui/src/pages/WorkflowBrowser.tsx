@@ -52,7 +52,12 @@ export default function WorkflowBrowser(props: WorkflowBrowserProps = {}) {
   const createNewWorkflow = async () => {
     try {
       const newId = await contextCreateNew();
-      navigate(`/workflows/${newId}`);
+      // Use the same navigation logic as selecting a workflow
+      if (props.onWorkflowSelect) {
+        props.onWorkflowSelect(newId);
+      } else {
+        navigate(`/workflows/${newId}`);
+      }
     } catch (err) {
       console.error('Failed to create workflow:', err);
     }
@@ -65,7 +70,15 @@ export default function WorkflowBrowser(props: WorkflowBrowserProps = {}) {
       navigate(`/workflows/${workflowId}`);
     }
   };
-  const openTemplates = () => navigate('/workflows/marketplace');
+  const openTemplates = () => {
+    // In overlay mode, we should close the overlay and then navigate
+    if (props.onWorkflowSelect) {
+      // For marketplace, we need a special handling - close overlay and navigate
+      props.onWorkflowSelect('__marketplace__');
+    } else {
+      navigate('/workflows/marketplace');
+    }
+  };
   const importWorkflow = contextImportWorkflow;
 
   // Filter workflows based on active filter and search

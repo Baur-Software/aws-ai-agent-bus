@@ -1,5 +1,5 @@
-import { createSignal, Show, For, lazy, onMount, onCleanup } from 'solid-js';
-import { useOverlay } from '../../../contexts/OverlayContext';
+import { createSignal, Show, For, onMount, onCleanup } from 'solid-js';
+import { useNavigate, useLocation } from '@solidjs/router';
 import { useOrganization } from '../../../contexts/OrganizationContext';
 import ConnectionStatus from '../../ui/ConnectionStatus';
 import {
@@ -23,22 +23,11 @@ import {
   Grid3X3
 } from 'lucide-solid';
 
-// Lazy load the pages as overlays
-const Dashboard = lazy(() => import('../../../pages/Dashboard'));
-const KVStore = lazy(() => import('../../../pages/KVStore'));
-const Artifacts = lazy(() => import('../../../pages/Artifacts'));
-const Events = lazy(() => import('../../../pages/Events'));
-const SettingsPage = lazy(() => import('../../../pages/Settings'));
-const AppsTab = lazy(() => import('../../apps/AppsTab'));
+// Remove lazy loading - OverlayRouter handles this now
 
 interface FloatingNavigationProps {
-  currentPage?: string;
-  onNavigate?: (page: string) => void;
   onPositionChange?: (x: number, y: number) => void;
   onPinnedChange?: (isPinned: boolean) => void;
-  onToggleChat?: () => void;
-  onOpenWorkflowBrowser?: () => void;
-  onOpenMarketplace?: () => void;
   initialPosition?: { x: number; y: number };
   initialPinned?: boolean;
 }
@@ -59,7 +48,8 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
   const [isPinned, setIsPinned] = createSignal(props.initialPinned ?? true);
   const [showOrgDropdown, setShowOrgDropdown] = createSignal(false);
 
-  const { openOverlay } = useOverlay();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user, currentOrganization, organizations, switchOrganization } = useOrganization();
 
   // Navigation drag handling
@@ -114,7 +104,7 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
   const navItems: NavItem[] = [
     { id: 'workflows', label: 'Workflows', icon: Workflow, path: '/' },
     { id: 'apps', label: 'Apps', icon: Grid3X3, path: '/apps' },
-    { id: 'overview', label: 'Stats', icon: House, path: '/dashboard' },
+    // Dashboard will be rebuilt as configurable canvas with datavis nodes
     { id: 'kv-store', label: 'KV Store', icon: Database, path: '/kv-store' },
     { id: 'artifacts', label: 'Artifacts & S3', icon: Archive, path: '/artifacts' },
     { id: 'events', label: 'Events', icon: Calendar, path: '/events' },
@@ -122,89 +112,27 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
     { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' }
   ];
 
-  const getPageComponent = (itemId: string) => {
-    switch (itemId) {
-      case 'overview':
-        return Dashboard;
-      case 'apps':
-        return AppsTab;
-      case 'kv-store':
-        return KVStore;
-      case 'artifacts':
-        return Artifacts;
-      case 'events':
-        return Events;
-      case 'settings':
-        return SettingsPage;
-      default:
-        return null;
-    }
-  };
-
-  const getOverlaySize = (itemId: string) => {
-    switch (itemId) {
-      case 'overview':
-        return 'large';
-      case 'apps':
-        return 'full';
-      case 'settings':
-        return 'medium';
-      case 'kv-store':
-      case 'artifacts':
-      case 'events':
-        return 'large';
-      default:
-        return 'medium';
-    }
-  };
-
   const handleNavigation = (item: NavItem) => {
-    // Special case for workflows - use parent handler or fallback to browser
-    if (item.id === 'workflows') {
-      if (props.onNavigate) {
-        props.onNavigate('workflows');
-      } else {
-        props.onOpenWorkflowBrowser?.();
-      }
-      return;
-    }
-
-    // Special case for chat - toggle chat panel
-    if (item.id === 'chat') {
-      props.onToggleChat?.();
-      return;
-    }
-
-    // For other items, use parent navigation handler first
-    if (props.onNavigate) {
-      props.onNavigate(item.id);
-      return;
-    }
-
-    // Fallback: Open other pages as overlays
-    const component = getPageComponent(item.id);
-    if (component) {
-      openOverlay({
-        id: item.id,
-        component: () => {
-          // Pass isOverlay prop to Settings component
-          if (item.id === 'settings') {
-            return <SettingsPage isOverlay={true} />;
-          }
-          return component();
-        },
-        title: item.label,
-        size: getOverlaySize(item.id) as any
-      });
-    }
+    // Simply navigate to the path
+    // The OverlayRouter will intercept and open the appropriate overlay
+    navigate(item.path);
   };
 
   const isActive = (itemId: string) => {
-    // Workflows is always active since it's the main page
-    if (itemId === 'workflows') {
-      return true;
+    const currentPath = location.pathname;
+    const item = navItems.find(n => n.id === itemId);
+
+    if (!item) return false;
+
+    // Check for exact match or prefix match for nested routes
+    if (item.path === '/') {
+      // Special case for root/workflows
+      return currentPath === '/' || currentPath.startsWith('/workflows');
     }
-    return false; // Overlays don't have active states in navigation
+
+    // Since overlays redirect back to '/', we keep workflows highlighted
+    // This could be enhanced to track last opened overlay
+    return currentPath === item.path;
   };
 
   const handlePin = (e: MouseEvent) => {

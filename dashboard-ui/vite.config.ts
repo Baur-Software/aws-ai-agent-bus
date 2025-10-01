@@ -12,7 +12,7 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
     root: '.',
     publicDir: false,
     build: {
-      outDir: '../dist/dashboard-ui',
+      outDir: './dist',
       emptyOutDir: true,
     },
     css: {

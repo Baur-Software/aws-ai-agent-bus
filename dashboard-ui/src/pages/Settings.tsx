@@ -4,6 +4,7 @@ import { createSignal, Show } from 'solid-js';
 import { usePageHeader } from '../contexts/HeaderContext';
 import IntegrationsSettings from '../components/IntegrationsSettings';
 import SidebarSettings from '../components/SidebarSettings';
+import NotificationSettings from '../components/NotificationSettings';
 
 const SETTINGS_SECTIONS = [
   {
@@ -32,7 +33,7 @@ const SETTINGS_SECTIONS = [
     description: 'Configure alerts and notifications',
     icon: Bell,
     href: '/settings/notifications',
-    available: false
+    available: true
   },
   {
     title: 'Appearance',
@@ -126,6 +127,8 @@ function Settings({ isOverlay = false }: SettingsProps) {
         return { title: 'Connected Apps', description: 'Connect external services and APIs' };
       case '/settings/sidebar':
         return { title: 'Sidebar Settings', description: 'Customize navigation menu visibility' };
+      case '/settings/notifications':
+        return { title: 'Notifications', description: 'Configure alerts and notifications' };
       default:
         return { title: 'Settings', description: 'Configure dashboard preferences and integrations' };
     }
@@ -137,6 +140,8 @@ function Settings({ isOverlay = false }: SettingsProps) {
         return <IntegrationsSettings isOverlay={isOverlay} />;
       case '/settings/sidebar':
         return <SidebarSettings isOverlay={isOverlay} />;
+      case '/settings/notifications':
+        return <NotificationSettings />;
       default:
         return (
           <div class="grid gap-6 md:grid-cols-2">
