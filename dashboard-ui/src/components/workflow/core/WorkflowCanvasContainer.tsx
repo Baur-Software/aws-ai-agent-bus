@@ -10,6 +10,7 @@ import { useOrganization } from '../../../contexts/OrganizationContext';
 import { useNotifications } from '../../../contexts/NotificationContext';
 import { useKVStore } from '../../../contexts/KVStoreContext';
 import { useDashboardServer } from '../../../contexts/DashboardServerContext';
+import { WorkflowEngine } from '../../../utils/workflowEngine';
 
 interface WorkflowCanvasContainerProps {
   workflowId?: string;
@@ -84,6 +85,7 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
   const [showCollaboration, setShowCollaboration] = createSignal(false);
   const [showWorkflowBrowser, setShowWorkflowBrowser] = createSignal(!props.workflowId);
   const [connectedIntegrations, setConnectedIntegrations] = createSignal<string[]>([]);
+  const [useMockData, setUseMockData] = createSignal(true); // Default to mock/dry-run mode
 
   // Canvas view options
   const [gridMode, setGridMode] = createSignal<'off' | 'grid' | 'dots'>('dots');
@@ -548,14 +550,51 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
     try {
       setIsExecuting(true);
       setExecutionStatus('running');
-      success('Workflow execution started');
 
-      setTimeout(() => {
-        setIsExecuting(false);
-        setExecutionStatus('completed');
-        success('Workflow completed successfully');
-      }, 3000);
-    } catch (err) {
+      const mockMode = useMockData();
+      console.log(`🚀 Running workflow with event emission (${mockMode ? 'DRY RUN - Mock Data' : 'LIVE RUN - Real Data'})`);
+
+      // Create WorkflowEngine with MCP client and event emitter
+      const engine = new WorkflowEngine(
+        dashboardServer,  // MCP client
+        dashboardServer.sendMessage,  // Event emitter function
+        mockMode  // Mock data mode
+      );
+
+      // Prepare workflow for execution
+      const workflow = {
+        id: workflowMetadata()?.id || 'temp-workflow',
+        name: workflowName(),
+        nodes: nodes().map(node => ({
+          id: node.id,
+          type: node.type,
+          x: node.x,
+          y: node.y,
+          inputs: node.inputs || [],
+          outputs: node.outputs || [],
+          config: node.config || {},
+          title: node.title || node.type,
+          description: node.description || '',
+          enabled: node.enabled !== false
+        })),
+        connections: connections()
+      };
+
+      success(mockMode
+        ? '🧪 Dry run started with mock data - check Events panel'
+        : '⚠️ LIVE run started with real data - check Events panel'
+      );
+
+      // Execute workflow (this will emit events throughout execution)
+      const result = await engine.executeWorkflow(workflow);
+
+      setIsExecuting(false);
+      setExecutionStatus('completed');
+      success('Workflow completed successfully');
+
+      console.log('✅ Workflow execution result:', result);
+    } catch (err: any) {
+      console.error('❌ Workflow execution failed:', err);
       setIsExecuting(false);
       setExecutionStatus('error');
       error(`Workflow execution failed: ${err.message}`);
@@ -658,6 +697,9 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
             gridMode={gridMode()}
             hasUnsavedChanges={hasUnsavedChanges()}
             isExecuting={isExecuting()}
+            nodeCount={nodes().length}
+            useMockData={useMockData()}
+            onToggleMockData={() => setUseMockData(!useMockData())}
             onPositionChange={handleToolbarPositionChange}
             initialPosition={toolbarPosition()}
             navigationPinned={props.navigationPinned}

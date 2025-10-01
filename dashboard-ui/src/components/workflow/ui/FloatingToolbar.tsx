@@ -1,6 +1,7 @@
 import { createSignal, createEffect, Show } from 'solid-js';
 import {
   Play,
+  Square,
   Save,
   Upload,
   Download,
@@ -71,6 +72,9 @@ interface FloatingToolbarProps {
   canRedo?: boolean;
   gridMode?: 'off' | 'grid' | 'dots';
   isPanMode?: boolean;
+  nodeCount?: number;
+  useMockData?: boolean;
+  onToggleMockData?: () => void;
 
   // Position
   onPositionChange?: (x: number, y: number) => void;
@@ -232,12 +236,24 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
       variant: 'secondary' as const
     },
     {
-      icon: Play,
-      label: props.isExecuting ? 'Running...' : 'Test Run',
+      icon: props.isExecuting ? Square : Play,
+      label: props.isExecuting ? 'Stop' : (props.useMockData ? 'Dry Run' : 'Live Run'),
       onClick: props.onRun,
+      onContextMenu: (e: MouseEvent) => {
+        e.preventDefault();
+        if (!props.isExecuting && props.onToggleMockData) {
+          props.onToggleMockData();
+        }
+      },
       show: true,
-      variant: 'primary' as const,
-      loading: props.isExecuting
+      variant: props.isExecuting ? 'danger' : (props.useMockData ? 'secondary' : 'primary') as const,
+      loading: false, // Don't show loading spinner, show Stop icon instead
+      disabled: !props.isExecuting && (props.nodeCount === 0 || props.nodeCount === undefined),
+      title: props.isExecuting
+        ? 'Stop workflow execution'
+        : (props.useMockData
+          ? 'Dry Run (uses sample data) • Right-click to switch to Live Run'
+          : 'Live Run (uses real data) • Right-click to switch to Dry Run')
     },
     {
       icon: Save,

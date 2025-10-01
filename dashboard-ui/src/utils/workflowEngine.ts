@@ -1,16 +1,49 @@
+// Import schema-based sample generator
+import { sampleDataGenerator } from './sampleDataGenerator.js';
+
 // Simple workflow execution engine for MCP tools
 export class WorkflowEngine {
-  constructor(mcpClient) {
+  constructor(mcpClient, eventEmitter = null, useMockData = false, nodeRegistry = null) {
     this.mcpClient = mcpClient;
     this.executionHistory = [];
+    this.eventEmitter = eventEmitter; // Dashboard server sendMessage function
+    this.useMockData = useMockData; // Mock/dry-run mode flag
+    this.nodeRegistry = nodeRegistry; // Registry with node schemas/definitions
+  }
+
+  // Emit workflow events to EventBridge via dashboard-server
+  async emitEvent(detailType, detail, source = 'workflow-engine') {
+    if (!this.eventEmitter) return;
+
+    try {
+      this.eventEmitter({
+        type: 'publish_event',
+        event: {
+          detailType,
+          source,
+          detail
+        }
+      });
+    } catch (error) {
+      console.error('Failed to emit workflow event:', error);
+    }
   }
 
   async executeWorkflow(workflow) {
     const { nodes } = workflow;
     const executionId = Date.now().toString();
-    
+
     console.log(`🚀 Starting workflow execution: ${executionId}`);
-    
+
+    // Emit workflow.started event
+    await this.emitEvent('workflow.started', {
+      executionId,
+      workflowId: workflow.id || workflow.name,
+      workflowName: workflow.name,
+      nodeCount: nodes.length,
+      timestamp: new Date().toISOString()
+    });
+
     try {
       // Find the trigger node (starting point)
       const triggerNode = nodes.find(node => node.type === 'trigger');
@@ -28,9 +61,19 @@ export class WorkflowEngine {
 
       // Execute nodes in sequence (simple linear execution for now)
       const result = await this.executeNode(triggerNode, nodes, context);
-      
+
       console.log(`✅ Workflow execution completed: ${executionId}`, result);
-      
+
+      // Emit workflow.completed event
+      await this.emitEvent('workflow.completed', {
+        executionId,
+        workflowId: workflow.id || workflow.name,
+        workflowName: workflow.name,
+        nodesExecuted: Object.keys(context.results).length,
+        result,
+        timestamp: new Date().toISOString()
+      });
+
       this.executionHistory.push({
         id: executionId,
         timestamp: new Date().toISOString(),
@@ -40,26 +83,114 @@ export class WorkflowEngine {
       });
 
       return result;
-      
+
     } catch (error) {
       console.error(`❌ Workflow execution failed: ${executionId}`, error);
-      
+
+      // Emit workflow.failed event
+      await this.emitEvent('workflow.failed', {
+        executionId,
+        workflowId: workflow.id || workflow.name,
+        workflowName: workflow.name,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+
       this.executionHistory.push({
         id: executionId,
         timestamp: new Date().toISOString(),
         status: 'failed',
         error: error.message
       });
-      
+
       throw error;
     }
   }
 
+  // Use sample data from node config (Zapier-style test data)
+  // Each node can have a 'sampleOutput' field that gets used in dry-run mode
+  useSampleData(node) {
+    // 1. Check if node has custom configured sample/test data
+    if (node.config?.sampleOutput) {
+      console.log(`🧪 Using custom sample data for ${node.type}:`, node.config.sampleOutput);
+      return node.config.sampleOutput;
+    }
+
+    // 2. Use default sample output from node definitions
+    const defaultSample = this.getDefaultSampleOutput(node.type);
+    if (defaultSample) {
+      console.log(`🧪 Using default sample data for ${node.type}:`, defaultSample);
+      return defaultSample;
+    }
+
+    // 3. Fallback placeholder if no defaults exist
+    console.log(`⚠️ No sample data configured for ${node.type}, using placeholder`);
+    return {
+      _sample: true,
+      nodeType: node.type,
+      message: `Configure 'sampleOutput' in node settings for realistic test data`,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  // Generate sample output from node schema
+  getDefaultSampleOutput(nodeType) {
+    // Try to get node schema from registry (MCP tools, custom nodes, etc)
+    const nodeSchema = this.getNodeSchema(nodeType);
+
+    if (nodeSchema?.outputSchema) {
+      // Generate sample data from output schema
+      return sampleDataGenerator.generateFromSchema(nodeSchema.outputSchema);
+    }
+
+    // If no schema available, return null (will trigger placeholder)
+    return null;
+  }
+
+  // Get node schema from registry
+  getNodeSchema(nodeType) {
+    // If nodeRegistry provided (contains MCP tool definitions, custom nodes, etc)
+    if (this.nodeRegistry) {
+      // Try to find node in registry
+      const nodeDef = this.nodeRegistry.get?.(nodeType) || this.nodeRegistry[nodeType];
+      if (nodeDef) {
+        return nodeDef;
+      }
+    }
+
+    // TODO: Also check centralized node definitions
+    // const NODE_DEFINITIONS = await import('./config/nodeDefinitions.ts');
+    // return NODE_DEFINITIONS.getNodeDefinition(nodeType);
+
+    return null;
+  }
+
   async executeNode(node, allNodes, context) {
-    console.log(`🔄 Executing node: ${node.type} (${node.id})`);
-    
+    const modeLabel = this.useMockData ? '🧪 DRY RUN' : '⚡ LIVE';
+    console.log(`🔄 ${modeLabel} Executing node: ${node.type} (${node.id})`);
+
+    // Emit node.state_changed → 'executing'
+    await this.emitEvent('workflow.node.state_changed', {
+      executionId: context.executionId,
+      nodeId: node.id,
+      nodeType: node.type,
+      previousState: 'pending',
+      currentState: 'executing',
+      mockMode: this.useMockData,
+      timestamp: new Date().toISOString()
+    });
+
+    const startTime = Date.now();
+
     try {
       let result;
+
+      // If dry-run mode, use sample data from node config (Zapier-style)
+      if (this.useMockData && node.type !== 'trigger') {
+        await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300)); // Simulate processing
+        result = this.useSampleData(node);
+      } else {
+        // Real execution - call actual APIs/MCP tools
       
       switch (node.type) {
         case 'trigger':
@@ -296,21 +427,69 @@ export class WorkflowEngine {
         default:
           result = { status: 'unknown_node_type', type: node.type };
       }
+      } // End of else block for real execution
 
       // Store result in context
       context.results[node.id] = result;
       context.data.previousResult = result;
 
+      const duration = Date.now() - startTime;
+
+      // Emit node.output_produced event
+      await this.emitEvent('workflow.node.output_produced', {
+        executionId: context.executionId,
+        nodeId: node.id,
+        nodeType: node.type,
+        output: result,
+        duration,
+        timestamp: new Date().toISOString()
+      });
+
+      // Emit node.state_changed → 'completed'
+      await this.emitEvent('workflow.node.state_changed', {
+        executionId: context.executionId,
+        nodeId: node.id,
+        nodeType: node.type,
+        previousState: 'executing',
+        currentState: 'completed',
+        duration,
+        timestamp: new Date().toISOString()
+      });
+
       // Find and execute next nodes (simple linear flow for now)
       const nextNodes = this.findNextNodes(node, allNodes);
       for (const nextNode of nextNodes) {
+        // Emit data_flowing event for edge animation
+        await this.emitEvent('workflow.node.data_flowing', {
+          executionId: context.executionId,
+          fromNodeId: node.id,
+          toNodeId: nextNode.id,
+          data: result,
+          timestamp: new Date().toISOString()
+        });
+
         await this.executeNode(nextNode, allNodes, context);
       }
 
       return result;
-      
+
     } catch (error) {
       console.error(`❌ Error executing node ${node.type}:`, error);
+
+      const duration = Date.now() - startTime;
+
+      // Emit node.state_changed → 'failed'
+      await this.emitEvent('workflow.node.state_changed', {
+        executionId: context.executionId,
+        nodeId: node.id,
+        nodeType: node.type,
+        previousState: 'executing',
+        currentState: 'failed',
+        error: error.message,
+        duration,
+        timestamp: new Date().toISOString()
+      });
+
       context.errors.push({
         nodeId: node.id,
         nodeType: node.type,
