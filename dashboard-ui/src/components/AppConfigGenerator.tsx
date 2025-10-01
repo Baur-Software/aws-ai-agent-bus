@@ -106,7 +106,7 @@ export default function AppConfigGenerator(props: AppConfigGeneratorProps) {
           name: data.name,
           category: data.category,
           description: data.description,
-          provider: provider() === 'custom' ? undefined : provider(),
+          provider: provider() === 'custom' ? undefined : (provider() as Exclude<typeof provider, 'custom'>),
           custom_auth_url: data.custom_auth_url || undefined,
           custom_token_url: data.custom_token_url || undefined,
           scopes,
