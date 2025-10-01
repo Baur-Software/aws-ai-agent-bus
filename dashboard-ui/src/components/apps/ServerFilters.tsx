@@ -6,7 +6,7 @@ interface ServerFiltersProps {
   tagSearchQuery: string;
   filteredTags: string[];
   popularTags: string[];
-  selectedVerification: 'all' | 'official' | 'signed' | 'popular';
+  selectedVerification: 'all' | 'official' | 'popular';
   sortBy: 'name' | 'downloadCount' | 'lastUpdated' | 'starCount';
   showOnlyFeatured: boolean;
   serverCount: number;
@@ -15,7 +15,7 @@ interface ServerFiltersProps {
   onToggleTag: (tag: string) => void;
   onClearTags: () => void;
   onTagSearch: (query: string) => void;
-  onVerificationFilter: (verification: 'all' | 'official' | 'signed' | 'popular') => void;
+  onVerificationFilter: (verification: 'all' | 'official' | 'popular') => void;
   onSortChange: (sort: 'name' | 'downloadCount' | 'lastUpdated' | 'starCount') => void;
   onToggleFeatured: (featured: boolean) => void;
 }
@@ -221,7 +221,6 @@ export default function ServerFilters(props: ServerFiltersProps) {
             >
               <option value="all">All Servers</option>
               <option value="official">Official Only</option>
-              <option value="signed">Code-signed Only</option>
               <option value="popular">Popular Only</option>
             </select>
           </div>

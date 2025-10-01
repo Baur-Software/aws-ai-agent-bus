@@ -53,8 +53,8 @@ export interface MCPServerListing {
 }
 
 export class MCPMarketplace {
-  private mcpSoUrl = 'https://mcp.so/servers';
-  private cacheKey = 'mcp-so-servers-cache-v2';
+  private awesomeServersUrl = 'https://raw.githubusercontent.com/punkpeye/awesome-mcp-servers/main/README.md';
+  private cacheKey = 'awesome-mcp-servers-cache-v5'; // v5: Added detailed node/agent info with icons, descriptions, expertise
   private cacheExpiryHours = 6; // Cache for 6 hours
 
   async searchServers(searchQuery: string = ''): Promise<MCPServerListing[]> {
@@ -66,15 +66,16 @@ export class MCPMarketplace {
         return this.filterServers(cachedServers, searchQuery);
       }
 
-      // Fetch fresh data if cache miss
-      const response = await fetch(this.mcpSoUrl);
-      const html = await response.text();
+      // Fetch fresh data from awesome-mcp-servers GitHub
+      const response = await fetch(this.awesomeServersUrl);
+      const markdown = await response.text();
 
-      const servers = await this.parseMcpSoServers(html);
+      const servers = await this.parseAwesomeMcpServers(markdown);
 
       // Cache the servers in artifacts store
       await this.cacheServers(servers);
 
+      console.log(`Fetched and cached ${servers.length} MCP servers from awesome-mcp-servers`);
       return this.filterServers(servers, searchQuery);
     } catch (error) {
       console.error('Failed to fetch MCP servers from GitHub:', error);
@@ -156,34 +157,140 @@ export class MCPMarketplace {
     }
   }
 
-  private async parseMcpSoServers(html: string): Promise<MCPServerListing[]> {
-    console.log(`Parsing mcp.so HTML response (${html.length} chars)`);
+  private async parseAwesomeMcpServers(markdown: string): Promise<MCPServerListing[]> {
+    console.log(`Parsing awesome-mcp-servers markdown (${markdown.length} chars)`);
 
     const servers: MCPServerListing[] = [];
+    let currentCategory = 'Other';
 
-    // Basic HTML parsing to extract server information
-    // Look for server blocks using common HTML patterns
-    const serverBlocks = this.extractServerBlocks(html);
+    // Parse markdown line by line
+    const lines = markdown.split('\n');
 
-    console.log(`Found ${serverBlocks.length} server blocks in mcp.so`);
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
 
-    for (const block of serverBlocks) {
-      try {
-        const serverInfo = await this.parseServerBlock(block);
-        if (serverInfo) {
-          servers.push(serverInfo);
-        }
-      } catch (error) {
-        console.warn('Failed to parse server block:', error);
+      // Category headers (## Category Name)
+      if (line.startsWith('## ') && !line.includes('Table of Contents') && !line.includes('Contributing')) {
+        currentCategory = line.replace('## ', '').trim();
         continue;
       }
 
-      // Limit to prevent too many servers
-      if (servers.length >= 100) break;
+      // Server entries (- [Name](link) - Description)
+      const serverMatch = line.match(/^-\s+\[([^\]]+)\]\(([^)]+)\)\s*-?\s*(.*)$/);
+      if (serverMatch) {
+        const [, name, url, description] = serverMatch;
+
+        try {
+          const server = await this.createServerFromMarkdownEntry(
+            name,
+            url,
+            description,
+            currentCategory
+          );
+
+          if (server) {
+            servers.push(server);
+          }
+        } catch (error) {
+          console.warn(`Failed to parse server: ${name}`, error);
+        }
+      }
     }
 
-    console.log(`Parsed ${servers.length} MCP servers from mcp.so`);
+    console.log(`Parsed ${servers.length} MCP servers from awesome-mcp-servers (${new Set(servers.map(s => s.category)).size} categories)`);
     return servers;
+  }
+
+  private async createServerFromMarkdownEntry(
+    name: string,
+    url: string,
+    description: string,
+    category: string
+  ): Promise<MCPServerListing | null> {
+    // Extract repository URL (GitHub)
+    const githubMatch = url.match(/github\.com\/([^\/]+\/[^\/]+)/);
+    const repository = githubMatch ? `https://github.com/${githubMatch[1]}` : url;
+    const githubPath = githubMatch ? githubMatch[1] : undefined;
+    const publisher = githubPath ? githubPath.split('/')[0] : 'Community';
+
+    // Generate server ID
+    const id = `mcp-${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+
+    // Check official status
+    const isOfficial = this.isOfficialServer(name, githubPath);
+    const verificationBadges = this.getVerificationBadges(name, githubPath);
+
+    // Generate tags from name and description
+    const baseTags = [
+      ...name.toLowerCase().split(/[-_\s]+/),
+      ...description.toLowerCase().split(/\s+/).slice(0, 5),
+      category.toLowerCase()
+    ].filter(tag => tag.length > 2 && !['mcp', 'server', 'the', 'and', 'for', 'with'].includes(tag));
+
+    // Add verification tags for filtering
+    const verificationTags = [];
+    if (isOfficial) {
+      verificationTags.push('official', 'verified');
+    } else {
+      verificationTags.push('community');
+    }
+
+    // Add badge tags
+    if (verificationBadges.includes('popular')) {
+      verificationTags.push('popular');
+    }
+
+    const tags = [...new Set([...verificationTags, ...baseTags])].slice(0, 15);
+    const capabilities = this.generateCapabilities(name, description);
+    const workflowIntegration = this.calculateWorkflowIntegration(name, description, capabilities);
+
+    return {
+      id,
+      name,
+      description: description || 'MCP Server',
+      publisher,
+      version: '1.0.0',
+
+      // Verification and trust
+      isOfficial,
+      isSigned: false,
+      verificationBadges,
+
+      // Repository and metadata
+      repository,
+      homepage: repository,
+      documentation: repository ? `${repository}#readme` : undefined,
+      downloadCount: 0, // Would need to fetch from npm/GitHub API
+      starCount: 0, // Would need to fetch from GitHub API
+      lastUpdated: new Date(),
+
+      // Categorization
+      category: this.normalizeCategory(category),
+      tags,
+
+      // Configuration - would need to fetch README
+      configurationSchema: [],
+      authMethods: ['none'],
+
+      // Runtime information
+      toolCount: 0,
+      capabilities,
+
+      // Workflow integration
+      workflowNodes: workflowIntegration.workflowNodes,
+      workflowNodeDetails: workflowIntegration.workflowNodeDetails,
+      specializedAgents: workflowIntegration.specializedAgents,
+      specializedAgentDetails: workflowIntegration.specializedAgentDetails,
+      nodeShapes: workflowIntegration.nodeShapes,
+      canExecuteAgents: workflowIntegration.canExecuteAgents,
+      dataInputTypes: workflowIntegration.dataInputTypes,
+      dataOutputTypes: workflowIntegration.dataOutputTypes,
+
+      // Installation
+      installCommand: undefined,
+      npmPackage: undefined,
+      dockerImage: undefined
+    };
   }
 
   private extractServerBlocks(html: string): string[] {
@@ -670,12 +777,59 @@ export class MCPMarketplace {
   }
 
   private isOfficialServer(name: string, githubPath?: string): boolean {
-    const officialOrgs = ['aws', 'google', 'microsoft', 'github', 'stripe', 'salesforce', 'slack'];
-    if (githubPath) {
-      const org = githubPath.split('/')[0].toLowerCase();
-      return officialOrgs.includes(org);
+    if (!githubPath) return false;
+
+    const org = githubPath.split('/')[0].toLowerCase();
+    const repoName = githubPath.split('/')[1]?.toLowerCase() || '';
+
+    // Official MCP organization
+    if (org === 'modelcontextprotocol') {
+      return true;
     }
-    return officialOrgs.some(org => name.toLowerCase().includes(org));
+
+    // Extract the core service name from the MCP server name
+    // e.g., "GitHub MCP Server" -> "github", "Slack Integration" -> "slack"
+    const normalizedName = name.toLowerCase()
+      .replace(/\bmcp\b/g, '')
+      .replace(/\bserver\b/g, '')
+      .replace(/\bintegration\b/g, '')
+      .replace(/\bofficial\b/g, '')
+      .replace(/[-_\s]+/g, ' ')
+      .trim();
+
+    // Get significant words (longer than 2 chars)
+    const nameWords = normalizedName.split(/\s+/).filter(w => w.length > 2);
+
+    // Check if the GitHub org exactly matches any word in the service name
+    // This catches: "github/..." for "GitHub MCP", "stripe/..." for "Stripe Integration"
+    for (const word of nameWords) {
+      if (org === word) {
+        return true;
+      }
+
+      // Also check common variations
+      const variations = [
+        word,
+        `${word}api`,
+        `${word}inc`,
+        `${word}hq`,
+        `${word}labs`,
+        word.replace('hub', ''), // githubapi -> gitapi
+        word.endsWith('api') ? word.slice(0, -3) : null
+      ].filter(Boolean);
+
+      if (variations.includes(org)) {
+        return true;
+      }
+    }
+
+    // Check if the repo name starts with the org name (canonical pattern)
+    // e.g., "stripe/stripe-mcp-server" or "github/github-integration"
+    if (repoName.startsWith(org) || repoName.startsWith(`${org}-`)) {
+      return true;
+    }
+
+    return false;
   }
 
   private getVerificationBadges(name: string, githubPath?: string): ('official' | 'signed' | 'popular' | 'verified')[] {
@@ -730,6 +884,143 @@ export class MCPMarketplace {
     }
 
     return capabilities.length > 0 ? capabilities : ['general_purpose'];
+  }
+
+  /**
+   * Calculate workflow nodes, agents, and shapes available with this MCP server
+   */
+  private calculateWorkflowIntegration(name: string, description: string, capabilities: string[]): {
+    workflowNodes: string[];
+    workflowNodeDetails: Array<{ type: string; name: string; description: string; category: string; icon?: string }>;
+    specializedAgents: string[];
+    specializedAgentDetails: Array<{ id: string; name: string; description: string; expertise: string[] }>;
+    nodeShapes: string[];
+    canExecuteAgents: boolean;
+    dataInputTypes: string[];
+    dataOutputTypes: string[];
+  } {
+    const workflowNodes: string[] = [];
+    const workflowNodeDetails: Array<{ type: string; name: string; description: string; category: string; icon?: string }> = [];
+    const specializedAgents: string[] = [];
+    const specializedAgentDetails: Array<{ id: string; name: string; description: string; expertise: string[] }> = [];
+    const nodeShapes: string[] = [];
+    const dataInputTypes: string[] = ['json', 'text']; // Most integrations accept these
+    const dataOutputTypes: string[] = ['json']; // Most integrations output JSON
+    let canExecuteAgents = true; // MCP servers can invoke agents
+
+    const lowerName = name.toLowerCase();
+    const lowerDesc = description.toLowerCase();
+    const allText = `${lowerName} ${lowerDesc} ${capabilities.join(' ')}`;
+
+    // Helper to add node with details
+    const addNode = (type: string, name: string, description: string, category: string, icon?: string) => {
+      workflowNodes.push(type);
+      workflowNodeDetails.push({ type, name, description, category, icon });
+    };
+
+    // Helper to add agent with details
+    const addAgent = (id: string, name: string, description: string, expertise: string[]) => {
+      specializedAgents.push(id);
+      specializedAgentDetails.push({ id, name, description, expertise });
+    };
+
+    // Triggers based on service type
+    if (allText.includes('webhook') || allText.includes('event')) {
+      addNode('webhook-trigger', 'Webhook Trigger', 'Receive HTTP webhooks from external services', 'triggers', '🔗');
+      nodeShapes.push('trigger');
+      dataInputTypes.push('webhook', 'http');
+    }
+    if (allText.includes('schedule') || allText.includes('cron') || allText.includes('periodic')) {
+      addNode('schedule-trigger', 'Schedule Trigger', 'Run workflows on a schedule', 'triggers', '⏰');
+      nodeShapes.push('trigger');
+    }
+
+    // Data operations
+    if (allText.includes('database') || allText.includes('sql') || allText.includes('data')) {
+      addNode('db-query', 'Database Query', 'Execute SQL queries', 'storage', '🗄️');
+      addNode('db-insert', 'Database Insert', 'Insert data into database', 'storage', '💾');
+      addNode('db-update', 'Database Update', 'Update database records', 'storage', '✏️');
+      nodeShapes.push('data', 'storage');
+      dataInputTypes.push('sql', 'structured-data');
+      dataOutputTypes.push('table', 'records');
+    }
+
+    // Analytics services
+    if (lowerName.includes('analytics') || lowerName.includes('google analytics') || capabilities.includes('data_analysis')) {
+      addNode('ga-top-pages', 'Top Pages Report', 'Get top performing pages from analytics', 'analytics', '📊');
+      addNode('ga-search-data', 'Search Console Data', 'Get search performance metrics', 'analytics', '🔍');
+      addNode('analytics-report', 'Analytics Report', 'Generate comprehensive analytics report', 'analytics', '📈');
+      addAgent('analytics-expert', 'Analytics Expert', 'Specialized in data analysis and reporting', ['analytics', 'data-visualization', 'metrics']);
+      nodeShapes.push('analytics', 'reporting');
+      dataOutputTypes.push('metrics', 'charts');
+    }
+
+    // Communication services
+    if (lowerName.includes('slack') || lowerName.includes('discord') || capabilities.includes('messaging')) {
+      addNode('send-message', 'Send Message', 'Send messages to channels or users', 'communication', '💬');
+      addNode('create-channel', 'Create Channel', 'Create new communication channels', 'communication', '➕');
+      addNode('notification', 'Notification', 'Send notifications', 'communication', '🔔');
+      addAgent('slack-integration-expert', 'Slack Expert', 'Specialized in Slack integrations and workflows', ['slack-api', 'bot-development', 'webhooks']);
+      nodeShapes.push('communication', 'notification');
+      dataInputTypes.push('message', 'notification');
+    }
+
+    // Development tools
+    if (lowerName.includes('github') || lowerName.includes('gitlab') || capabilities.includes('repository_management')) {
+      addNode('create-issue', 'Create Issue', 'Create repository issues', 'development', '🐛');
+      addNode('create-pr', 'Create Pull Request', 'Create pull requests', 'development', '🔀');
+      addNode('repo-query', 'Repository Query', 'Query repository data', 'development', '📂');
+      addAgent('github-integration-expert', 'GitHub Expert', 'Specialized in GitHub API and workflows', ['git', 'ci-cd', 'code-review']);
+      nodeShapes.push('development', 'version-control');
+      dataInputTypes.push('code', 'git-refs');
+      dataOutputTypes.push('commits', 'pull-requests');
+    }
+
+    // Cloud services
+    if (lowerName.includes('aws') || capabilities.includes('cloud_services')) {
+      addNode('s3-upload', 'S3 Upload', 'Upload files to S3 storage', 'cloud', '☁️');
+      addNode('dynamodb-query', 'DynamoDB Query', 'Query DynamoDB tables', 'cloud', '🗃️');
+      addNode('lambda-invoke', 'Invoke Lambda', 'Execute Lambda functions', 'cloud', '⚡');
+      addNode('sns-send', 'SNS Publish', 'Publish messages to SNS topics', 'cloud', '📢');
+      addAgent('s3-storage-expert', 'S3 Expert', 'Specialized in S3 storage operations', ['s3', 'object-storage', 'cdn']);
+      addAgent('dynamodb-database-expert', 'DynamoDB Expert', 'Specialized in DynamoDB operations', ['nosql', 'dynamodb', 'queries']);
+      addAgent('lambda-serverless-expert', 'Lambda Expert', 'Specialized in serverless functions', ['serverless', 'lambda', 'functions']);
+      addAgent('sns-messaging-expert', 'SNS Expert', 'Specialized in SNS messaging', ['messaging', 'pub-sub', 'notifications']);
+      nodeShapes.push('cloud', 'infrastructure');
+      dataInputTypes.push('files', 'binary');
+      dataOutputTypes.push('storage-urls', 'execution-results');
+    }
+
+    // Stripe/payments
+    if (lowerName.includes('stripe') || allText.includes('payment')) {
+      addNode('create-payment', 'Create Payment', 'Process payments', 'payments', '💳');
+      addNode('check-subscription', 'Check Subscription', 'Verify subscription status', 'payments', '🔒');
+      addNode('refund-payment', 'Refund Payment', 'Process refunds', 'payments', '↩️');
+      addAgent('stripe-payments-expert', 'Stripe Expert', 'Specialized in payment processing', ['stripe-api', 'subscriptions', 'webhooks']);
+      nodeShapes.push('payments', 'ecommerce');
+      dataInputTypes.push('payment-data', 'customer-info');
+      dataOutputTypes.push('transaction-results', 'receipts');
+    }
+
+    // HTTP/API actions (always available for MCP servers)
+    addNode('http-get', 'HTTP GET', 'Make GET requests to APIs', 'http', '🌐');
+    addNode('http-post', 'HTTP POST', 'Make POST requests to APIs', 'http', '📮');
+    nodeShapes.push('http', 'api');
+
+    // Agent node (always available - can invoke any specialized agent)
+    addNode('agent', 'AI Agent', 'Execute tasks with AI agents', 'agents', '🤖');
+    nodeShapes.push('agents');
+
+    return {
+      workflowNodes: [...new Set(workflowNodes)],
+      workflowNodeDetails,
+      specializedAgents: [...new Set(specializedAgents)],
+      specializedAgentDetails,
+      nodeShapes: [...new Set(nodeShapes)],
+      canExecuteAgents,
+      dataInputTypes: [...new Set(dataInputTypes)],
+      dataOutputTypes: [...new Set(dataOutputTypes)]
+    };
   }
 
   async getServersByCategory(category: string): Promise<MCPServerListing[]> {

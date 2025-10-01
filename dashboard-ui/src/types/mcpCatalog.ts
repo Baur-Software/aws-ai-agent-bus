@@ -46,6 +46,27 @@ export interface MCPServerListing {
   toolCount: number;
   capabilities: string[];
 
+  // Workflow integration
+  workflowNodes?: string[]; // Available workflow node types from this integration
+  workflowNodeDetails?: Array<{
+    type: string;
+    name: string;
+    description: string;
+    category: string;
+    icon?: string;
+  }>;
+  specializedAgents?: string[]; // Available specialized agents
+  specializedAgentDetails?: Array<{
+    id: string;
+    name: string;
+    description: string;
+    expertise: string[];
+  }>;
+  nodeShapes?: string[]; // UI shapes/categories (triggers, actions, transforms, etc.)
+  canExecuteAgents?: boolean; // Whether this integration can spawn/invoke agents
+  dataInputTypes?: string[]; // What data types this integration can consume
+  dataOutputTypes?: string[]; // What data types this integration produces
+
   // Installation
   installCommand?: string;
   dockerImage?: string;

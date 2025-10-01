@@ -1,4 +1,4 @@
-import { createSignal, Show } from 'solid-js';
+import { createSignal, Show, For } from 'solid-js';
 import { MCPServerListing } from '../../types/mcpCatalog';
 import VerificationBadges from './VerificationBadges';
 import CapabilitiesTags from './CapabilitiesTags';
@@ -15,6 +15,7 @@ interface MCPServerCardProps {
 
 export default function MCPServerCard(props: MCPServerCardProps) {
   const [showDetails, setShowDetails] = createSignal(false);
+  const [showWorkflowDetails, setShowWorkflowDetails] = createSignal(false);
 
   const logo = getServiceLogo(props.server.name);
 
@@ -141,70 +142,191 @@ export default function MCPServerCard(props: MCPServerCardProps) {
               {props.server.description}
             </p>
 
-            {/* Meta Info Row */}
+            {/* Meta Info Row - Only show meaningful info */}
             <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-3">
               <span class="font-medium">by {props.server.publisher}</span>
-              <span>•</span>
-              <span class="capitalize">{props.server.category}</span>
-              <Show when={props.server.version}>
+              <Show when={props.server.category && props.server.category !== 'Other'}>
                 <span>•</span>
-                <span>v{props.server.version}</span>
+                <span class="capitalize">{props.server.category}</span>
               </Show>
             </div>
 
-            {/* Capabilities - Compact */}
-            <CapabilitiesTags capabilities={props.server.capabilities} maxDisplay={3} />
-          </div>
-        </div>
-      </div>
+            {/* Capabilities - More compact, max 2 */}
+            <Show when={props.server.capabilities && props.server.capabilities.length > 0}>
+              <CapabilitiesTags capabilities={props.server.capabilities} maxDisplay={2} />
+            </Show>
 
-      {/* Footer with Metrics and Links */}
-      <div class="px-5 py-3 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700">
-        <div class="flex items-center justify-between">
-          {/* Metrics */}
-          <div class="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
-            <div class="flex items-center gap-1">
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-              </svg>
-              <span>{formatNumber(props.server.downloadCount)}</span>
-            </div>
+            {/* Workflow Integration Summary */}
+            <Show when={props.server.workflowNodes && props.server.workflowNodes.length > 0}>
+              <div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                <button
+                  onClick={() => setShowWorkflowDetails(!showWorkflowDetails())}
+                  class="w-full flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+                >
+                  <div class="flex items-center gap-2">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3zM14 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3z" />
+                    </svg>
+                    <span class="font-medium">{props.server.workflowNodes.length} workflow nodes</span>
+                    <Show when={props.server.specializedAgents && props.server.specializedAgents.length > 0}>
+                      <span>•</span>
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      <span>{props.server.specializedAgents.length} agents</span>
+                    </Show>
+                  </div>
+                  <svg
+                    class={`w-4 h-4 transition-transform ${showWorkflowDetails() ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
 
-            <div class="flex items-center gap-1">
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-              <span>{formatNumber(props.server.starCount)}</span>
-            </div>
+                {/* Expandable Workflow Details */}
+                <Show when={showWorkflowDetails()}>
+                  <div class="mt-3 space-y-3 pl-2">
+                    {/* Workflow Nodes List */}
+                    <Show when={props.server.workflowNodeDetails && props.server.workflowNodeDetails.length > 0}>
+                      <div>
+                        <div class="text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">Available Nodes:</div>
+                        <div class="space-y-1.5">
+                          <For each={props.server.workflowNodeDetails}>
+                            {(node) => (
+                              <div class="flex items-start gap-2 text-xs">
+                                <span class="text-base flex-shrink-0">{node.icon || '📦'}</span>
+                                <div class="flex-1 min-w-0">
+                                  <div class="font-medium text-slate-800 dark:text-slate-200">{node.name}</div>
+                                  <div class="text-slate-500 dark:text-slate-400 text-xs">{node.description}</div>
+                                  <div class="text-slate-400 dark:text-slate-500 text-xs mt-0.5">
+                                    <span class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">{node.category}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </For>
+                        </div>
+                      </div>
+                    </Show>
 
-            <Show when={props.server.toolCount}>
-              <div class="flex items-center gap-1">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-                <span>{props.server.toolCount} tools</span>
+                    {/* Specialized Agents List */}
+                    <Show when={props.server.specializedAgentDetails && props.server.specializedAgentDetails.length > 0}>
+                      <div>
+                        <div class="text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">Specialized Agents:</div>
+                        <div class="space-y-1.5">
+                          <For each={props.server.specializedAgentDetails}>
+                            {(agent) => (
+                              <div class="flex items-start gap-2 text-xs">
+                                <span class="text-base flex-shrink-0">🤖</span>
+                                <div class="flex-1 min-w-0">
+                                  <div class="font-medium text-slate-800 dark:text-slate-200">{agent.name}</div>
+                                  <div class="text-slate-500 dark:text-slate-400 text-xs">{agent.description}</div>
+                                  <div class="flex flex-wrap gap-1 mt-1">
+                                    <For each={agent.expertise}>
+                                      {(skill) => (
+                                        <span class="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs">
+                                          {skill}
+                                        </span>
+                                      )}
+                                    </For>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </For>
+                        </div>
+                      </div>
+                    </Show>
+
+                    {/* Data Compatibility Info */}
+                    <Show when={props.server.dataInputTypes || props.server.dataOutputTypes}>
+                      <div>
+                        <div class="text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">Data Compatibility:</div>
+                        <div class="space-y-1">
+                          <Show when={props.server.dataInputTypes && props.server.dataInputTypes.length > 0}>
+                            <div class="text-xs">
+                              <span class="text-slate-600 dark:text-slate-400">Accepts: </span>
+                              <span class="text-slate-700 dark:text-slate-300">{props.server.dataInputTypes.join(', ')}</span>
+                            </div>
+                          </Show>
+                          <Show when={props.server.dataOutputTypes && props.server.dataOutputTypes.length > 0}>
+                            <div class="text-xs">
+                              <span class="text-slate-600 dark:text-slate-400">Produces: </span>
+                              <span class="text-slate-700 dark:text-slate-300">{props.server.dataOutputTypes.join(', ')}</span>
+                            </div>
+                          </Show>
+                        </div>
+                      </div>
+                    </Show>
+                  </div>
+                </Show>
               </div>
             </Show>
           </div>
-
-          {/* Action Links - Simplified */}
-          <div class="flex items-center gap-3">
-            <Show when={props.server.repository}>
-              <a
-                href={props.server.repository}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors flex items-center gap-1"
-              >
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-                GitHub
-              </a>
-            </Show>
-          </div>
         </div>
       </div>
+
+      {/* Footer with Metrics and Links - Only show if there's meaningful data */}
+      <Show when={
+        (props.server.downloadCount && props.server.downloadCount > 0) ||
+        (props.server.starCount && props.server.starCount > 0) ||
+        props.server.toolCount ||
+        props.server.repository
+      }>
+        <div class="px-5 py-3 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700">
+          <div class="flex items-center justify-between">
+            {/* Metrics - Only show non-zero values */}
+            <div class="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
+              <Show when={props.server.downloadCount && props.server.downloadCount > 0}>
+                <div class="flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                  </svg>
+                  <span>{formatNumber(props.server.downloadCount)}</span>
+                </div>
+              </Show>
+
+              <Show when={props.server.starCount && props.server.starCount > 0}>
+                <div class="flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                  </svg>
+                  <span>{formatNumber(props.server.starCount)}</span>
+                </div>
+              </Show>
+
+              <Show when={props.server.toolCount && props.server.toolCount > 0}>
+                <div class="flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                  <span>{props.server.toolCount} tools</span>
+                </div>
+              </Show>
+            </div>
+
+            {/* Action Links */}
+            <div class="flex items-center gap-3">
+              <Show when={props.server.repository}>
+                <a
+                  href={props.server.repository}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors flex items-center gap-1"
+                >
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  GitHub
+                </a>
+              </Show>
+            </div>
+          </div>
+        </div>
+      </Show>
     </div>
   );
 }
