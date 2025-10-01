@@ -378,26 +378,6 @@ function KVStore() {
             <RefreshCw class={`w-4 h-4 ${isLoading() ? 'animate-spin' : ''}`} />
             Refresh
           </button>
-          <Show when={usingKeyIndex()}>
-            <button
-              class="btn btn-secondary flex items-center gap-2 text-xs"
-              onClick={forceDiscovery}
-              title="Discover all context keys (ignores index)"
-            >
-              <Search class="w-4 h-4" />
-              Discover
-            </button>
-          </Show>
-          <Show when={!usingKeyIndex() && kvPairs().length > 0}>
-            <button
-              class="btn btn-secondary flex items-center gap-2 text-xs"
-              onClick={rebuildKeyIndex}
-              title="Create key index from current results"
-            >
-              <Database class="w-4 h-4" />
-              Index
-            </button>
-          </Show>
           <button
             class="btn btn-primary flex items-center gap-2"
             onClick={() => {
@@ -634,6 +614,18 @@ function KVStore() {
               >
                 Cancel
               </button>
+              <Show when={editingPair()}>
+                <button
+                  class="btn btn-secondary ml-auto flex items-center gap-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  onClick={() => {
+                    deleteKVPair(newKey());
+                    setShowAddModal(false);
+                  }}
+                >
+                  <Trash2 class="w-4 h-4" />
+                  Delete
+                </button>
+              </Show>
             </div>
           </div>
         </div>

@@ -5,7 +5,7 @@ interface ActionButtonProps {
   label: string;
   onClick?: () => void;
   onContextMenu?: (e: MouseEvent) => void;
-  variant?: 'primary' | 'secondary' | 'warning';
+  variant?: 'primary' | 'secondary' | 'warning' | 'danger';
   loading?: boolean;
   disabled?: boolean;
   badge?: boolean;
@@ -20,6 +20,8 @@ export default function ActionButton(props: ActionButtonProps) {
         return 'bg-blue-500 hover:bg-blue-600 text-white border-blue-500';
       case 'warning':
         return 'bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500';
+      case 'danger':
+        return 'bg-red-500 hover:bg-red-600 text-white border-red-500';
       case 'secondary':
       default:
         return 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600';
