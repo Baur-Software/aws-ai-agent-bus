@@ -180,7 +180,9 @@ export class OutputTask implements WorkflowTask<OutputInput, OutputOutput> {
           title: 'Custom Fields',
           description: 'Specific fields to include in custom format',
           items: {
-            type: 'string'
+            type: 'string',
+            title: 'Field Name',
+            description: 'Custom field name'
           }
         },
         summaryTemplate: {

@@ -42,11 +42,12 @@ export class TrelloCreateCardTask implements WorkflowTask<TrelloCreateCardInput,
       title: 'Create Trello Card',
       description: 'Creates a new card in a Trello list',
       properties: {
-        listId: { type: 'string', description: 'ID of the Trello list' },
-        name: { type: 'string', description: 'Card title' },
-        description: { type: 'string', description: 'Card description' },
+        listId: { type: 'string' as const, title: 'List ID', description: 'ID of the Trello list' },
+        name: { type: 'string' as const, title: 'Card Name', description: 'Card title' },
+        description: { type: 'string' as const, title: 'Description', description: 'Card description' },
         position: {
-          type: 'string',
+          type: 'string' as const,
+          title: 'Position',
           enum: ['top', 'bottom'],
           description: 'Position in the list'
         }

@@ -38,9 +38,9 @@ export class TrelloCreateBoardTask implements WorkflowTask<TrelloCreateBoardInpu
       title: 'Create Trello Board',
       description: 'Creates a new Trello board with specified configuration',
       properties: {
-        name: { type: 'string', description: 'Board name' },
-        description: { type: 'string', description: 'Board description' },
-        visibility: { type: 'string', enum: ['private', 'public'], description: 'Board visibility' }
+        name: { type: 'string' as const, title: 'Board Name', description: 'Board name' },
+        description: { type: 'string' as const, title: 'Description', description: 'Board description' },
+        visibility: { type: 'string' as const, title: 'Visibility', enum: ['private', 'public'], description: 'Board visibility' }
       },
       required: ['name']
     };

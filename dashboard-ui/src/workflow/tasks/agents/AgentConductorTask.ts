@@ -211,13 +211,13 @@ export class AgentConductorTask implements WorkflowTask<AgentConductorInput, Age
               type: 'array',
               title: 'Preferred Agents',
               description: 'List of preferred agent types to use',
-              items: { type: 'string' }
+              items: { type: 'string', title: 'Agent Type', description: 'Agent type identifier' }
             },
             excludeAgents: {
               type: 'array',
               title: 'Exclude Agents',
               description: 'List of agent types to exclude',
-              items: { type: 'string' }
+              items: { type: 'string', title: 'Agent Type', description: 'Agent type identifier' }
             }
           }
         }

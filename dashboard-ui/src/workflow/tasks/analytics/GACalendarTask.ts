@@ -241,6 +241,8 @@ export class GACalendarTask implements WorkflowTask<GACalendarInput, GACalendarO
           description: 'Types of content to include in calendar',
           items: {
             type: 'string',
+            title: 'Content Type',
+            description: 'Type of content',
             enum: ['blog', 'social', 'video', 'email', 'landing-page']
           }
         },

@@ -195,23 +195,28 @@ export class HTTPGetTask implements WorkflowTask<HTTPGetInput, HTTPGetOutput> {
             type: {
               type: 'string',
               enum: ['bearer', 'basic', 'apikey'],
-              title: 'Auth Type'
+              title: 'Auth Type',
+              description: 'Authentication type'
             },
             token: {
               type: 'string',
-              title: 'Token/API Key'
+              title: 'Token/API Key',
+              description: 'Bearer token or API key'
             },
             username: {
               type: 'string',
-              title: 'Username (for basic auth)'
+              title: 'Username (for basic auth)',
+              description: 'Username for basic authentication'
             },
             password: {
               type: 'string',
-              title: 'Password (for basic auth)'
+              title: 'Password (for basic auth)',
+              description: 'Password for basic authentication'
             },
             headerName: {
               type: 'string',
               title: 'Header Name (for API key)',
+              description: 'Custom header name for API key',
               default: 'X-API-Key'
             }
           }

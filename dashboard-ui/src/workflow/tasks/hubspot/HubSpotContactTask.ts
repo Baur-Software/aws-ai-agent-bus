@@ -255,7 +255,8 @@ export class HubSpotContactTask implements WorkflowTask<HubSpotContactInput, Hub
           description: 'HubSpot list IDs to add contact to',
           items: {
             type: 'string',
-            title: 'List ID'
+            title: 'List ID',
+            description: 'HubSpot list identifier'
           }
         }
       },

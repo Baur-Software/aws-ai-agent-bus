@@ -33,12 +33,14 @@ export class JSONParseTask implements WorkflowTask<JSONParseInput, JSONParseOutp
 
   getSchema() {
     return {
+      type: 'object' as const,
       title: 'Parse JSON String',
+      description: 'Parse JSON string into object',
       properties: {
-        jsonString: { type: 'string', description: 'JSON string to parse' },
-        useContextData: { type: 'boolean', description: 'Use data from workflow context' },
-        contextKey: { type: 'string', description: 'Key to read from context data' },
-        cleanupMode: { type: 'boolean', description: 'Attempt to clean malformed JSON' }
+        jsonString: { type: 'string' as const, title: 'JSON String', description: 'JSON string to parse' },
+        useContextData: { type: 'boolean' as const, title: 'Use Context Data', description: 'Use data from workflow context' },
+        contextKey: { type: 'string' as const, title: 'Context Key', description: 'Key to read from context data' },
+        cleanupMode: { type: 'boolean' as const, title: 'Cleanup Mode', description: 'Attempt to clean malformed JSON' }
       },
       required: []
     };
