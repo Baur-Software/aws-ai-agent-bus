@@ -201,27 +201,35 @@ impl TenantManager {
     pub async fn new() -> anyhow::Result<Self> {
         let mut tenant_configs = HashMap::new();
 
-        // Create a default demo tenant for development
-        let demo_context = TenantContext {
-            tenant_id: "demo-tenant".to_string(),
-            user_id: "user-demo-123".to_string(),
-            organization_id: "org-demo-456".to_string(),
-            role: UserRole::Admin,
-            permissions: vec![
-                Permission::ReadKV,
-                Permission::WriteKV,
-                Permission::DeleteKV,
-                Permission::ListArtifacts,
-                Permission::GetArtifacts,
-                Permission::PutArtifacts,
-                Permission::SendEvents,
-                Permission::ExecuteWorkflows,
-            ],
-            aws_region: "us-west-2".to_string(),
-            resource_limits: ResourceLimits::default(),
-        };
+        // Load tenant configs from environment or config file
+        // In production, tenants should be loaded from database/config service
+        // For development, check if DEV_MODE is enabled before creating demo tenant
+        if std::env::var("DEV_MODE").unwrap_or_default() == "true" {
+            warn!("DEV_MODE enabled: Creating demo tenant (DO NOT USE IN PRODUCTION)");
+            let demo_context = TenantContext {
+                tenant_id: "demo-tenant".to_string(),
+                user_id: "user-demo-123".to_string(),
+                context_type: ContextType::Organizational, // Fixed: was Personal but has org_id
+                organization_id: "org-demo-456".to_string(),
+                role: UserRole::Admin,
+                permissions: vec![
+                    Permission::ReadKV,
+                    Permission::WriteKV,
+                    Permission::DeleteKV,
+                    Permission::ListArtifacts,
+                    Permission::GetArtifacts,
+                    Permission::PutArtifacts,
+                    Permission::SendEvents,
+                    Permission::ExecuteWorkflows,
+                ],
+                aws_region: "us-west-2".to_string(),
+                resource_limits: ResourceLimits::default(),
+            };
 
-        tenant_configs.insert("demo-tenant".to_string(), demo_context);
+            tenant_configs.insert("demo-tenant".to_string(), demo_context);
+        } else {
+            info!("Production mode: Tenant contexts will be created from auth headers");
+        }
 
         // Create AWS rate limiter with default limits
         let aws_rate_limiter = Arc::new(AwsRateLimiter::new(AwsServiceLimits::default()));

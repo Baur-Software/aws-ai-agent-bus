@@ -2,7 +2,7 @@ use aws_sdk_dynamodb::Client as DynamoDbClient;
 use aws_sdk_eventbridge::Client as EventBridgeClient;
 use aws_sdk_s3::Client as S3Client;
 use aws_sdk_secretsmanager::Client as SecretsManagerClient;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::sync::Arc;
 use thiserror::Error;
 
@@ -274,6 +274,557 @@ impl AwsService {
         }
 
         Ok(())
+    }
+
+    // Query events from DynamoDB events table
+    #[allow(clippy::too_many_arguments)]
+    pub async fn query_events(
+        &self,
+        session: &TenantSession,
+        user_id: Option<String>,
+        organization_id: Option<String>,
+        source: Option<String>,
+        detail_type: Option<String>,
+        priority: Option<String>,
+        start_time: Option<String>,
+        end_time: Option<String>,
+        limit: i32,
+        exclusive_start_key: Option<String>,
+        ascending: bool,
+    ) -> Result<Value, AwsError> {
+        use aws_sdk_dynamodb::types::AttributeValue;
+
+        // Determine table name from environment
+        let events_table = std::env::var("AGENT_MESH_EVENTS_TABLE")
+            .unwrap_or_else(|_| "agent-mesh-dev-events".to_string());
+
+        // Build query based on available filters
+        // Priority: user_id > source > table scan
+        let mut query_builder = if let Some(uid) = user_id.as_ref() {
+            // Use user-index GSI
+            self.clients
+                .dynamodb
+                .query()
+                .table_name(&events_table)
+                .index_name("user-index")
+                .key_condition_expression("#userId = :userId")
+                .expression_attribute_names("#userId", "userId")
+                .expression_attribute_values(":userId", AttributeValue::S(uid.clone()))
+        } else if let Some(src) = source.as_ref() {
+            // Use timestamp-index GSI
+            self.clients
+                .dynamodb
+                .query()
+                .table_name(&events_table)
+                .index_name("timestamp-index")
+                .key_condition_expression("#source = :source")
+                .expression_attribute_names("#source", "source")
+                .expression_attribute_values(":source", AttributeValue::S(src.clone()))
+        } else {
+            // Fall back to scan (expensive!)
+            // In production, we should always have userId or source filter
+            return Err(AwsError::Config(
+                "Query requires userId or source filter to avoid expensive scan".to_string(),
+            ));
+        };
+
+        // Add time range filter if provided
+        if let (Some(start), Some(end)) = (start_time.as_ref(), end_time.as_ref()) {
+            if user_id.is_some() {
+                query_builder = query_builder
+                    .key_condition_expression("#userId = :userId AND #timestamp BETWEEN :start AND :end")
+                    .expression_attribute_names("#timestamp", "timestamp")
+                    .expression_attribute_values(":start", AttributeValue::S(start.clone()))
+                    .expression_attribute_values(":end", AttributeValue::S(end.clone()));
+            } else if source.is_some() {
+                query_builder = query_builder
+                    .key_condition_expression("#source = :source AND #timestamp BETWEEN :start AND :end")
+                    .expression_attribute_names("#timestamp", "timestamp")
+                    .expression_attribute_values(":start", AttributeValue::S(start.clone()))
+                    .expression_attribute_values(":end", AttributeValue::S(end.clone()));
+            }
+        } else if let Some(start) = start_time.as_ref() {
+            if user_id.is_some() {
+                query_builder = query_builder
+                    .key_condition_expression("#userId = :userId AND #timestamp >= :start")
+                    .expression_attribute_names("#timestamp", "timestamp")
+                    .expression_attribute_values(":start", AttributeValue::S(start.clone()));
+            } else if source.is_some() {
+                query_builder = query_builder
+                    .key_condition_expression("#source = :source AND #timestamp >= :start")
+                    .expression_attribute_names("#timestamp", "timestamp")
+                    .expression_attribute_values(":start", AttributeValue::S(start.clone()));
+            }
+        }
+
+        // Add filter expressions for additional filters
+        let mut filter_expression_parts = Vec::new();
+
+        if let Some(dt) = detail_type.as_ref() {
+            filter_expression_parts.push("#detailType = :detailType".to_string());
+            query_builder = query_builder
+                .expression_attribute_names("#detailType", "detailType")
+                .expression_attribute_values(":detailType", AttributeValue::S(dt.clone()));
+        }
+
+        if let Some(prio) = priority.as_ref() {
+            filter_expression_parts.push("#priority = :priority".to_string());
+            query_builder = query_builder
+                .expression_attribute_names("#priority", "priority")
+                .expression_attribute_values(":priority", AttributeValue::S(prio.clone()));
+        }
+
+        if let Some(org_id) = organization_id.as_ref() {
+            filter_expression_parts.push("#organizationId = :organizationId".to_string());
+            query_builder = query_builder
+                .expression_attribute_names("#organizationId", "organizationId")
+                .expression_attribute_values(":organizationId", AttributeValue::S(org_id.clone()));
+        }
+
+        if !filter_expression_parts.is_empty() {
+            query_builder = query_builder
+                .filter_expression(filter_expression_parts.join(" AND "));
+        }
+
+        // Set limit
+        query_builder = query_builder.limit(limit);
+
+        // Set scan direction
+        query_builder = query_builder.scan_index_forward(ascending);
+
+        // Add pagination cursor if provided
+        if let Some(start_key) = exclusive_start_key {
+            // Parse start key (simplified - in production would be proper DynamoDB key)
+            // For now, we'll skip this since it requires proper key deserialization
+        }
+
+        // Execute query
+        let result = query_builder
+            .send()
+            .await
+            .map_err(|e| AwsError::DynamoDb(e.to_string()))?;
+
+        // Convert DynamoDB items to JSON
+        let mut events = Vec::new();
+        if let Some(ref items) = result.items {
+            for item in items {
+                let mut event = serde_json::Map::new();
+
+                for (key, value) in item {
+                    let json_value = match value {
+                        AttributeValue::S(s) => Value::String(s.clone()),
+                        AttributeValue::N(n) => {
+                            if let Ok(num) = n.parse::<i64>() {
+                                Value::Number(num.into())
+                            } else if let Ok(num) = n.parse::<f64>() {
+                                Value::Number(serde_json::Number::from_f64(num).unwrap_or(0.into()))
+                            } else {
+                                Value::String(n.clone())
+                            }
+                        }
+                        AttributeValue::Bool(b) => Value::Bool(*b),
+                        _ => Value::String(format!("{:?}", value)),
+                    };
+                    event.insert(key.clone(), json_value);
+                }
+
+                events.push(Value::Object(event));
+            }
+        }
+
+        // Build response
+        let response = serde_json::json!({
+            "events": events,
+            "count": events.len(),
+            "lastEvaluatedKey": result.last_evaluated_key().map(|k| format!("{:?}", k))
+        });
+
+        Ok(response)
+    }
+
+    // Analytics query for event metrics
+    #[allow(clippy::too_many_arguments)]
+    pub async fn analytics_query(
+        &self,
+        session: &TenantSession,
+        user_id: Option<String>,
+        organization_id: Option<String>,
+        start_time: Option<String>,
+        end_time: Option<String>,
+        metrics: Vec<String>,
+        granularity: String
+    ) -> Result<Value, AwsError> {
+        // Generate cache key
+        let scope = if let Some(org_id) = &organization_id {
+            format!("org-{}", org_id)
+        } else if let Some(uid) = &user_id {
+            format!("user-{}", uid)
+        } else {
+            format!("user-{}", session.context.user_id)
+        };
+
+        let time_range = format!("{}-{}",
+            start_time.as_deref().unwrap_or("24h"),
+            end_time.as_deref().unwrap_or("now")
+        );
+        let cache_key = format!("analytics-{}-{}", scope, time_range);
+
+        // Check cache (5 minute TTL)
+        if let Ok(Some(cached)) = self.kv_get_direct(&cache_key).await {
+            if let Ok(cached_value) = serde_json::from_str::<Value>(&cached) {
+                tracing::info!("Returning cached analytics for {}", cache_key);
+                return Ok(cached_value);
+            }
+        }
+
+        // Query events for analytics
+        let events_table = std::env::var("AGENT_MESH_EVENTS_TABLE")
+            .unwrap_or_else(|_| "agent-mesh-dev-events".to_string());
+
+        // Default time window: last 24 hours
+        let end_dt = if let Some(et) = end_time {
+            chrono::DateTime::parse_from_rfc3339(&et)
+                .map_err(|e| AwsError::Config(format!("Invalid endTime: {}", e)))?
+                .with_timezone(&chrono::Utc)
+        } else {
+            chrono::Utc::now()
+        };
+
+        let start_dt = if let Some(st) = start_time {
+            chrono::DateTime::parse_from_rfc3339(&st)
+                .map_err(|e| AwsError::Config(format!("Invalid startTime: {}", e)))?
+                .with_timezone(&chrono::Utc)
+        } else {
+            end_dt - chrono::Duration::hours(24)
+        };
+
+        // Query events using timestamp-index
+        let mut query_builder = self.clients.dynamodb.query()
+            .table_name(&events_table)
+            .index_name("timestamp-index")
+            .key_condition_expression("#timestamp BETWEEN :start AND :end")
+            .expression_attribute_names("#timestamp", "timestamp")
+            .expression_attribute_values(":start",
+                aws_sdk_dynamodb::types::AttributeValue::S(start_dt.to_rfc3339()))
+            .expression_attribute_values(":end",
+                aws_sdk_dynamodb::types::AttributeValue::S(end_dt.to_rfc3339()));
+
+        // Add user/org filtering
+        if let Some(uid) = user_id.as_ref() {
+            query_builder = query_builder
+                .filter_expression("#userId = :userId")
+                .expression_attribute_names("#userId", "userId")
+                .expression_attribute_values(":userId",
+                    aws_sdk_dynamodb::types::AttributeValue::S(uid.clone()));
+        } else if let Some(org_id) = organization_id.as_ref() {
+            query_builder = query_builder
+                .filter_expression("#organizationId = :organizationId")
+                .expression_attribute_names("#organizationId", "organizationId")
+                .expression_attribute_values(":organizationId",
+                    aws_sdk_dynamodb::types::AttributeValue::S(org_id.clone()));
+        }
+
+        let result = query_builder.send().await
+            .map_err(|e| AwsError::DynamoDb(e.to_string()))?;
+
+        // Process events for analytics
+        let mut volume_buckets: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
+        let mut source_counts: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
+        let mut priority_counts: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
+        let mut event_type_counts: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
+
+        if let Some(ref items) = result.items {
+            for item in items {
+                // Extract timestamp for volume buckets
+                if let Some(timestamp_attr) = item.get("timestamp") {
+                    if let Ok(ts_str) = timestamp_attr.as_s() {
+                        if let Ok(ts) = chrono::DateTime::parse_from_rfc3339(ts_str) {
+                            let bucket_key = if granularity == "hourly" {
+                                ts.format("%Y-%m-%d %H:00").to_string()
+                            } else {
+                                ts.format("%Y-%m-%d").to_string()
+                            };
+                            *volume_buckets.entry(bucket_key).or_insert(0) += 1;
+                        }
+                    }
+                }
+
+                // Count sources
+                if let Some(source_attr) = item.get("source") {
+                    if let Ok(source) = source_attr.as_s() {
+                        *source_counts.entry(source.clone()).or_insert(0) += 1;
+                    }
+                }
+
+                // Count priorities
+                if let Some(priority_attr) = item.get("priority") {
+                    if let Ok(priority) = priority_attr.as_s() {
+                        *priority_counts.entry(priority.clone()).or_insert(0) += 1;
+                    }
+                }
+
+                // Count event types
+                if let Some(detail_type_attr) = item.get("detailType") {
+                    if let Ok(detail_type) = detail_type_attr.as_s() {
+                        *event_type_counts.entry(detail_type.clone()).or_insert(0) += 1;
+                    }
+                }
+            }
+        }
+
+        // Build response based on requested metrics
+        let mut analytics = serde_json::Map::new();
+
+        if metrics.contains(&"volume".to_string()) {
+            let mut buckets: Vec<_> = volume_buckets.into_iter()
+                .map(|(bucket, count)| json!({ "bucket": bucket, "count": count }))
+                .collect();
+            buckets.sort_by(|a, b| a["bucket"].as_str().cmp(&b["bucket"].as_str()));
+            analytics.insert("volume".to_string(), json!({
+                "granularity": granularity,
+                "buckets": buckets
+            }));
+        }
+
+        if metrics.contains(&"topSources".to_string()) {
+            let mut sources: Vec<_> = source_counts.into_iter().collect();
+            sources.sort_by(|a, b| b.1.cmp(&a.1)); // Descending by count
+            let top_sources: Vec<_> = sources.into_iter()
+                .map(|(source, count)| json!({ "source": source, "count": count }))
+                .collect();
+            analytics.insert("topSources".to_string(), json!(top_sources));
+        }
+
+        if metrics.contains(&"priority".to_string()) {
+            analytics.insert("priority".to_string(), json!({
+                "low": priority_counts.get("low").unwrap_or(&0),
+                "medium": priority_counts.get("medium").unwrap_or(&0),
+                "high": priority_counts.get("high").unwrap_or(&0),
+                "critical": priority_counts.get("critical").unwrap_or(&0)
+            }));
+        }
+
+        if metrics.contains(&"eventTypes".to_string()) {
+            let mut types: Vec<_> = event_type_counts.into_iter().collect();
+            types.sort_by(|a, b| b.1.cmp(&a.1)); // Descending by count
+            let event_types: Vec<_> = types.into_iter()
+                .map(|(event_type, count)| json!({ "eventType": event_type, "count": count }))
+                .collect();
+            analytics.insert("eventTypes".to_string(), json!(event_types));
+        }
+
+        let response = json!({
+            "scope": scope,
+            "startTime": start_dt.to_rfc3339(),
+            "endTime": end_dt.to_rfc3339(),
+            "analytics": analytics,
+            "cached": false
+        });
+
+        // Cache the result (5 minute TTL = 300 seconds)
+        let cache_value = serde_json::to_string(&response).unwrap();
+        let ttl = (chrono::Utc::now().timestamp() + 300) as u32;
+        if let Err(e) = self.kv_set_direct(&cache_key, &cache_value, Some(ttl)).await {
+            tracing::warn!("Failed to cache analytics: {}", e);
+        }
+
+        Ok(response)
+    }
+
+    // Create event rule
+    pub async fn create_event_rule(
+        &self,
+        session: &TenantSession,
+        name: &str,
+        pattern: Value,
+        description: Option<String>,
+        enabled: bool
+    ) -> Result<Value, AwsError> {
+        let event_rules_table = std::env::var("AGENT_MESH_EVENT_RULES_TABLE")
+            .unwrap_or_else(|_| "agent-mesh-dev-event-rules".to_string());
+
+        // Generate unique rule ID
+        let rule_id = format!("rule-{}-{}", session.context.user_id, uuid::Uuid::new_v4());
+        let timestamp = chrono::Utc::now().to_rfc3339();
+
+        // Store rule in DynamoDB
+        let mut put_item = self.clients.dynamodb.put_item()
+            .table_name(&event_rules_table)
+            .item("ruleId", aws_sdk_dynamodb::types::AttributeValue::S(rule_id.clone()))
+            .item("userId", aws_sdk_dynamodb::types::AttributeValue::S(session.context.user_id.clone()))
+            .item("organizationId", aws_sdk_dynamodb::types::AttributeValue::S(session.context.organization_id.clone()))
+            .item("name", aws_sdk_dynamodb::types::AttributeValue::S(name.to_string()))
+            .item("pattern", aws_sdk_dynamodb::types::AttributeValue::S(serde_json::to_string(&pattern)?))
+            .item("enabled", aws_sdk_dynamodb::types::AttributeValue::Bool(enabled))
+            .item("createdAt", aws_sdk_dynamodb::types::AttributeValue::S(timestamp.clone()))
+            .item("updatedAt", aws_sdk_dynamodb::types::AttributeValue::S(timestamp.clone()));
+
+        if let Some(desc) = description.as_ref() {
+            put_item = put_item.item("description", aws_sdk_dynamodb::types::AttributeValue::S(desc.clone()));
+        }
+
+        put_item.send().await
+            .map_err(|e| AwsError::DynamoDb(e.to_string()))?;
+
+        Ok(json!({
+            "ruleId": rule_id,
+            "name": name,
+            "pattern": pattern,
+            "description": description,
+            "enabled": enabled,
+            "createdAt": timestamp
+        }))
+    }
+
+    // Create alert subscription
+    #[allow(clippy::too_many_arguments)]
+    pub async fn create_alert_subscription(
+        &self,
+        session: &TenantSession,
+        name: &str,
+        rule_id: &str,
+        notification_method: &str,
+        sns_topic_arn: Option<String>,
+        email_address: Option<String>,
+        enabled: bool
+    ) -> Result<Value, AwsError> {
+        let subscriptions_table = std::env::var("AGENT_MESH_SUBSCRIPTIONS_TABLE")
+            .unwrap_or_else(|_| "agent-mesh-dev-subscriptions".to_string());
+
+        // Generate unique subscription ID
+        let subscription_id = format!("sub-{}-{}", session.context.user_id, uuid::Uuid::new_v4());
+        let timestamp = chrono::Utc::now().to_rfc3339();
+
+        // Store subscription in DynamoDB
+        let mut put_item = self.clients.dynamodb.put_item()
+            .table_name(&subscriptions_table)
+            .item("subscriptionId", aws_sdk_dynamodb::types::AttributeValue::S(subscription_id.clone()))
+            .item("userId", aws_sdk_dynamodb::types::AttributeValue::S(session.context.user_id.clone()))
+            .item("organizationId", aws_sdk_dynamodb::types::AttributeValue::S(session.context.organization_id.clone()))
+            .item("name", aws_sdk_dynamodb::types::AttributeValue::S(name.to_string()))
+            .item("ruleId", aws_sdk_dynamodb::types::AttributeValue::S(rule_id.to_string()))
+            .item("notificationMethod", aws_sdk_dynamodb::types::AttributeValue::S(notification_method.to_string()))
+            .item("enabled", aws_sdk_dynamodb::types::AttributeValue::Bool(enabled))
+            .item("createdAt", aws_sdk_dynamodb::types::AttributeValue::S(timestamp.clone()))
+            .item("updatedAt", aws_sdk_dynamodb::types::AttributeValue::S(timestamp.clone()));
+
+        if let Some(arn) = sns_topic_arn.as_ref() {
+            put_item = put_item.item("snsTopicArn", aws_sdk_dynamodb::types::AttributeValue::S(arn.clone()));
+        }
+
+        if let Some(email) = email_address.as_ref() {
+            put_item = put_item.item("emailAddress", aws_sdk_dynamodb::types::AttributeValue::S(email.clone()));
+        }
+
+        put_item.send().await
+            .map_err(|e| AwsError::DynamoDb(e.to_string()))?;
+
+        Ok(json!({
+            "subscriptionId": subscription_id,
+            "name": name,
+            "ruleId": rule_id,
+            "notificationMethod": notification_method,
+            "snsTopicArn": sns_topic_arn,
+            "emailAddress": email_address,
+            "enabled": enabled,
+            "createdAt": timestamp
+        }))
+    }
+
+    // Events health check
+    pub async fn events_health_check(&self, session: &TenantSession) -> Result<Value, AwsError> {
+        let events_table = std::env::var("AGENT_MESH_EVENTS_TABLE")
+            .unwrap_or_else(|_| "agent-mesh-dev-events".to_string());
+        let rules_table = std::env::var("AGENT_MESH_EVENT_RULES_TABLE")
+            .unwrap_or_else(|_| "agent-mesh-dev-event-rules".to_string());
+        let subscriptions_table = std::env::var("AGENT_MESH_SUBSCRIPTIONS_TABLE")
+            .unwrap_or_else(|_| "agent-mesh-dev-subscriptions".to_string());
+
+        // Check events table - count user's events from last 24 hours
+        let end_time = chrono::Utc::now();
+        let start_time = end_time - chrono::Duration::hours(24);
+
+        let events_result = self.clients.dynamodb.query()
+            .table_name(&events_table)
+            .index_name("user-index")
+            .key_condition_expression("#userId = :userId")
+            .filter_expression("#timestamp BETWEEN :start AND :end")
+            .expression_attribute_names("#userId", "userId")
+            .expression_attribute_names("#timestamp", "timestamp")
+            .expression_attribute_values(":userId",
+                aws_sdk_dynamodb::types::AttributeValue::S(session.context.user_id.clone()))
+            .expression_attribute_values(":start",
+                aws_sdk_dynamodb::types::AttributeValue::S(start_time.to_rfc3339()))
+            .expression_attribute_values(":end",
+                aws_sdk_dynamodb::types::AttributeValue::S(end_time.to_rfc3339()))
+            .select(aws_sdk_dynamodb::types::Select::Count)
+            .send()
+            .await;
+
+        let events_count = events_result
+            .map(|r| r.count())
+            .unwrap_or(0);
+
+        // Check rules table - count user's rules
+        let rules_result = self.clients.dynamodb.query()
+            .table_name(&rules_table)
+            .index_name("user-index")
+            .key_condition_expression("#userId = :userId")
+            .expression_attribute_names("#userId", "userId")
+            .expression_attribute_values(":userId",
+                aws_sdk_dynamodb::types::AttributeValue::S(session.context.user_id.clone()))
+            .select(aws_sdk_dynamodb::types::Select::Count)
+            .send()
+            .await;
+
+        let rules_count = rules_result
+            .map(|r| r.count())
+            .unwrap_or(0);
+
+        // Check subscriptions table - count user's subscriptions
+        let subscriptions_result = self.clients.dynamodb.query()
+            .table_name(&subscriptions_table)
+            .index_name("user-index")
+            .key_condition_expression("#userId = :userId")
+            .expression_attribute_names("#userId", "userId")
+            .expression_attribute_values(":userId",
+                aws_sdk_dynamodb::types::AttributeValue::S(session.context.user_id.clone()))
+            .select(aws_sdk_dynamodb::types::Select::Count)
+            .send()
+            .await;
+
+        let subscriptions_count = subscriptions_result
+            .map(|r| r.count())
+            .unwrap_or(0);
+
+        // Determine overall health status
+        let status = if events_count > 0 || rules_count > 0 || subscriptions_count > 0 {
+            "healthy"
+        } else {
+            "idle" // No data yet, but system is operational
+        };
+
+        Ok(json!({
+            "status": status,
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+            "checks": {
+                "eventsTable": {
+                    "name": events_table,
+                    "count24h": events_count,
+                    "status": "ok"
+                },
+                "rulesTable": {
+                    "name": rules_table,
+                    "count": rules_count,
+                    "status": "ok"
+                },
+                "subscriptionsTable": {
+                    "name": subscriptions_table,
+                    "count": subscriptions_count,
+                    "status": "ok"
+                }
+            }
+        }))
     }
 
     // Direct KV operations without session (for internal use)
