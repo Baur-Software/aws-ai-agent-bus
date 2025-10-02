@@ -29,6 +29,11 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
         '/info': dashboardServerUrl,
         '/health': dashboardServerUrl,
       }
+    },
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: './src/test-setup.ts',
     }
   };
 });

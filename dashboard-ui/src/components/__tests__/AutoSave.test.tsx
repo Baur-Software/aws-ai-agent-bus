@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach, type Mock } from 'vitest';
 import { createRoot, createSignal } from 'solid-js';
 import type { WorkflowMetadata } from '../workflow/core/WorkflowManager';
 import type { WorkflowNode } from '../workflow/ui/WorkflowNodeDetails';
@@ -116,7 +116,7 @@ class AutoSaveService {
 
 describe('Auto-Save Functionality', () => {
   let autoSaveService: AutoSaveService;
-  let saveCallback: vi.Mock;
+  let saveCallback: Mock;
   let sampleWorkflowData: any;
 
   beforeEach(() => {

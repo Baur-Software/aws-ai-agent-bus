@@ -2,7 +2,6 @@ import { createSignal, For, Show } from 'solid-js';
 import {
   generateOAuth2Config,
   generateAPIKeyConfig,
-  OAUTH2_TEMPLATES,
   QUICK_GENERATORS,
   validateOAuth2Config
 } from '../utils/oauth2Generator';
@@ -29,7 +28,6 @@ export default function AppConfigGenerator(props: AppConfigGeneratorProps) {
 
   // Form state
   const [configType, setConfigType] = createSignal<'oauth2' | 'api_key'>('oauth2');
-  const [provider, setProvider] = createSignal<keyof typeof OAUTH2_TEMPLATES | 'custom'>('custom');
   const [formData, setFormData] = createSignal({
     id: '',
     name: '',
@@ -101,14 +99,19 @@ export default function AppConfigGenerator(props: AppConfigGeneratorProps) {
       if (configType() === 'oauth2') {
         const scopes = data.scopes.split(',').map(s => s.trim()).filter(Boolean);
 
+        if (!data.custom_auth_url || !data.custom_token_url) {
+          setPreviewConfig(null);
+          setValidationErrors(['Auth URL and Token URL are required for OAuth2']);
+          return;
+        }
+
         config = generateOAuth2Config({
           id: data.id,
           name: data.name,
           category: data.category,
           description: data.description,
-          provider: provider() === 'custom' ? undefined : (provider() as Exclude<typeof provider, 'custom'>),
-          custom_auth_url: data.custom_auth_url || undefined,
-          custom_token_url: data.custom_token_url || undefined,
+          auth_url: data.custom_auth_url,
+          token_url: data.custom_token_url,
           scopes,
           additional_fields: customFields(),
           workflow_capabilities: workflowCapabilities(),
@@ -135,55 +138,6 @@ export default function AppConfigGenerator(props: AppConfigGeneratorProps) {
     }
   };
 
-  // Quick generate
-  const quickGenerate = (generator: string) => {
-    const data = formData();
-    let config: AppConfig | null = null;
-
-    switch (generator) {
-      case 'google-analytics':
-        config = QUICK_GENERATORS.google_service('Analytics', [
-          'https://www.googleapis.com/auth/analytics.readonly'
-        ]);
-        break;
-      case 'github-repos':
-        config = generateOAuth2Config({
-          id: 'github-repos',
-          name: 'GitHub Repositories',
-          category: 'Development',
-          description: 'Access GitHub repositories and issues',
-          provider: 'github',
-          scopes: ['repo', 'user']
-        });
-        break;
-      case 'slack-bot':
-        config = generateOAuth2Config({
-          id: 'slack-bot',
-          name: 'Slack Bot',
-          category: 'Communication',
-          description: 'Slack bot integration',
-          provider: 'slack',
-          scopes: ['chat:write', 'channels:read']
-        });
-        break;
-    }
-
-    if (config) {
-      setFormData({
-        id: config.id,
-        name: config.name,
-        category: config.category,
-        description: config.description,
-        custom_auth_url: config.oauth2_config?.auth_url || '',
-        custom_token_url: config.oauth2_config?.token_url || '',
-        scopes: config.oauth2_config?.scopes.join(', ') || '',
-        docs_url: config.docsUrl || ''
-      });
-      setCustomFields(config.ui_fields.slice(2) || []); // Skip client_id/secret
-      setWorkflowCapabilities(config.workflow_capabilities);
-      generatePreview();
-    }
-  };
 
   // Save config via events
   const handleSave = async () => {
@@ -234,34 +188,6 @@ export default function AppConfigGenerator(props: AppConfigGeneratorProps) {
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Form */}
         <div class="space-y-4">
-          {/* Quick Generate */}
-          <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <div class="flex items-center gap-2 mb-2">
-              <Sparkles class="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span class="text-sm font-medium text-blue-900 dark:text-blue-300">Quick Generate</span>
-            </div>
-            <div class="flex gap-2 flex-wrap">
-              <button
-                onClick={() => quickGenerate('google-analytics')}
-                class="px-2 py-1 text-xs bg-white dark:bg-slate-700 border border-blue-200 dark:border-blue-700 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30"
-              >
-                Google Analytics
-              </button>
-              <button
-                onClick={() => quickGenerate('github-repos')}
-                class="px-2 py-1 text-xs bg-white dark:bg-slate-700 border border-blue-200 dark:border-blue-700 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30"
-              >
-                GitHub Repos
-              </button>
-              <button
-                onClick={() => quickGenerate('slack-bot')}
-                class="px-2 py-1 text-xs bg-white dark:bg-slate-700 border border-blue-200 dark:border-blue-700 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30"
-              >
-                Slack Bot
-              </button>
-            </div>
-          </div>
-
           {/* Basic Info */}
           <div class="space-y-3">
             <div class="grid grid-cols-2 gap-3">
@@ -328,44 +254,28 @@ export default function AppConfigGenerator(props: AppConfigGeneratorProps) {
           {/* OAuth2 specific */}
           <Show when={configType() === 'oauth2'}>
             <div class="space-y-3">
-              <div>
-                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Provider Template</label>
-                <select
-                  value={provider()}
-                  onChange={(e) => setProvider(e.target.value as any)}
-                  class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-md text-sm"
-                >
-                  <option value="custom">Custom URLs</option>
-                  <For each={Object.keys(OAUTH2_TEMPLATES)}>
-                    {(key) => <option value={key}>{key.charAt(0).toUpperCase() + key.slice(1)}</option>}
-                  </For>
-                </select>
-              </div>
-
-              <Show when={provider() === 'custom'}>
-                <div class="grid grid-cols-1 gap-3">
-                  <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Auth URL</label>
-                    <input
-                      type="url"
-                      value={formData().custom_auth_url}
-                      onInput={(e) => updateField('custom_auth_url', e.target.value)}
-                      placeholder="https://provider.com/oauth/authorize"
-                      class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-md text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Token URL</label>
-                    <input
-                      type="url"
-                      value={formData().custom_token_url}
-                      onInput={(e) => updateField('custom_token_url', e.target.value)}
-                      placeholder="https://provider.com/oauth/token"
-                      class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-md text-sm"
-                    />
-                  </div>
+              <div class="grid grid-cols-1 gap-3">
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Auth URL</label>
+                  <input
+                    type="url"
+                    value={formData().custom_auth_url}
+                    onInput={(e) => updateField('custom_auth_url', e.target.value)}
+                    placeholder="https://provider.com/oauth/authorize"
+                    class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-md text-sm"
+                  />
                 </div>
-              </Show>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Token URL</label>
+                  <input
+                    type="url"
+                    value={formData().custom_token_url}
+                    onInput={(e) => updateField('custom_token_url', e.target.value)}
+                    placeholder="https://provider.com/oauth/token"
+                    class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-md text-sm"
+                  />
+                </div>
+              </div>
 
               <div>
                 <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Scopes</label>

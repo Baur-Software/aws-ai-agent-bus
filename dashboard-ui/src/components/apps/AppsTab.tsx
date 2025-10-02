@@ -24,7 +24,7 @@ export default function AppsTab() {
   const [searchQuery, setSearchQuery] = createSignal('');
   const [selectedTags, setSelectedTags] = createSignal<Set<string>>(new Set());
   const [tagSearchQuery, setTagSearchQuery] = createSignal('');
-  const [selectedVerification, setSelectedVerification] = createSignal<'all' | 'official' | 'signed' | 'popular'>('all');
+  const [selectedVerification, setSelectedVerification] = createSignal<'all' | 'official' | 'popular'>('all');
   const [sortBy, setSortBy] = createSignal<'name' | 'downloadCount' | 'lastUpdated' | 'starCount'>('downloadCount');
   const [showOnlyFeatured, setShowOnlyFeatured] = createSignal(false);
 
@@ -325,7 +325,7 @@ export default function AppsTab() {
     setShowOnlyFeatured(false);
   };
 
-  const handleVerificationFilter = (verification: 'all' | 'official' | 'signed' | 'popular') => {
+  const handleVerificationFilter = (verification: 'all' | 'official' | 'popular') => {
     setSelectedVerification(verification);
   };
 

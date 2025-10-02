@@ -7,7 +7,7 @@ import {
   Zap, Cloud, HardDrive, MessageSquare, CreditCard, Github, Linkedin,
   Youtube, ShoppingCart, DollarSign, Code, FileJson, Key, Link,
   ArrowRight, Send, RefreshCw, Braces, Grid3x3, Layers, Shield,
-  Funnel, Repeat, Monitor, Server, Trello, List, CheckSquare,
+  Funnel, Repeat, Monitor, Server, List, CheckSquare,
   Activity, PieChart, Gauge, Globe, Image, Twitter, ChevronDown,
   ChevronRight, Plus, Settings, Package, ExternalLink
 } from 'lucide-solid';
@@ -286,29 +286,8 @@ const INTEGRATION_NODE_TYPES: { [key: string]: NodeType[] } = {
       requiresIntegration: 'stripe',
       isAvailable: false
     }
-  ],
-  'trello': [
-    {
-      type: 'trello-create-card',
-      label: 'Create Card',
-      icon: Plus,
-      color: 'bg-blue-500',
-      description: 'Create Trello card',
-      category: 'Trello',
-      requiresIntegration: 'trello',
-      isAvailable: false
-    },
-    {
-      type: 'trello-create-board',
-      label: 'Create Board',
-      icon: Trello,
-      color: 'bg-blue-600',
-      description: 'Create Trello board',
-      category: 'Trello',
-      requiresIntegration: 'trello',
-      isAvailable: false
-    }
   ]
+  // Additional integrations loaded dynamically via MCP
 };
 
 export default function NodeSidebar(props: NodeSidebarProps) {

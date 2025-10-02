@@ -70,9 +70,9 @@ export const mockWorkflowTemplates: WorkflowTemplate[] = [
   {
     id: 'template-2',
     name: 'Lead Nurturing Campaign',
-    description: 'Automated lead nurturing workflow using Salesforce and email marketing',
+    description: 'Automated lead nurturing workflow using CRM and email marketing',
     category: 'Sales & Marketing',
-    tags: ['salesforce', 'leads', 'email', 'nurturing'],
+    tags: ['crm', 'leads', 'email', 'nurturing'],
     popularity: 720,
     rating: 4.5,
     author: 'Marketing Automation Team',
