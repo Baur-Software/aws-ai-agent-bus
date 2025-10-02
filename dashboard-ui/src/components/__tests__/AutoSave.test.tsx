@@ -54,7 +54,7 @@ class AutoSaveService {
       if (currentSequence === this.timerSequence) {
         this.autoSaveTimer = null;
       }
-    }, this.saveDelay);
+    }, this.saveDelay) as unknown as number;
   }
 
   private async performAutoSave(data: any): Promise<void> {
