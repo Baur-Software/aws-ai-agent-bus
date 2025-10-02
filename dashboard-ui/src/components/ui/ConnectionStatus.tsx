@@ -20,6 +20,7 @@ export default function ConnectionStatus(props: ConnectionStatusProps = {}) {
 
   // For debugging - use just WebSocket connection for now
   const wsConnected = () => isConnected();
+  const serverVersion = () => '1.0.0'; // TODO: Get from server
 
   const showLabel = props.showLabel ?? true;
   const compact = props.compact ?? false;

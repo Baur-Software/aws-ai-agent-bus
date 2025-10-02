@@ -191,12 +191,17 @@ export default function AppConfigGenerator(props: AppConfigGeneratorProps) {
     if (!config || validationErrors().length > 0) return;
 
     try {
-      // Emit config creation event
-      await events.send('app-config.created', {
-        config,
-        orgId: props.orgId,
-        timestamp: new Date().toISOString()
-      });
+      // Emit config creation event (optional - events may not be available)
+      if (dashboardServer.callMCPTool) {
+        await dashboardServer.callMCPTool('events_send', {
+          detailType: 'app-config.created',
+          detail: {
+            config,
+            orgId: props.orgId,
+            timestamp: new Date().toISOString()
+          }
+        });
+      }
 
       // Save via event-driven system
       const saveSuccess = await saveConfig(config, props.orgId);
