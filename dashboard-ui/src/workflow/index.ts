@@ -24,17 +24,15 @@ import { Logger, EventEmitter } from './types';
 export interface WorkflowSystemConfig {
   // Service configuration
   mcpClient?: any;
-  trelloApiKey?: string;
-  trelloToken?: string;
   httpTimeout?: number;
   httpRetries?: number;
-  
+
   // Logging configuration
   logger?: Logger;
-  
+
   // Event handling
   eventEmitter?: EventEmitter;
-  
+
   // Task filtering (for conditional registration)
   enabledCategories?: string[];
   disabledTasks?: string[];
@@ -53,8 +51,6 @@ export function createWorkflowSystem(config: WorkflowSystemConfig): WorkflowSyst
   // Create service container
   const services = createServiceContainer({
     mcpClient: config.mcpClient,
-    trelloApiKey: config.trelloApiKey,
-    trelloToken: config.trelloToken,
     httpTimeout: config.httpTimeout,
     httpRetries: config.httpRetries
   });
@@ -64,8 +60,6 @@ export function createWorkflowSystem(config: WorkflowSystemConfig): WorkflowSyst
 
   // Register all available tasks
   registerAllTasks(taskRegistry, {
-    googleAnalytics: services.googleAnalytics,
-    trello: services.trello,
     mcp: services.mcp,
     http: services.http,
     logger: config.logger
