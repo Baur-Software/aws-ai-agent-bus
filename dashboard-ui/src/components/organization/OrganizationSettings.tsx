@@ -6,10 +6,9 @@ import GeneralSettings from './settings/GeneralSettings';
 import MemberManagement from './settings/MemberManagement';
 import SecuritySettings from './settings/SecuritySettings';
 import BillingSettings from './settings/BillingSettings';
-import DangerZone from './settings/DangerZone';
 import { Settings, Users, Shield, CreditCard, AlertTriangle } from 'lucide-solid';
 
-type SettingsTab = 'general' | 'members' | 'security' | 'billing' | 'danger';
+type SettingsTab = 'general' | 'members' | 'security' | 'billing';
 
 interface TabConfig {
   id: SettingsTab;
@@ -53,13 +52,6 @@ export default function OrganizationSettings() {
       icon: CreditCard,
       description: 'Billing information and subscription management',
       requiresPermission: 'admin'
-    },
-    {
-      id: 'danger',
-      label: 'Danger Zone',
-      icon: AlertTriangle,
-      description: 'Destructive actions and organization deletion',
-      requiresPermission: 'owner'
     }
   ];
 
@@ -92,8 +84,6 @@ export default function OrganizationSettings() {
         return canManageOrganization() ? <SecuritySettings /> : <AccessDenied />;
       case 'billing':
         return canManageOrganization() ? <BillingSettings /> : <AccessDenied />;
-      case 'danger':
-        return currentOrganization()?.userRole === 'owner' ? <DangerZone /> : <AccessDenied />;
       default:
         return <GeneralSettings />;
     }

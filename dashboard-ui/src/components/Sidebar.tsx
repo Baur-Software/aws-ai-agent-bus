@@ -32,18 +32,8 @@ function Sidebar(props: SidebarProps) {
 
   const handleRefresh = async (): Promise<void> => {
     setIsRefreshing(true);
-    // Force a health check by reloading the page's MCP resources
-    try {
-      if (mcp.refresh) {
-        mcp.refresh();
-      } else {
-        console.warn('Refresh method not available');
-      }
-    } catch (error) {
-      console.warn('Manual health check failed:', error);
-    }
-    // Brief delay to show the refresh animation
-    setTimeout(() => setIsRefreshing(false), 1000);
+    // Force a page reload to refresh MCP resources
+    window.location.reload();
   };
 
   return (
