@@ -8,10 +8,33 @@ import { MCPWebSocketHandler, MCP_MESSAGE_TYPES } from './mcpHandlers.js';
 import ErrorHandler from '../utils/ErrorHandler.js';
 import { EventsHandler } from '../handlers/events.js';
 import { mcpMarketplace } from '../services/MCPMarketplace.js';
+import { ChatService } from '../services/ChatService.js';
+import { MCPServiceRegistry } from '../services/MCPServiceRegistry.js';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { EventBridgeClient } from '@aws-sdk/client-eventbridge';
 
 interface Dependencies {
   metricsAggregator: any;
   eventSubscriber: any;
+}
+
+// Global ChatService instance
+let chatServiceInstance: ChatService | null = null;
+
+function getChatService(): ChatService {
+  if (!chatServiceInstance) {
+    const dynamodb = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-west-2' });
+    const eventBridge = new EventBridgeClient({ region: process.env.AWS_REGION || 'us-west-2' });
+    const mcpRegistry = new MCPServiceRegistry();
+
+    chatServiceInstance = new ChatService(dynamodb, eventBridge, mcpRegistry, {
+      bedrock: {
+        region: process.env.AWS_REGION || 'us-west-2',
+        modelId: process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-sonnet-20240229-v1:0'
+      }
+    });
+  }
+  return chatServiceInstance;
 }
 
 export function setupWebSocketHandlers(wss: WebSocketServer, { metricsAggregator, eventSubscriber }: Dependencies, yjsHandler?: any) {
@@ -431,6 +454,114 @@ async function handleWebSocketMessage(ws: WebSocket, message: any, { metricsAggr
           timestamp: publishResult.timestamp
         }));
         break;
+
+      case 'chat.send_message': {
+        const { sessionId, message: userMessage } = message.data || message;
+        const chatService = getChatService();
+
+        try {
+          // Create session if needed
+          let targetSessionId = sessionId;
+          if (!targetSessionId) {
+            const session = await chatService.createSession(
+              userContext.userId,
+              'New Chat',
+              'bedrock',
+              userContext.organizationId
+            );
+            targetSessionId = session.sessionId;
+          }
+
+          // Send message and get AI response
+          const response = await chatService.sendMessage({
+            sessionId: targetSessionId,
+            message: userMessage,
+            userId: userContext.userId,
+            organizationId: userContext.organizationId
+          });
+
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'chat.message_response',
+            data: {
+              sessionId: targetSessionId,
+              message: response
+            }
+          }));
+        } catch (error) {
+          console.error('Chat error:', error);
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'error',
+            error: error instanceof Error ? error.message : 'Failed to process chat message'
+          }));
+        }
+        break;
+      }
+
+      case 'chat.get_history': {
+        const { sessionId } = message.data || message;
+        const chatService = getChatService();
+
+        try {
+          const session = chatService.getSession(sessionId);
+
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'chat.history_response',
+            data: {
+              messages: session?.messages || [],
+              session: session ? {
+                sessionId: session.sessionId,
+                title: session.title,
+                backend: session.backend,
+                model: session.model
+              } : null
+            }
+          }));
+        } catch (error) {
+          console.error('Get history error:', error);
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'error',
+            error: error instanceof Error ? error.message : 'Failed to get chat history'
+          }));
+        }
+        break;
+      }
+
+      case 'chat.create_session': {
+        const { title } = message.data || message;
+        const chatService = getChatService();
+
+        try {
+          const session = await chatService.createSession(
+            userContext.userId,
+            title || 'New Chat',
+            'bedrock',
+            userContext.organizationId
+          );
+
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'chat.session_created',
+            data: {
+              sessionId: session.sessionId,
+              title: session.title,
+              backend: session.backend,
+              model: session.model
+            }
+          }));
+        } catch (error) {
+          console.error('Create session error:', error);
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'error',
+            error: error instanceof Error ? error.message : 'Failed to create chat session'
+          }));
+        }
+        break;
+      }
 
       case 'request_metrics':
         const metrics = await metricsAggregator.getAllMetrics();
