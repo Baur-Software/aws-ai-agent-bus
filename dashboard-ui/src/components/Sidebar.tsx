@@ -1,5 +1,5 @@
 import { A } from '@solidjs/router';
-import { Show, createSignal, For } from 'solid-js';
+import { Show, createSignal, For, type JSX } from 'solid-js';
 import { useDashboardServer } from '../contexts/DashboardServerContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import ConnectionStatus from './ui/ConnectionStatus';
