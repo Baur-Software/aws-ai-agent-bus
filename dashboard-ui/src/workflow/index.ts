@@ -60,7 +60,6 @@ export function createWorkflowSystem(config: WorkflowSystemConfig): WorkflowSyst
 
   // Register all available tasks
   registerAllTasks(taskRegistry, {
-    mcp: services.mcp,
     http: services.http,
     logger: config.logger
   });

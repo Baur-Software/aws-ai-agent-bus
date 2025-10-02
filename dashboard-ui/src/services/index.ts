@@ -2,26 +2,8 @@
 // Centralized exports for all service clients
 
 // Core service exports
-export { MCPService, MCPError, createMCPService } from './MCPService';
 export { HTTPService, APIClient, HTTPError, createHTTPService } from './HTTPService';
 export { WorkflowStorageService, createWorkflowStorageService } from './WorkflowStorageService';
-
-// Type exports for MCP
-export type {
-  KVGetResult,
-  KVSetParams,
-  KVSetResult,
-  Artifact,
-  ArtifactListResult,
-  ArtifactPutParams,
-  ArtifactPutResult,
-  EventSendParams,
-  EventSendResult,
-  WorkflowStartParams,
-  WorkflowResult,
-  WorkflowStatusParams,
-  WorkflowStatusResult
-} from './MCPService';
 
 // Type exports for HTTP
 export type {
@@ -43,7 +25,6 @@ export type {
 
 // Service factory functions for easy dependency injection
 export interface ServiceContainer {
-  mcp: MCPService;
   http: HTTPService;
   workflowStorage: WorkflowStorageService;
 }
@@ -56,15 +37,12 @@ export interface ServiceConfig {
 }
 
 export function createServiceContainer(config: ServiceConfig): ServiceContainer {
-  const mcpService = createMCPService(config.mcpClient);
-
   return {
-    mcp: mcpService,
     http: createHTTPService({
       timeout: config.httpTimeout,
       retries: config.httpRetries
     }),
-    workflowStorage: createWorkflowStorageService(mcpService, config.userId)
+    workflowStorage: createWorkflowStorageService(config.mcpClient, config.userId)
   };
 }
 
@@ -96,7 +74,6 @@ export class ServiceRegistry {
   setupDefaultServices(config: ServiceConfig): void {
     const container = createServiceContainer(config);
 
-    this.register('mcp', container.mcp);
     this.register('http', container.http);
     this.register('workflowStorage', container.workflowStorage);
   }

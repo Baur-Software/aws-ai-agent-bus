@@ -60,3 +60,4 @@ dist/
 build/
 out/
 localstack-data/
+nul
