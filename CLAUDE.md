@@ -71,11 +71,19 @@ npm run report:users-by-country  # Live GA report (requires credentials)
 npm run report:users-by-country-sample  # Sample data report
 
 # Infrastructure (Terraform)
+# Set AWS profile (recommended - avoids hardcoding in Terraform files)
+export AWS_PROFILE=baursoftware
+export AWS_REGION=us-west-2
+
 npm run tf:fmt            # Format Terraform files
 npm run tf:init           # Initialize workspace (set WS and ENV vars)
 npm run tf:plan           # Plan infrastructure changes
 npm run tf:apply          # Apply infrastructure changes
 npm run tf:destroy        # Destroy infrastructure
+
+# Alternative: Use backend config file (profile centralized)
+cd infra/workspaces/small/kv_store
+terraform init -backend-config=backend.hcl
 
 # Event Monitoring Infrastructure (PowerShell on Windows)
 cd infra/workspaces/small/events_monitoring
@@ -193,9 +201,13 @@ AWS Secrets Manager secret: `agent-mesh-mcp/google-analytics`
 
 ### Infrastructure Management
 - Use Terraform workspaces in `infra/workspaces/`
-- Start with small workspaces for cost-effectiveness (~$10/month)
-- Scale to medium/large workspaces as needed
+- **Workspace Tiers**:
+  - `extra-small`: $10/month target, minimal services, no hardcoded profiles ✅
+  - `small`: Core services, needs profile centralization (run `centralize-all-profiles.sh`) ⚠️
+  - `medium`: ECS agents, Step Functions, no hardcoded profiles ✅
+  - `large`: Aurora pgvector, analytics, no hardcoded profiles ✅
 - Environment-driven configuration pattern
+- **AWS Profile**: Use `export AWS_PROFILE=baursoftware` to avoid hardcoding (see `infra/workspaces/PROFILE_CENTRALIZATION_ALL.md`)
 
 ## Agent System
 
@@ -256,6 +268,8 @@ user-demo-user-123-integration-google-analytics-personal    # Personal account
 - Always run `npm run tf:fmt` before commits
 - Set WS and ENV variables before Terraform operations
 - Use small workspaces for development, scale as needed
+- **AWS Profile Configuration**: Set `export AWS_PROFILE=baursoftware` or use `backend.hcl` files (see `infra/workspaces/small/README.md`)
+- Profile configuration centralized to avoid duplication across modules
 
 ### Integration Multiple Connections
 - **Migration Issues**: Legacy connections automatically migrate to new format with `default` connectionId

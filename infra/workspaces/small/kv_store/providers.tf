@@ -12,14 +12,14 @@ terraform {
     bucket  = "baursoftware-terraform-state"
     key     = "agent-mesh/small/kv_store/terraform.tfstate"
     region  = "us-west-2"
-    profile = "baursoftware"
+    # profile = "baursoftware" # Now using AWS_PROFILE env var or backend.hcl
     encrypt = true
   }
 }
 
 provider "aws" {
   region  = "us-west-2"
-  profile = "baursoftware"
+  # profile = "baursoftware" # Now using AWS_PROFILE env var or backend.hcl
 
   default_tags {
     tags = {
