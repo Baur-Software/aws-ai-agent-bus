@@ -33,6 +33,9 @@ export interface Organization {
   industry?: string;
   size?: 'startup' | 'small' | 'medium' | 'large' | 'enterprise';
 
+  // Infrastructure Tier (maps to infra/workspaces/)
+  workspaceTier: 'extra-small' | 'small' | 'medium' | 'large';
+
   // Membership
   memberCount: number;
   maxMembers?: number;

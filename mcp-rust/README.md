@@ -5,6 +5,7 @@ A high-performance, multi-tenant Model Context Protocol (MCP) server implemented
 ## Features
 
 ### Multi-Tenant Architecture
+
 - **Tenant Isolation**: Complete isolation of data and resources per tenant
 - **Session Management**: Secure session tracking with automatic cleanup
 - **Permission System**: Role-based access control (Admin, User, Viewer)
@@ -12,12 +13,14 @@ A high-performance, multi-tenant Model Context Protocol (MCP) server implemented
 - **Rate Limiting**: Built-in rate limiting per tenant session
 
 ### AWS Integration
+
 - **DynamoDB**: Key-value store with tenant isolation
 - **S3**: Artifact storage with tenant-based prefixing
 - **EventBridge**: Event publishing with tenant context
 - **Secrets Manager**: Secure credential storage
 
 ### MCP Protocol Support
+
 - **JSON-RPC 2.0**: Full MCP protocol compliance
 - **Tool Registration**: Dynamic tool discovery based on permissions
 - **Error Handling**: Comprehensive error responses with proper codes

@@ -17,6 +17,7 @@ import { WorkflowNode } from './WorkflowNodeDetails';
 import { useNavigate } from '@solidjs/router';
 import { NODE_DEFINITIONS } from '../../../config/nodeDefinitions';
 import NodeConfigRenderer from './NodeConfigRenderer';
+import { useFloatingPanelResize } from '../../../hooks/useFloatingPanelResize';
 
 interface FloatingNodePanelProps {
   onDragStart: (nodeType: string, e: DragEvent) => void;
@@ -184,19 +185,22 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
           'mcp-apps': organizedAgents['mcp-apps'] || []
         };
 
-        // Add any MCP app agents from the registry
+        // Add MCP app agents from the registry, grouped by app
         const mcpAgents = mcpRegistry.getAgents();
-        if (mcpAgents.length > 0 && !agentGroups['mcp-apps']) {
-          agentGroups['mcp-apps'] = [];
-        }
         mcpAgents.forEach(agent => {
-          agentGroups['mcp-apps'].push({
+          // Group by the app name (extracted from serverId)
+          const groupKey = `mcp-app-${agent.serverId}`;
+          if (!agentGroups[groupKey]) {
+            agentGroups[groupKey] = [];
+          }
+          agentGroups[groupKey].push({
             type: agent.id,
             name: agent.name,
             description: agent.description,
             icon: agent.icon,
             color: agent.color,
-            group: 'mcp-apps'
+            group: groupKey,
+            serverId: agent.serverId
           });
         });
 
@@ -274,23 +278,24 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
           }
         });
 
-        // Add MCP app agents to the groups
+        // Add MCP app agents to the groups, organized by app
         const mcpAgents = mcpRegistry.getAgents();
-        if (mcpAgents.length > 0) {
-          if (!agentGroups['mcp-apps']) {
-            agentGroups['mcp-apps'] = [];
+        mcpAgents.forEach(agent => {
+          // Group by the app name (extracted from serverId)
+          const groupKey = `mcp-app-${agent.serverId}`;
+          if (!agentGroups[groupKey]) {
+            agentGroups[groupKey] = [];
           }
-          mcpAgents.forEach(agent => {
-            agentGroups['mcp-apps'].push({
-              type: agent.id,
-              name: agent.name,
-              description: agent.description,
-              icon: agent.icon,
-              color: agent.color,
-              group: 'mcp-apps'
-            });
+          agentGroups[groupKey].push({
+            type: agent.id,
+            name: agent.name,
+            description: agent.description,
+            icon: agent.icon,
+            color: agent.color,
+            group: groupKey,
+            serverId: agent.serverId
           });
-        }
+        });
 
         setAgentNodes(agentGroups);
       } else {
@@ -323,25 +328,50 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
         'other': []
       };
 
-      // Add MCP app agents even in fallback
+      // Add MCP app agents even in fallback, grouped by app
       const mcpAgents = mcpRegistry.getAgents();
-      if (mcpAgents.length > 0) {
-        mcpAgents.forEach(agent => {
-          fallbackGroups['mcp-apps'].push({
-            type: agent.id,
-            name: agent.name,
-            description: agent.description,
-            icon: agent.icon,
-            color: agent.color,
-            group: 'mcp-apps'
-          });
+      mcpAgents.forEach(agent => {
+        // Group by the app name (extracted from serverId)
+        const groupKey = `mcp-app-${agent.serverId}`;
+        if (!fallbackGroups[groupKey]) {
+          fallbackGroups[groupKey] = [];
+        }
+        fallbackGroups[groupKey].push({
+          type: agent.id,
+          name: agent.name,
+          description: agent.description,
+          icon: agent.icon,
+          color: agent.color,
+          group: groupKey,
+          serverId: agent.serverId
         });
-      }
+      });
 
       setAgentNodes(fallbackGroups);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper to get a friendly app name from groupName
+  const getAppDisplayName = (groupName: string) => {
+    if (groupName.startsWith('mcp-app-')) {
+      const serverId = groupName.replace('mcp-app-', '');
+      // Try to get the actual app name from the MCP registry
+      const agents = mcpRegistry.getAgents();
+      const agent = agents.find(a => a.serverId === serverId);
+      if (agent) {
+        // Extract app name from agent name (e.g., "Google Analytics Agent" -> "Google Analytics")
+        return agent.name.replace(' Agent', '').trim();
+      }
+      // Fallback: format the serverId nicely
+      return serverId
+        .replace(/^(integration|mcp)-/, '')
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+    return groupName.replace(/-/g, ' ').replace('specialized ', 'Specialized: ');
   };
 
   const determineAgentGroup = (agent: string) => {
@@ -520,27 +550,23 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
       if (result?.value) {
         const models = JSON.parse(result.value);
         setAvailableModels(models);
-      } else {
-        // Fallback: Default hosted models + common alternatives
-        setAvailableModels([
-          // Hosted Bedrock (default execution path)
-          { id: 'bedrock:anthropic.claude-3-5-sonnet-20241022-v2:0', name: 'Claude 3.5 Sonnet v2 (Default)' },
-          { id: 'bedrock:anthropic.claude-3-5-sonnet-20240620-v1:0', name: 'Claude 3.5 Sonnet' },
-          { id: 'bedrock:anthropic.claude-3-opus-20240229-v1:0', name: 'Claude 3 Opus' },
-          { id: 'bedrock:anthropic.claude-3-haiku-20240307-v1:0', name: 'Claude 3 Haiku' }
-        ]);
       }
     } catch (error) {
-      console.warn('Failed to load available models:', error);
-      // Use same fallback
-      setAvailableModels([
-        { id: 'bedrock:anthropic.claude-3-5-sonnet-20241022-v2:0', name: 'Claude 3.5 Sonnet v2 (Default)' },
-        { id: 'bedrock:anthropic.claude-3-5-sonnet-20240620-v1:0', name: 'Claude 3.5 Sonnet' },
-        { id: 'bedrock:anthropic.claude-3-opus-20240229-v1:0', name: 'Claude 3 Opus' },
-        { id: 'bedrock:anthropic.claude-3-haiku-20240307-v1:0', name: 'Claude 3 Haiku' }
-      ]);
+      console.error('Failed to load available models from KV store:', error);
+      // Leave models empty - UI should handle empty state
+      setAvailableModels([]);
     }
   };
+
+  // Use floating panel resize hook to keep pinned panel at right edge
+  useFloatingPanelResize({
+    isPinned,
+    panelWidth,
+    onPositionChange: (x, y) => {
+      setPosition({ x, y });
+      props.onPositionChange?.(x, y);
+    }
+  });
 
   // Load agents on mount
   onMount(async () => {
@@ -925,7 +951,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
           isDragging() || isResizing() ? 'shadow-2xl scale-105 select-none' : ''
         } ${
           isPinned()
-            ? 'rounded-none border-l-0 border-t-0 border-b-0 h-screen'
+            ? 'rounded-none border-r-0 border-t-0 border-b-0 h-screen'
             : 'rounded-lg'
         }`}
         style={{
@@ -933,7 +959,9 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
           top: `${position().y}px`,
           width: `${panelWidth()}px`,
           height: isPinned() ? '100vh' : `${panelHeight()}px`,
-          'max-height': isPinned() ? '100vh' : '90vh'
+          'max-height': isPinned() ? '100vh' : '90vh',
+          'will-change': isDragging() || isResizing() ? 'transform' : 'auto',
+          transform: 'translate3d(0, 0, 0)' // Force GPU acceleration
         }}
         onMouseDown={handleMouseDown}
         onWheel={handlePanelWheel}
@@ -1153,13 +1181,18 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                                             groupName.includes('devops') ? 'bg-purple-100 dark:bg-purple-900/30' :
                                             groupName.includes('integrations') ? 'bg-pink-100 dark:bg-pink-900/30' :
                                             groupName.includes('universal') ? 'bg-green-100 dark:bg-green-900/30' :
-                                            groupName.includes('mcp-apps') ? 'bg-cyan-100 dark:bg-cyan-900/30' :
+                                            groupName.startsWith('mcp-app-') ? 'bg-cyan-100 dark:bg-cyan-900/30' :
                                             'bg-gray-100 dark:bg-gray-700'
                                           }`}
                                         >
                                           <div class="flex items-center gap-2">
+                                            <Show when={groupName.startsWith('mcp-app-')}>
+                                              <div class="w-5 h-5 bg-gradient-to-br from-cyan-500 to-blue-600 rounded flex items-center justify-center text-white text-xs">
+                                                🔌
+                                              </div>
+                                            </Show>
                                             <span class="text-sm font-medium text-gray-900 dark:text-white capitalize">
-                                              {groupName.replace(/-/g, ' ').replace('specialized ', 'Specialized: ')}
+                                              {getAppDisplayName(groupName)}
                                             </span>
                                             <span class="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded-full">
                                               {groupAgents.length}

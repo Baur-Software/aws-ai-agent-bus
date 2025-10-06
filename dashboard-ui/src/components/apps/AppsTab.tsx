@@ -39,65 +39,13 @@ export default function AppsTab() {
   const [currentPage, setCurrentPage] = createSignal(1);
   const itemsPerPage = 12;
 
-  // Top 100 most popular SaaS platforms with MCP servers (prioritized by enterprise usage)
-  const featuredPlatformIds = [
-    // Cloud Infrastructure & Compute
-    'mcp-aws-core', 'mcp-aws-bedrock-kb-retrieval', 'mcp-aws-cdk', 'mcp-aws-cost-analysis',
-    'mcp-azure-devops', 'mcp-google-cloud', 'mcp-cloudflare', 'mcp-digital-ocean',
-    'mcp-vercel', 'mcp-netlify', 'mcp-heroku', 'mcp-railway',
-
-    // Developer Tools & CI/CD
-    'mcp-github', 'mcp-gitlab', 'mcp-bitbucket', 'mcp-circleci',
-    'mcp-jenkins', 'mcp-buildkite', 'mcp-travis-ci', 'mcp-docker',
-    'mcp-kubernetes', 'mcp-terraform', 'mcp-ansible', 'mcp-datadog',
-
-    // Database & Data Tools
-    'mcp-mongodb', 'mcp-postgresql', 'mcp-mysql', 'mcp-redis',
-    'mcp-elasticsearch', 'mcp-clickhouse', 'mcp-snowflake', 'mcp-databricks',
-    'mcp-bigquery', 'mcp-redshift', 'mcp-dynamodb', 'mcp-firebase',
-
-    // Communication & Collaboration
-    'mcp-slack', 'mcp-discord', 'mcp-microsoft-teams', 'mcp-zoom',
-    'mcp-notion', 'mcp-linear', 'mcp-jira', 'mcp-confluence',
-    'mcp-asana', 'mcp-monday', 'mcp-clickup', 'mcp-basecamp',
-
-    // Business & Finance
-    'mcp-stripe', 'mcp-paypal', 'mcp-square', 'mcp-chargebee',
-    'mcp-quickbooks', 'mcp-xero', 'mcp-freshbooks', 'mcp-braintree',
-    'mcp-plaid', 'mcp-wise', 'mcp-coinbase', 'mcp-binance',
-
-    // Marketing & Analytics
-    'mcp-google-analytics', 'mcp-segment', 'mcp-mixpanel', 'mcp-amplitude',
-    'mcp-hubspot', 'mcp-salesforce', 'mcp-mailchimp', 'mcp-sendgrid',
-    'mcp-twilio', 'mcp-intercom', 'mcp-zendesk', 'mcp-freshdesk',
-
-    // Content & Media
-    'mcp-youtube', 'mcp-vimeo', 'mcp-spotify', 'mcp-soundcloud',
-    'mcp-wordpress', 'mcp-contentful', 'mcp-strapi', 'mcp-sanity',
-    'mcp-cloudinary', 'mcp-imgix', 'mcp-mux', 'mcp-wistia',
-
-    // AI & Machine Learning
-    'mcp-openai', 'mcp-anthropic', 'mcp-huggingface', 'mcp-replicate',
-    'mcp-cohere', 'mcp-stability-ai', 'mcp-midjourney', 'mcp-elevenlabs',
-
-    // Storage & File Management
-    'mcp-box', 'mcp-dropbox', 'mcp-google-drive', 'mcp-onedrive',
-    'mcp-s3', 'mcp-backblaze', 'mcp-wasabi', 'mcp-aiven',
-
-    // Security & Authentication
-    'mcp-auth0', 'mcp-okta', 'mcp-onelogin', 'mcp-duo',
-    'mcp-1password', 'mcp-lastpass', 'mcp-vault', 'mcp-cyberark',
-
-    // E-commerce & Retail
-    'mcp-shopify', 'mcp-woocommerce', 'mcp-magento', 'mcp-bigcommerce',
-
-    // Automation & Integration
-    'mcp-zapier', 'mcp-make', 'mcp-n8n', 'mcp-ifttt',
-    'mcp-apify', 'mcp-browserbase', 'mcp-puppeteer', 'mcp-playwright'
-  ];
-
+  // Featured servers are determined by tags, not hardcoded IDs
   const featuredServers = createMemo(() => {
-    return servers().filter(server => featuredPlatformIds.includes(server.id));
+    return servers().filter(server =>
+      server.verificationBadges?.includes('popular') ||
+      server.verificationBadges?.includes('official') ||
+      server.tags?.includes('featured')
+    );
   });
 
   // Derived state with memos
@@ -137,8 +85,12 @@ export default function AppsTab() {
     const featured = showOnlyFeatured();
 
     return servers().filter(server => {
-      // Featured filter
-      if (featured && !featuredPlatformIds.includes(server.id)) {
+      // Featured filter - based on tags instead of hardcoded IDs
+      if (featured && !(
+        server.verificationBadges?.includes('popular') ||
+        server.verificationBadges?.includes('official') ||
+        server.tags?.includes('featured')
+      )) {
         return false;
       }
 
@@ -168,7 +120,9 @@ export default function AppsTab() {
     const sort = sortBy();
     // Exclude featured servers from the main list to avoid duplicates
     const nonFeaturedServers = filteredServers().filter(server =>
-      !featuredPlatformIds.includes(server.id)
+      !(server.verificationBadges?.includes('popular') ||
+        server.verificationBadges?.includes('official') ||
+        server.tags?.includes('featured'))
     );
 
     return [...nonFeaturedServers].sort((a, b) => {

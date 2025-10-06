@@ -12,6 +12,10 @@ export interface NodeDefinition {
   color?: string;
   defaultConfig?: Record<string, any>;
 
+  // Integration/authentication requirement
+  requiresIntegration?: string; // Integration ID (e.g., 'google-analytics', 'slack')
+  requiresCredentials?: boolean; // Whether this node needs credentials
+
   // Schema-based output definition (preferred)
   outputSchema?: {
     type: 'object';
@@ -25,10 +29,11 @@ export interface NodeDefinition {
   configFields?: {
     key: string;
     label: string;
-    type: 'text' | 'number' | 'select' | 'textarea' | 'json';
+    type: 'text' | 'number' | 'select' | 'textarea' | 'json' | 'credential';
     required?: boolean;
     defaultValue?: any;
     options?: { label: string; value: any }[];
+    integrationId?: string; // For credential type fields
   }[];
 }
 
@@ -292,7 +297,10 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
     category: 'analytics',
     icon: '📊',
     color: 'bg-orange-500',
+    requiresIntegration: 'google-analytics',
+    requiresCredentials: true,
     configFields: [
+      { key: 'connectionId', label: 'Google Analytics Connection', type: 'credential', integrationId: 'google-analytics', required: true },
       { key: 'days', label: 'Days', type: 'number', defaultValue: 30 },
       { key: 'limit', label: 'Limit', type: 'number', defaultValue: 10 }
     ],
@@ -372,19 +380,148 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
 
   // Logic
   {
-    type: 'condition',
-    name: 'Condition',
-    description: 'Branch based on condition',
+    type: 'conditional',
+    name: 'Conditional Branch',
+    description: 'Route workflow based on conditions - supports if/else if/else logic',
     category: 'logic',
     icon: '🔀',
     color: 'bg-cyan-500',
     configFields: [
-      { key: 'condition', label: 'Condition Expression', type: 'text', required: true }
+      {
+        key: 'conditions',
+        label: 'Conditions (evaluated in order)',
+        type: 'json',
+        required: true,
+        defaultValue: [
+          { condition: 'data.value > 100', label: 'High Value', output: 'high' },
+          { condition: 'data.value > 50', label: 'Medium Value', output: 'medium' },
+          { condition: 'true', label: 'Default/Else', output: 'low' }
+        ]
+      },
+      {
+        key: 'mode',
+        label: 'Evaluation Mode',
+        type: 'select',
+        defaultValue: 'first-match',
+        options: [
+          { label: 'First Match (if/else if/else)', value: 'first-match' },
+          { label: 'All Matches (parallel execution)', value: 'all-matches' }
+        ]
+      }
     ],
+    outputSchema: {
+      type: 'object',
+      properties: {
+        matchedCondition: {
+          type: 'object',
+          properties: {
+            condition: { type: 'string', description: 'The matched condition expression' },
+            label: { type: 'string', description: 'Human-readable label for the condition' },
+            output: { type: 'string', description: 'Output port identifier' },
+            index: { type: 'number', description: 'Position in condition list (0-based)' }
+          },
+          required: ['condition', 'output', 'index']
+        },
+        allMatches: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              condition: { type: 'string' },
+              label: { type: 'string' },
+              output: { type: 'string' },
+              index: { type: 'number' }
+            }
+          },
+          description: 'All matched conditions (only in all-matches mode)'
+        },
+        inputData: {
+          type: 'object',
+          additionalProperties: true,
+          description: 'Original input data that was evaluated'
+        },
+        evaluationMode: { type: 'string', enum: ['first-match', 'all-matches'] }
+      },
+      required: ['matchedCondition', 'inputData', 'evaluationMode']
+    },
     defaultSampleOutput: {
-      condition: 'value > 100',
-      result: true,
-      branch: 'true-path'
+      matchedCondition: {
+        condition: 'data.value > 100',
+        label: 'High Value',
+        output: 'high',
+        index: 0
+      },
+      allMatches: [
+        {
+          condition: 'data.value > 100',
+          label: 'High Value',
+          output: 'high',
+          index: 0
+        }
+      ],
+      inputData: {
+        value: 150,
+        category: 'premium',
+        userId: 'usr_12345'
+      },
+      evaluationMode: 'first-match'
+    }
+  },
+  {
+    type: 'switch',
+    name: 'Switch',
+    description: 'Route based on value matching - like a switch/case statement',
+    category: 'logic',
+    icon: '🎛️',
+    color: 'bg-blue-500',
+    configFields: [
+      {
+        key: 'value',
+        label: 'Value to Match',
+        type: 'text',
+        required: true,
+        defaultValue: 'data.status'
+      },
+      {
+        key: 'cases',
+        label: 'Cases',
+        type: 'json',
+        required: true,
+        defaultValue: [
+          { match: 'active', output: 'active-users' },
+          { match: 'pending', output: 'pending-users' },
+          { match: 'inactive', output: 'inactive-users' },
+          { match: 'default', output: 'other' }
+        ]
+      }
+    ],
+    outputSchema: {
+      type: 'object',
+      properties: {
+        matchedCase: {
+          type: 'object',
+          properties: {
+            match: { type: 'string', description: 'The value that was matched' },
+            output: { type: 'string', description: 'Output port for this case' }
+          },
+          required: ['match', 'output']
+        },
+        inputValue: { type: 'string', description: 'The value that was evaluated' },
+        inputData: { type: 'object', additionalProperties: true }
+      },
+      required: ['matchedCase', 'inputValue', 'inputData']
+    },
+    defaultSampleOutput: {
+      matchedCase: {
+        match: 'active',
+        output: 'active-users'
+      },
+      inputValue: 'active',
+      inputData: {
+        status: 'active',
+        userId: 'usr_12345',
+        lastActive: '2025-09-30T10:30:00Z'
+      }
     }
   },
   {
@@ -401,6 +538,33 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
       delayed: 5000,
       startedAt: '2025-09-30T10:30:00Z',
       completedAt: '2025-09-30T10:30:05Z'
+    }
+  },
+
+  // Docker (executed on AWS ECS Fargate)
+  {
+    type: 'docker-run',
+    name: 'Docker Container',
+    description: 'Execute a Docker container on AWS ECS Fargate',
+    category: 'compute',
+    icon: '🐳',
+    color: 'bg-blue-600',
+    configFields: [
+      { key: 'image', label: 'Image', type: 'text', required: true },
+      { key: 'tag', label: 'Tag', type: 'text', defaultValue: 'latest' }
+    ],
+    outputSchema: {
+      type: 'object',
+      properties: {
+        containerId: { type: 'string', description: 'ECS Task ARN' },
+        exitCode: { type: 'number', description: 'Container exit code' },
+        stdout: { type: 'string', description: 'Standard output from CloudWatch Logs' },
+        stderr: { type: 'string', description: 'Standard error from CloudWatch Logs' },
+        duration: { type: 'number', description: 'Execution time in seconds' },
+        startedAt: { type: 'string', format: 'date-time' },
+        finishedAt: { type: 'string', format: 'date-time' }
+      },
+      required: ['containerId', 'exitCode']
     }
   },
 

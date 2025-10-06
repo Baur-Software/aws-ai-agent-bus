@@ -3,7 +3,11 @@ import { useLocation } from '@solidjs/router';
 import { useDashboardServer } from '../contexts/DashboardServerContext';
 import { useNotifications } from '../contexts/NotificationContext';
 
-function ChatPanel(props) {
+interface ChatPanelProps {
+  onClose?: () => void;
+}
+
+function ChatPanel(props: ChatPanelProps) {
   const location = useLocation();
   const [messages, setMessages] = createSignal([]);
   const [inputText, setInputText] = createSignal('');
@@ -83,63 +87,39 @@ function ChatPanel(props) {
 
   const processMessage = async (message) => {
     const lower = message.toLowerCase();
-    const currentPath = location.pathname;
 
     try {
-      // Page-specific context responses
-      if (lower.includes('page') || lower.includes('current') || lower.includes('here')) {
-        const pageHelp = {
-          '/dashboard': 'This is the dashboard page. I can help you:\n• Understand the metrics shown\n• Get detailed analytics data\n• Navigate to specific tools\n• Explain the KV store stats\n• Show artifact information',
-          '/analytics': 'This is the analytics page. I can help you:\n• Fetch latest Google Analytics data\n• Generate reports for specific date ranges\n• Explain performance metrics\n• Get top pages or user data',
-          '/kv-store': 'This is the KV store page. I can help you:\n• Get or set specific key-value pairs\n• Search for existing keys\n• Format data properly\n• Explain TTL settings',
-          '/workflows': 'This is the workflows page. I can help you:\n• Build new workflows with drag-and-drop\n• Connect workflow nodes\n• Run existing workflows\n• Explain node types and integrations',
-          '/artifacts': 'This is the artifacts page. I can help you:\n• Upload new files\n• Search existing artifacts\n• Download content\n• Manage artifact metadata',
-          '/events': 'This is the events page. I can help you:\n• Monitor system events\n• Send custom events\n• Set up event rules\n• Track event patterns',
-          '/settings': 'This is the settings page. I can help you:\n• Configure integrations\n• Set up OAuth connections\n• Manage user preferences\n• Test integration connections'
-        };
+      // Use the agent_chat MCP tool to process the message with AI
+      const result = await executeTool('agent_chat', {
+        message: message,
+        context: {
+          currentPage: location.pathname,
+          conversationHistory: messages().slice(-5).map(m => ({
+            role: m.sender === 'user' ? 'user' : 'assistant',
+            content: m.content
+          }))
+        }
+      });
 
-        return pageHelp[currentPath] || 'I can help you with whatever page you\'re currently viewing. What specific help do you need?';
+      // Extract the response from the MCP result
+      if (result && typeof result === 'object') {
+        return result.response || result.message || JSON.stringify(result);
       }
 
-
-      // KV Store requests
-      if (lower.includes('store') || lower.includes('save') || lower.includes('get')) {
-        return 'I can help you with the KV store:\n• "Save data to key: mykey"\n• "Get value from key: mykey"\n• Visit the KV Store page for full management';
-      }
-
-      // Dynamic tool requests - route to available user MCP servers
-      if (lower.includes('workflow') || lower.includes('process') || lower.includes('analytics') || lower.includes('calendar')) {
-        return 'I can help with tools based on your connected MCP servers. Check the Settings page to connect integrations that enable these features.';
-      }
-
-      // Help and general requests
-      if (lower.includes('help')) {
-        return `I can assist you with:
-
-🔹 **Analytics**: Generate reports, analyze traffic, get insights
-🔹 **Content Calendar**: Create AI-powered content schedules  
-🔹 **KV Store**: Save and retrieve key-value data
-🔹 **Artifacts**: Manage files and content
-🔹 **Workflows**: Execute automated processes
-🔹 **Events**: Monitor and send system events
-
-Try asking something like "show me analytics for last 30 days" or "generate a content calendar"!`;
-      }
-
-      // Default response
-      return `I understand you're asking about "${message}". Let me help you with that! 
-
-You can:
-• Ask for specific analytics data
-• Request content calendar generation  
-• Get help with KV store operations
-• Start workflows or check their status
-
-What specifically would you like me to help you with?`;
+      return result || 'I processed your request but got an empty response. Please try rephrasing.';
 
     } catch (toolError) {
-      console.error('Tool execution error:', toolError);
-      return `I tried to help with your request but encountered an issue. The error was: ${toolError.message}. Please try a different approach or check the specific tool page.`;
+      console.error('Chat tool execution error:', toolError);
+
+      // Fallback to basic help message when MCP server is unavailable
+      return `I'm having trouble connecting to the AI backend right now.
+
+The MCP server may not be responding. Please check:
+• Dashboard server is running
+• MCP server is connected
+• Try refreshing the page
+
+Error details: ${toolError.message}`;
     }
   };
 
@@ -197,19 +177,12 @@ What specifically would you like me to help you with?`;
           <span class="font-semibold text-slate-900 dark:text-white">MCP Assistant</span>
         </div>
         <div class="flex items-center gap-1">
-          <button 
-            class="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors" 
-            onClick={clearChat} 
+          <button
+            class="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors"
+            onClick={clearChat}
             title="Clear chat"
           >
             <i class="fas fa-trash text-sm" />
-          </button>
-          <button 
-            class="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors" 
-            onClick={props.onClose} 
-            title="Close chat"
-          >
-            <i class="fas fa-times text-sm" />
           </button>
         </div>
       </div>

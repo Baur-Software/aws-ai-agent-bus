@@ -1,8 +1,15 @@
 import { createSignal, For, Show } from 'solid-js';
+import { Dynamic } from 'solid-js/web';
 import {
-  Plus, Trash2, CircleCheckBig, XCircle, CircleQuestionMark, Zap
+  Plus, Trash2, CircleCheckBig, XCircle, CircleQuestionMark, Zap, Server
 } from 'lucide-solid';
 import { useNotifications } from '../contexts/NotificationContext';
+
+// Icon mapping for custom integrations that use string icon names
+const iconMap: Record<string, any> = {
+  'Server': Server,
+  'server': Server
+};
 
 interface IntegrationConnection {
   connection_id: string;
@@ -59,6 +66,15 @@ export default function IntegrationCard(props: IntegrationCardProps) {
   const isConnected = () => connections().length > 0;
   const hasMultipleConnections = () => connections().length > 1;
 
+  // Get the icon component - handle both component references and string names
+  const IconComponent = () => {
+    const icon = props.integration.icon;
+    if (typeof icon === 'string') {
+      return iconMap[icon] || Server; // Fallback to Server icon
+    }
+    return icon;
+  };
+
   const handleFieldChange = (key: string, value: string) => {
     setFormData(prev => ({ ...prev, [key]: value }));
   };
@@ -101,7 +117,7 @@ export default function IntegrationCard(props: IntegrationCardProps) {
       <div class="flex items-start justify-between mb-4">
         <div class="flex items-center gap-3">
           <div class={`p-3 rounded-lg ${props.integration.color} text-white ${isConnected() ? 'ring-2 ring-green-200 dark:ring-green-700' : ''}`}>
-            <props.integration.icon class="w-6 h-6" />
+            <Dynamic component={IconComponent()} class="w-6 h-6" />
           </div>
           <div class="flex-1">
             <div class="flex items-center gap-2">

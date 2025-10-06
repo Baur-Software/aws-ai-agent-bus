@@ -149,12 +149,13 @@ export function useEventDrivenAppConfigs() {
     /**
      * Load app configs via events
      */
-    async loadConfigs(orgId?: string) {
+    async loadConfigs(userId?: string, orgId?: string) {
       try {
         setIsLoading(true);
 
         // Emit load request event
         await events.send('app-config.load-marketplace', {
+          userId,
           orgId,
           timestamp: new Date().toISOString(),
           request_id: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -162,7 +163,7 @@ export function useEventDrivenAppConfigs() {
 
         // For now, use fallback until event streaming is ready
         // TODO: Listen for app-config.loaded event from dashboard server
-        const loadedConfigs = await this.loadConfigsFallback(orgId);
+        const loadedConfigs = await this.loadConfigsFallback(userId, orgId);
         setConfigs(loadedConfigs);
 
         return loadedConfigs;
@@ -263,7 +264,7 @@ export function useEventDrivenAppConfigs() {
     /**
      * Fallback method until event streaming is implemented
      */
-    async loadConfigsFallback(orgId?: string) {
+    async loadConfigsFallback(userId?: string, orgId?: string) {
       // This would be replaced with event listener once WebSocket streaming is ready
       const knownAppIds = [
         'google-analytics', 'slack', 'github', 'stripe', 'salesforce',
@@ -271,24 +272,58 @@ export function useEventDrivenAppConfigs() {
       ];
 
       const configs = [];
+
+      // Load known integrations (global marketplace)
       for (const appId of knownAppIds) {
         try {
-          // Try org-specific first
-          if (orgId) {
-            const orgConfig = await kv.getDirectFallback(`org-${orgId}-app-config-${appId}`);
-            if (orgConfig) {
-              configs.push(orgConfig);
-              continue;
-            }
-          }
-
-          // Try global
-          const globalConfig = await kv.getDirectFallback(`app-config-${appId}`);
+          const globalConfig = await kv.getDirectFallback(`integration-${appId}`);
           if (globalConfig) {
             configs.push(globalConfig);
           }
         } catch (err) {
           // Ignore missing configs
+        }
+      }
+
+      // Load user-scoped (personal) custom MCP servers
+      if (userId) {
+        try {
+          const userRegistry = await kv.getDirectFallback(`user-${userId}-integration-registry-custom-mcp`);
+          if (userRegistry && Array.isArray(userRegistry)) {
+            for (const serverId of userRegistry) {
+              try {
+                const customConfig = await kv.getDirectFallback(`user-${userId}-integration-${serverId}`);
+                if (customConfig) {
+                  configs.push(customConfig);
+                }
+              } catch (err) {
+                // Ignore missing custom configs
+              }
+            }
+          }
+        } catch (err) {
+          // Registry doesn't exist yet
+        }
+      }
+
+      // Load org-scoped custom MCP servers
+      if (orgId) {
+        try {
+          const orgRegistry = await kv.getDirectFallback(`org-${orgId}-integration-registry-custom-mcp`);
+          if (orgRegistry && Array.isArray(orgRegistry)) {
+            for (const serverId of orgRegistry) {
+              try {
+                const customConfig = await kv.getDirectFallback(`org-${orgId}-integration-${serverId}`);
+                if (customConfig) {
+                  configs.push(customConfig);
+                }
+              } catch (err) {
+                // Ignore missing custom configs
+              }
+            }
+          }
+        } catch (err) {
+          // Registry doesn't exist yet
         }
       }
 

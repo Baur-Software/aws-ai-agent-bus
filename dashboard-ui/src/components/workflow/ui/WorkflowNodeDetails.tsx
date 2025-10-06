@@ -1,6 +1,36 @@
-import { createSignal, createEffect, For, Show } from 'solid-js';
+import { createSignal, createEffect, For, Show, createMemo } from 'solid-js';
 import { useDashboardServer } from '../../../contexts/DashboardServerContext';
 import { useOrganization } from '../../../contexts/OrganizationContext';
+import { AgentConfigForm, type AgentConfigFormData } from '../../AgentConfigForm';
+// Workflow nodes library - dedicated components for node configuration
+import {
+  ConditionalNodeConfig,
+  DEFAULT_CONDITIONAL_CONFIG,
+  SwitchNodeConfig,
+  DEFAULT_SWITCH_CONFIG,
+  HttpNodeConfig,
+  DEFAULT_HTTP_CONFIG,
+  KVStoreNodeConfig,
+  DEFAULT_KV_GET_CONFIG,
+  DEFAULT_KV_SET_CONFIG,
+  TriggerNodeConfig,
+  DEFAULT_MANUAL_TRIGGER_CONFIG,
+  DEFAULT_WEBHOOK_TRIGGER_CONFIG,
+  DEFAULT_SCHEDULE_TRIGGER_CONFIG,
+  DockerNodeConfig,
+  DEFAULT_DOCKER_CONFIG,
+  hasDedicatedComponent,
+  type ConditionalConfig,
+  type SwitchConfig,
+  type HttpConfig,
+  type KVStoreConfig,
+  type TriggerConfig,
+  type DockerConfig
+} from '../../../lib/workflow-nodes';
+import { mcpRegistry } from '../../../services/MCPCapabilityRegistry';
+import { CredentialSelector } from './CredentialSelector';
+import { UpgradePrompt } from './UpgradePrompt';
+import { useNodeAvailable } from '../../../hooks/useFeatureFlag';
 import {
   Settings, X, Save, Play, Code, Database, Zap, Bot,
   MessageSquare, Calendar, BarChart3, Cloud, Users,
@@ -64,6 +94,14 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
 
   const { executeTool } = useDashboardServer();
   const { currentOrganization } = useOrganization();
+
+  // Check if node is available based on feature flags
+  const isNodeAvailable = createMemo(() => {
+    const node = localNode();
+    if (!node) return true;
+    const available = useNodeAvailable(node.type);
+    return available();
+  });
 
   // Model configurations with cost and purpose information
   const modelConfigs: ModelInfo[] = [
@@ -303,15 +341,49 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
       },
 
       // Logic & Control
-      'condition': {
-        title: 'Conditional Logic',
-        description: 'If/else branching logic',
+      'conditional': {
+        title: 'Conditional Branch',
+        description: 'Route workflow based on conditions (if/else if/else)',
         icon: Code,
-        color: 'bg-yellow-500',
+        color: 'bg-cyan-500',
         fields: [
-          { key: 'condition', label: 'Condition', type: 'text', required: true },
-          { key: 'operator', label: 'Operator', type: 'select', options: ['equals', 'not_equals', 'greater_than', 'less_than', 'contains'] },
-          { key: 'value', label: 'Value', type: 'text', required: true }
+          {
+            key: 'conditions',
+            label: 'Conditions (evaluated in order)',
+            type: 'json',
+            required: true,
+            help: 'Array of {condition, label, output} objects. Use JavaScript expressions like "data.value > 100"'
+          },
+          {
+            key: 'mode',
+            label: 'Evaluation Mode',
+            type: 'select',
+            options: ['first-match', 'all-matches'],
+            default: 'first-match',
+            help: 'First match stops at first true condition, all matches evaluates all'
+          }
+        ]
+      },
+      'switch': {
+        title: 'Switch',
+        description: 'Route based on value matching (switch/case)',
+        icon: Code,
+        color: 'bg-blue-500',
+        fields: [
+          {
+            key: 'value',
+            label: 'Value to Match',
+            type: 'text',
+            required: true,
+            help: 'Expression to evaluate (e.g., "data.status")'
+          },
+          {
+            key: 'cases',
+            label: 'Cases',
+            type: 'json',
+            required: true,
+            help: 'Array of {match, output} objects. Use "default" as catch-all'
+          }
         ]
       },
 
@@ -329,12 +401,56 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
       }
     };
 
-    return configs[nodeType] || {
+    // Check if config exists in hardcoded list
+    if (configs[nodeType]) {
+      return configs[nodeType];
+    }
+
+    // Check if this is an MCP-generated agent node
+    const mcpAgents = mcpRegistry.getAgents();
+    const mcpAgent = mcpAgents.find(agent => agent.id === nodeType);
+
+    if (mcpAgent) {
+      // Return config for MCP agent nodes
+      return {
+        title: mcpAgent.name,
+        description: mcpAgent.description,
+        icon: Bot, // Use Bot icon for agents
+        color: mcpAgent.color,
+        fields: [], // MCP agents use the agent config tab
+        agentConfig: true // Enable AI Model configuration tab
+      };
+    }
+
+    // Check if this is an MCP-generated workflow node
+    const mcpNodes = mcpRegistry.getNodes();
+    const mcpNode = mcpNodes.find(node => node.type === nodeType);
+
+    if (mcpNode) {
+      // Return config for MCP workflow nodes
+      return {
+        title: mcpNode.name,
+        description: mcpNode.description,
+        icon: Settings,
+        color: mcpNode.color,
+        fields: mcpNode.inputs?.map(input => ({
+          key: input.name,
+          label: input.name,
+          type: input.type as any,
+          required: input.required
+        })) || [],
+        agentConfig: false
+      };
+    }
+
+    // Fallback for unknown node types
+    return {
       title: nodeType,
       description: 'Custom node configuration',
       icon: Settings,
       color: 'bg-gray-500',
-      fields: []
+      fields: [],
+      agentConfig: false
     };
   };
 
@@ -496,6 +612,19 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
           />
         );
 
+      case 'credential':
+        return (
+          <CredentialSelector
+            integrationId={field.integrationId || 'unknown'}
+            value={value}
+            onChange={(credentialPath) => updateConfig(field.key, credentialPath)}
+            label={field.label}
+            showStatus={true}
+            showTest={true}
+            allowCreate={true}
+          />
+        );
+
       case 'password':
         return (
           <div class="relative">
@@ -591,25 +720,104 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
 
         {/* Content */}
         <div class="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Validation Errors */}
-          <Show when={validationErrors().length > 0}>
-            <div class="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md">
-              <div class="flex items-center gap-2 mb-2">
-                <AlertTriangle class="w-4 h-4 text-red-600 dark:text-red-400" />
-                <span class="text-sm font-medium text-red-800 dark:text-red-200">
-                  Configuration Errors
-                </span>
-              </div>
-              <ul class="text-sm text-red-700 dark:text-red-300 space-y-1">
-                <For each={validationErrors()}>
-                  {(error) => <li>• {error}</li>}
-                </For>
-              </ul>
-            </div>
+          {/* Show upgrade prompt if node is locked */}
+          <Show when={!isNodeAvailable()}>
+            <UpgradePrompt
+              nodeType={localNode()!.type}
+              nodeDisplayName={getNodeConfig(localNode()!.type).title}
+              nodeDescription={getNodeConfig(localNode()!.type).description}
+            />
           </Show>
 
-          {/* Configuration Tab */}
-          <Show when={activeTab() === 'config'}>
+          {/* Show configuration only if node is available */}
+          <Show when={isNodeAvailable()}>
+            {/* Validation Errors */}
+            <Show when={validationErrors().length > 0}>
+              <div class="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md">
+                <div class="flex items-center gap-2 mb-2">
+                  <AlertTriangle class="w-4 h-4 text-red-600 dark:text-red-400" />
+                  <span class="text-sm font-medium text-red-800 dark:text-red-200">
+                    Configuration Errors
+                  </span>
+                </div>
+                <ul class="text-sm text-red-700 dark:text-red-300 space-y-1">
+                  <For each={validationErrors()}>
+                    {(error) => <li>• {error}</li>}
+                  </For>
+                </ul>
+              </div>
+            </Show>
+
+            {/* Configuration Tab */}
+            <Show when={activeTab() === 'config'}>
+            {/* Logic Nodes - Conditional */}
+            <Show when={localNode()!.type === 'conditional'}>
+              <ConditionalNodeConfig
+                value={localNode()!.config as ConditionalConfig || DEFAULT_CONDITIONAL_CONFIG}
+                onChange={(config) => {
+                  setLocalNode({ ...localNode()!, config: config });
+                }}
+              />
+            </Show>
+
+            {/* Logic Nodes - Switch */}
+            <Show when={localNode()!.type === 'switch'}>
+              <SwitchNodeConfig
+                value={localNode()!.config as SwitchConfig || DEFAULT_SWITCH_CONFIG}
+                onChange={(config) => {
+                  setLocalNode({ ...localNode()!, config: config });
+                }}
+              />
+            </Show>
+
+            {/* HTTP Nodes */}
+            <Show when={['http-get', 'http-post', 'http-put', 'http-delete'].includes(localNode()!.type)}>
+              <HttpNodeConfig
+                value={localNode()!.config as HttpConfig || { ...DEFAULT_HTTP_CONFIG, method: localNode()!.type.split('-')[1].toUpperCase() as any }}
+                onChange={(config) => {
+                  setLocalNode({ ...localNode()!, config: config });
+                }}
+              />
+            </Show>
+
+            {/* Storage Nodes - KV */}
+            <Show when={['kv-get', 'kv-set'].includes(localNode()!.type)}>
+              <KVStoreNodeConfig
+                value={localNode()!.config as KVStoreConfig || (localNode()!.type === 'kv-get' ? DEFAULT_KV_GET_CONFIG : DEFAULT_KV_SET_CONFIG)}
+                onChange={(config) => {
+                  setLocalNode({ ...localNode()!, config: config });
+                }}
+                nodeType={localNode()!.type as 'kv-get' | 'kv-set'}
+              />
+            </Show>
+
+            {/* Trigger Nodes */}
+            <Show when={['trigger', 'webhook', 'schedule'].includes(localNode()!.type)}>
+              <TriggerNodeConfig
+                value={localNode()!.config as TriggerConfig || (
+                  localNode()!.type === 'trigger' ? DEFAULT_MANUAL_TRIGGER_CONFIG :
+                  localNode()!.type === 'webhook' ? DEFAULT_WEBHOOK_TRIGGER_CONFIG :
+                  DEFAULT_SCHEDULE_TRIGGER_CONFIG
+                )}
+                onChange={(config) => {
+                  setLocalNode({ ...localNode()!, config: config });
+                }}
+                triggerType={localNode()!.type as 'trigger' | 'webhook' | 'schedule'}
+              />
+            </Show>
+
+            {/* Docker Nodes */}
+            <Show when={localNode()!.type === 'docker-run'}>
+              <DockerNodeConfig
+                value={localNode()!.config as DockerConfig || DEFAULT_DOCKER_CONFIG}
+                onChange={(config) => {
+                  setLocalNode({ ...localNode()!, config: config });
+                }}
+              />
+            </Show>
+
+            {/* Generic Config Form for Other Node Types */}
+            <Show when={!hasDedicatedComponent(localNode()!.type)}>
             <div class="space-y-4">
               {/* Basic Settings */}
               <div class="space-y-3">
@@ -658,8 +866,42 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
             </div>
           </Show>
 
-          {/* Agent Configuration Tab */}
+          {/* Agent Configuration Tab - Using Shared AgentConfigForm */}
           <Show when={activeTab() === 'agent' && getNodeConfig(localNode()!.type).agentConfig}>
+            <AgentConfigForm
+              value={{
+                name: localNode()!.title || getNodeConfig(localNode()!.type).title,
+                description: localNode()!.description,
+                category: 'agents',
+                icon: '🤖',
+                modelId: localNode()!.agentConfig?.modelId || 'bedrock:anthropic.claude-3-5-sonnet-20241022-v2:0',
+                temperature: localNode()!.agentConfig?.temperature ?? 0.7,
+                maxTokens: localNode()!.agentConfig?.maxTokens ?? 2048,
+                systemPrompt: localNode()!.agentConfig?.systemPrompt,
+                requiresPrivacy: localNode()!.agentConfig?.requiresPrivacy ?? false
+              }}
+              onChange={(config: AgentConfigFormData) => {
+                const updated = {
+                  ...localNode()!,
+                  agentConfig: {
+                    ...localNode()!.agentConfig,
+                    modelId: config.modelId,
+                    temperature: config.temperature,
+                    maxTokens: config.maxTokens,
+                    systemPrompt: config.systemPrompt,
+                    requiresPrivacy: config.requiresPrivacy
+                  }
+                };
+                setLocalNode(updated);
+              }}
+              availableModels={props.availableModels?.map(m => ({ id: m, name: m }))}
+              showAdvanced={true}
+              mode="edit"
+            />
+          </Show>
+
+          {/* Old Agent Configuration Tab - Removed, replaced with shared form above */}
+          <Show when={false && activeTab() === 'agent' && getNodeConfig(localNode()!.type).agentConfig}>
             <div class="space-y-4">
               <div>
                 <div class="flex items-center justify-between mb-2">
@@ -891,6 +1133,7 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
                 </div>
               </div>
             </div>
+          </Show>
           </Show>
         </div>
 

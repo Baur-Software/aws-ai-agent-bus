@@ -299,12 +299,17 @@ export const WorkflowProvider: ParentComponent = (props) => {
           let workflowData = savedWorkflows;
 
           // If it's an object with a 'value' property, extract it
-          if (typeof savedWorkflows === 'object' && !Array.isArray(savedWorkflows) && savedWorkflows.value) {
+          if (typeof savedWorkflows === 'object' && !Array.isArray(savedWorkflows) && 'value' in savedWorkflows) {
             workflowData = savedWorkflows.value;
           }
 
+          // Check if workflowData is null or undefined
+          if (workflowData === null || workflowData === undefined) {
+            console.log('No workflows found - KV key exists but value is null/undefined');
+            workflowSummaries = [];
+          }
           // Now handle the actual workflow data
-          if (typeof workflowData === 'string') {
+          else if (typeof workflowData === 'string') {
             try {
               workflowSummaries = JSON.parse(workflowData);
             } catch (parseErr) {
@@ -352,63 +357,15 @@ export const WorkflowProvider: ParentComponent = (props) => {
           }
         }
 
-        // If no workflows found, add sample workflows for demonstration
+        // If no workflows found, return empty array
         if (workflowSummaries.length === 0) {
-          console.log('No workflows found, adding sample workflows for demonstration');
-          throw new Error('No workflows found - will use samples');
+          console.log('No workflows found - KV store returned empty');
+          workflowSummaries = [];
         }
       } catch (apiErr) {
-        console.warn('Real data loading failed, using sample workflows:', apiErr);
-
-        // Fallback to sample workflows
-        workflowSummaries = [
-          {
-            id: 'sample-workflow-1',
-            name: 'Customer Onboarding Flow',
-            description: 'Automated workflow for onboarding new customers with email sequences and task assignments',
-            context: 'user',
-            isPublic: false,
-            version: '1.2.0',
-            stats: {
-              starCount: 12,
-              forkCount: 3,
-              usageCount: 45,
-              lastUsed: new Date().toISOString()
-            },
-            metadata: {
-              createdAt: '2024-01-15T10:00:00Z',
-              updatedAt: new Date().toISOString(),
-              createdBy: user()?.id || 'demo-user',
-              nodeCount: 8,
-              tags: ['automation', 'onboarding', 'customer']
-            },
-            collaborators: [],
-            forkedFrom: undefined
-          },
-          {
-            id: 'sample-workflow-2',
-            name: 'Data Analysis Pipeline',
-            description: 'Automated data processing and analysis workflow with reporting features',
-            context: 'shared',
-            isPublic: true,
-            version: '2.1.0',
-            stats: {
-              starCount: 28,
-              forkCount: 7,
-              usageCount: 156,
-              lastUsed: '2024-01-20T14:30:00Z'
-            },
-            metadata: {
-              createdAt: '2023-12-10T09:00:00Z',
-              updatedAt: '2024-01-20T14:30:00Z',
-              createdBy: 'org-admin',
-              nodeCount: 15,
-              tags: ['data', 'analytics', 'reporting', 'template']
-            },
-            collaborators: [],
-            forkedFrom: undefined
-          }
-        ];
+        console.error('Failed to load workflows from KV store:', apiErr);
+        // Return empty array - UI should show "create your first workflow" state
+        workflowSummaries = [];
       }
 
       setWorkflows(workflowSummaries);

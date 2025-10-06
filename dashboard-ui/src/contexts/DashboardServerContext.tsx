@@ -487,11 +487,11 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
     return new Promise((resolve, reject) => {
       const messageId = `mcp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // Set up timeout (30 seconds for MCP tools to handle slow operations)
+      // Set up timeout (5 seconds for quick feedback, critical calls can retry)
       const timeout = setTimeout(() => {
         pendingRequests.delete(messageId);
-        reject(new Error(`MCP tool call '${tool}' timed out after 30s`));
-      }, 30000);
+        reject(new Error(`MCP tool call '${tool}' timed out after 5s - check MCP server connection`));
+      }, 5000);
 
       // Store the pending request
       pendingRequests.set(messageId, { resolve, reject, timeout });

@@ -2,6 +2,8 @@ import { createContext, useContext, createSignal, createMemo, JSX } from 'solid-
 import { useKVStore } from './KVStoreContext';
 import { useNotifications } from './NotificationContext';
 import { useOrganization } from './OrganizationContext';
+import { mcpRegistry } from '../services/MCPCapabilityRegistry';
+import type { MCPServerListing } from '../types/mcpCatalog';
 
 const ONE_YEAR_HOURS = 8760;
 
@@ -150,11 +152,21 @@ export function IntegrationsProvider(props: { children: JSX.Element }) {
       const storageKey = getStorageKey('connection', userId, integrationId, connectionId);
       await kvStore.set(storageKey, userConnection, ONE_YEAR_HOURS);
 
+      // Load the integration configuration to get metadata for MCP registry
+      const integrationConfig = await loadIntegrationConfig(integrationId, orgId, userId);
+
+      // Register with MCP capability registry to create agents and workflow nodes
+      if (integrationConfig) {
+        await registerIntegrationCapabilities(integrationId, integrationConfig);
+      }
+
       await publishIntegrationEvent(integrationId, 'connected', {
         connection_id: connectionId,
         service: integrationId,
         organization_id: orgId,
-        user_id: userId
+        user_id: userId,
+        has_agents: !!integrationConfig,
+        has_nodes: !!integrationConfig
       });
 
       await loadIntegrationConnections(integrationId);
@@ -175,6 +187,9 @@ export function IntegrationsProvider(props: { children: JSX.Element }) {
       const storageKey = getStorageKey('connection', userId, integrationId, connectionId);
       await kvStore.del(storageKey);
 
+      // Unregister from MCP capability registry
+      await mcpRegistry.unregisterApp(integrationId);
+
       await publishIntegrationEvent(integrationId, 'disconnected', {
         connection_id: connectionId,
         service: integrationId,
@@ -186,6 +201,101 @@ export function IntegrationsProvider(props: { children: JSX.Element }) {
       success(`Disconnected ${integrationId} successfully!`);
     } catch (err) {
       error(`Failed to disconnect integration: ${err.message}`);
+    }
+  };
+
+  // Helper function to load integration configuration from KV store
+  const loadIntegrationConfig = async (integrationId: string, orgId: string, userId: string): Promise<any | null> => {
+    try {
+      // Try org-specific config first
+      let configKey = `org-${orgId}-integration-${integrationId}`;
+      let config = await kvStore.get(configKey);
+
+      if (config) {
+        return config;
+      }
+
+      // Try user-specific config
+      configKey = `user-${userId}-integration-${integrationId}`;
+      config = await kvStore.get(configKey);
+
+      if (config) {
+        return config;
+      }
+
+      // Try global integration config
+      configKey = `integration-${integrationId}`;
+      config = await kvStore.get(configKey);
+
+      return config || null;
+    } catch (err) {
+      console.warn(`Failed to load integration config for ${integrationId}:`, err);
+      return null;
+    }
+  };
+
+  // Helper function to register integration capabilities with MCP registry
+  const registerIntegrationCapabilities = async (integrationId: string, config: any): Promise<void> => {
+    try {
+      // Convert integration config to MCPServerListing format
+      const serverListing: MCPServerListing = {
+        id: integrationId,
+        name: config.name || integrationId,
+        description: config.description || `Integration for ${config.name || integrationId}`,
+        publisher: config.publisher || 'User',
+        version: config.version || '1.0.0',
+
+        // Verification
+        isOfficial: config.isOfficial || false,
+        isSigned: config.isSigned || false,
+        verificationBadges: config.verificationBadges || [],
+
+        // Repository and metadata
+        repository: config.repository || config.serverUrl || config.docsUrl || '',
+        homepage: config.homepage || config.serverUrl || config.docsUrl,
+        documentation: config.documentation || config.docsUrl,
+        downloadCount: config.downloadCount || 0,
+        starCount: config.starCount || 0,
+        lastUpdated: new Date(config.updated_at || config.created_at || Date.now()),
+
+        // Categorization
+        category: config.category || 'Other',
+        tags: config.tags || [],
+
+        // Configuration
+        configurationSchema: config.ui_fields || config.fields || [],
+        authMethods: config.authMethods || ['none'],
+
+        // Runtime information
+        toolCount: config.toolCount || 0,
+        capabilities: config.capabilities || [],
+
+        // Workflow integration from config
+        workflowNodes: config.workflowNodes || [],
+        workflowNodeDetails: config.workflowNodeDetails || [],
+        specializedAgents: config.specializedAgents || [],
+        specializedAgentDetails: config.specializedAgentDetails || [],
+        nodeShapes: config.nodeShapes || [],
+        canExecuteAgents: config.canExecuteAgents !== false,
+        dataInputTypes: config.dataInputTypes || ['json'],
+        dataOutputTypes: config.dataOutputTypes || ['json'],
+
+        // Installation
+        installCommand: config.installCommand,
+        npmPackage: config.npmPackage,
+        dockerImage: config.dockerImage
+      };
+
+      // Register with MCP capability registry
+      await mcpRegistry.registerApp(serverListing);
+
+      console.log(`✅ Registered ${integrationId} with MCP capability registry:`, {
+        agents: mcpRegistry.getAgents().filter(a => a.serverId === integrationId).length,
+        nodes: mcpRegistry.getNodes(integrationId).length
+      });
+    } catch (err) {
+      console.error(`Failed to register integration capabilities for ${integrationId}:`, err);
+      throw err;
     }
   };
 

@@ -2,22 +2,28 @@ import { createSignal, createMemo, Show, createEffect, createResource } from 'so
 import { usePageHeader } from '../contexts/HeaderContext';
 import { useIntegrations } from '../contexts/IntegrationsContext';
 import { useOrganization } from '../contexts/OrganizationContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useEventDrivenAppConfigs } from '../hooks/useEventDrivenKV';
 import IntegrationsGrid from './IntegrationsGrid';
+import CustomMCPServerModal from './CustomMCPServerModal';
 import {
-  Settings, Shield, Building
+  Settings, Shield, Building, Plus
 } from 'lucide-solid';
 
 export default function IntegrationsSettings() {
   usePageHeader('Connected Apps', 'Connect external services and manage API connections');
 
   const integrations = useIntegrations();
-  const { currentOrganization } = useOrganization();
+  const { currentOrganization, user } = useOrganization();
+  const { user: authUser } = useAuth();
   const { loadConfigs } = useEventDrivenAppConfigs();
+  const [showCustomMCPModal, setShowCustomMCPModal] = createSignal(false);
 
   // Load app configs dynamically from KV store (integration-* keys)
   const [appConfigs] = createResource(async () => {
-    const configs = await loadConfigs();
+    const userId = authUser()?.userId || user()?.id || 'demo-user-123';
+    const orgId = currentOrganization()?.id;
+    const configs = await loadConfigs(userId, orgId);
     return configs || [];
   });
 
@@ -66,23 +72,37 @@ export default function IntegrationsSettings() {
                 Each connected app provides structured configuration for seamless automation.
               </p>
             </div>
-            <Show when={currentOrganization()}>
-              <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <Building class="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <div class="text-sm">
-                  <div class="font-medium text-blue-900 dark:text-blue-300">
-                    {currentOrganization()?.name}
-                  </div>
-                  <div class="text-blue-600 dark:text-blue-400 text-xs">
-                    Organization Context
+            <div class="flex items-center gap-3">
+              <button
+                class="btn btn-primary flex items-center gap-2"
+                onClick={() => setShowCustomMCPModal(true)}
+              >
+                <Plus class="w-4 h-4" />
+                Add Custom MCP Server
+              </button>
+              <Show when={currentOrganization()}>
+                <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <Building class="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <div class="text-sm">
+                    <div class="font-medium text-blue-900 dark:text-blue-300">
+                      {currentOrganization()?.name}
+                    </div>
+                    <div class="text-blue-600 dark:text-blue-400 text-xs">
+                      Organization Context
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Show>
+              </Show>
+            </div>
           </div>
         </div>
 
         <IntegrationsGrid integrations={availableIntegrations()} />
+
+        <CustomMCPServerModal
+          isOpen={showCustomMCPModal()}
+          onClose={() => setShowCustomMCPModal(false)}
+        />
 
         <div class="mt-8 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
           <div class="flex items-start gap-3">
