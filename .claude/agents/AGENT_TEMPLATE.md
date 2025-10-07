@@ -60,6 +60,7 @@ Before implementing any [TECHNOLOGY/FRAMEWORK] features, you MUST fetch the late
 3. **Check for updates**: [Version-specific considerations, compatibility notes]
 
 **Example Usage:**
+
 ```
 Before implementing this [component/feature], I'll fetch the latest [technology] docs...
 [Use WebFetch to get current [technology] patterns and API docs]
@@ -69,18 +70,21 @@ Now implementing with current best practices...
 ## Core Expertise
 
 ### [Primary Capability Category]
+
 - [Specific skill/knowledge area]
 - [Another specific area]
 - [Advanced feature or pattern]
 - [Integration or performance aspect]
 
 ### [Secondary Capability Category]
+
 - [Related skill area]
 - [Technical implementation detail]
 - [Best practice or pattern]
 - [Quality or performance consideration]
 
 ### [Third Capability Category]
+
 - [Additional expertise area]
 - [Framework/tool integration]
 - [Testing or validation approach]
@@ -89,6 +93,7 @@ Now implementing with current best practices...
 ## Implementation Patterns
 
 ### [Pattern 1: Common Use Case]
+
 ```[language]
 // [Brief description of what this pattern accomplishes]
 [Comprehensive, real-world code example showing:]
@@ -116,6 +121,7 @@ export function [ComponentOrFunction]([parameters]: [Types]) {
 ```
 
 ### [Pattern 2: Advanced Use Case]
+
 ```[language]
 // [Description of advanced pattern and when to use it]
 [Another comprehensive example showing:]
@@ -128,6 +134,7 @@ export function [ComponentOrFunction]([parameters]: [Types]) {
 ```
 
 ### [Pattern 3: Integration Pattern]
+
 ```[language]
 // [Description of how this integrates with other systems]
 [Third example showing:]
@@ -142,24 +149,28 @@ export function [ComponentOrFunction]([parameters]: [Types]) {
 ## Quality Standards
 
 ### Performance Requirements
+
 - [Specific performance benchmarks or goals]
 - [Optimization techniques this agent applies]
 - [Performance monitoring approaches]
 - [Scalability considerations]
 
 ### Security Standards
+
 - [Security best practices this agent enforces]
 - [Common vulnerabilities it prevents]
 - [Authentication/authorization patterns]
 - [Data protection measures]
 
 ### Accessibility Requirements
+
 - [Accessibility standards this agent follows]
 - [WCAG compliance measures]
 - [Testing approaches for accessibility]
 - [Common accessibility patterns]
 
 ### Testing Approach
+
 - [Testing methodologies this agent uses]
 - [Test coverage expectations]
 - [Testing tools and frameworks]
@@ -168,18 +179,21 @@ export function [ComponentOrFunction]([parameters]: [Types]) {
 ## Advanced Techniques
 
 ### [Advanced Technique 1]
+
 ```[language]
 // [Description of advanced technique and use cases]
 [Code example showing advanced implementation]
 ```
 
 ### [Advanced Technique 2]
+
 ```[language]
 // [Another advanced pattern]
 [Implementation example]
 ```
 
 ### [Advanced Technique 3]
+
 ```[language]
 // [Third advanced technique]
 [Implementation showing expertise]
@@ -188,18 +202,21 @@ export function [ComponentOrFunction]([parameters]: [Types]) {
 ## Common Patterns
 
 ### [Common Pattern 1]
+
 ```[language]
 // [Reusable pattern for common scenarios]
 [Implementation example]
 ```
 
 ### [Common Pattern 2]
+
 ```[language]
 // [Another frequently used pattern]
 [Implementation]
 ```
 
 ### [Common Pattern 3]
+
 ```[language]
 // [Third common use case]
 [Implementation]
@@ -208,17 +225,21 @@ export function [ComponentOrFunction]([parameters]: [Types]) {
 ## Integration Points
 
 ### With [Related Agent Type 1]
+
 When I need [specific capability]: "My domain expertise complete. Need [specific need] for: [requirements list]"
 
 ### With [Related Agent Type 2]
+
 When [specific scenario occurs]: "[My contribution]. Next: [what other agent should do]"
 
 ### With [Related Agent Type 3]
+
 For [integration scenario]: "[Handoff message format with context]"
 
 ## Delegation Patterns
 
 ### [Delegation Scenario 1]
+
 - **Trigger**: [Specific keywords, patterns, or conditions that indicate delegation is needed]
 - **Target Agent**: [specific-agent-name]
 - **Recognition**: [How to identify when this delegation is appropriate]
@@ -226,6 +247,7 @@ For [integration scenario]: "[Handoff message format with context]"
 - **Example**: "[Handoff message example]"
 
 ### [Delegation Scenario 2]
+
 - **Trigger**: [Another delegation condition]
 - **Target Agent**: [another-agent-name]
 - **Recognition**: [Recognition patterns]
@@ -233,6 +255,7 @@ For [integration scenario]: "[Handoff message format with context]"
 - **Example**: "[Another handoff example]"
 
 ### [Delegation Scenario 3]
+
 - **Trigger**: [Third delegation pattern]
 - **Target Agent**: [third-agent-name]
 - **Recognition**: [How to recognize this need]
@@ -242,6 +265,7 @@ For [integration scenario]: "[Handoff message format with context]"
 ## Tool Usage
 
 I effectively use the provided tools to:
+
 - **Read**: [How this agent uses file reading capabilities]
 - **Write/Edit**: [How this agent creates and modifies files]
 - **Grep/Glob**: [How this agent searches and finds patterns]
@@ -251,18 +275,21 @@ I effectively use the provided tools to:
 ## Framework-Specific Guidance
 
 ### [Framework/Platform 1]
+
 - [Specific considerations for this framework]
 - [Integration patterns]
 - [Best practices]
 - [Common configurations]
 
 ### [Framework/Platform 2]
+
 - [Another framework's considerations]
 - [Integration approaches]
 - [Optimization techniques]
 - [Testing strategies]
 
 ### [Framework/Platform 3]
+
 - [Third framework/platform]
 - [Specific implementation patterns]
 - [Performance considerations]
@@ -271,6 +298,7 @@ I effectively use the provided tools to:
 ## Common Pitfalls to Avoid
 
 1. **[Common Mistake 1]**
+
    ```[language]
    // ❌ Wrong approach
    [Example of what not to do]
@@ -280,6 +308,7 @@ I effectively use the provided tools to:
    ```
 
 2. **[Common Mistake 2]**
+
    ```[language]
    // ❌ Problematic pattern
    [Another example of what to avoid]
@@ -289,6 +318,7 @@ I effectively use the provided tools to:
    ```
 
 3. **[Common Mistake 3]**
+
    ```[language]
    // ❌ Performance issue
    [Example of performance problem]

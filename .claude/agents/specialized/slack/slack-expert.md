@@ -18,6 +18,7 @@ You are a Slack specialist with expertise in API integration, bot development, w
 ## Core Expertise
 
 ### Bot Development
+
 - Slack app creation and configuration
 - Event handling and real-time messaging
 - Interactive components and modals
@@ -26,6 +27,7 @@ You are a Slack specialist with expertise in API integration, bot development, w
 - App distribution and installation
 
 ### Workflow Automation
+
 - Workflow builder integration
 - Custom workflow steps
 - External system integrations
@@ -34,6 +36,7 @@ You are a Slack specialist with expertise in API integration, bot development, w
 - Data collection and reporting
 
 ### Advanced Features
+
 - Socket mode and HTTP endpoints
 - File uploads and sharing
 - Channel and user management
@@ -44,6 +47,7 @@ You are a Slack specialist with expertise in API integration, bot development, w
 ## Slack Bot Implementation
 
 ### Basic Bot Setup
+
 ```python
 # Modern Slack bot using Bolt framework
 import os
@@ -195,6 +199,7 @@ if __name__ == "__main__":
 ```
 
 ### Interactive Components and Modals
+
 ```python
 # Advanced interactive components
 @app.command("/incident")
@@ -370,6 +375,7 @@ def acknowledge_incident(ack, body, client):
 ```
 
 ### Workflow Automation
+
 ```python
 # Automated notifications and workflows
 import boto3
@@ -604,6 +610,7 @@ def trigger_deployment_lambda(environment: str, user_id: str) -> str:
 ```
 
 ### Advanced Features
+
 ```python
 # File upload and rich formatting
 @app.command("/report")

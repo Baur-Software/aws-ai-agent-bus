@@ -40,27 +40,35 @@ infra/
 ## Key Modules
 
 ### Agent Orchestration (`agent_orchestration/`)
+
 Manages Step Functions workflows that coordinate Claude agents:
+
 - **Conductor Agent**: Plans and coordinates multi-step tasks
 - **Critic Agent**: Reviews and validates agent outputs
 - **Sweeper Agent**: Cleans up resources and maintains system health
 
 ### Agent Compute (`agent_compute/`)
+
 Provides ECS Fargate tasks for running Claude agents:
+
 - Secure container execution with least-privilege IAM
 - Automatic scaling based on workload
 - Integration with MCP server infrastructure
 - Support for different "lanes" (read-only, dry-run, execute)
 
 ### Agent ML Features (`agent_ml_features/`)
+
 Optional Aurora PostgreSQL with pgvector for ML capabilities:
+
 - Vector similarity search
 - Embedding storage and retrieval
 - Semantic search across agent artifacts
 - ML model metadata storage
 
 ### Agent Integrations (`agent_integrations/`)
+
 Third-party service integrations:
+
 - **Stripe**: Payment processing workflows
 - **Supabase**: Database and auth integration
 - **Vercel**: Deployment pipeline integration
@@ -70,18 +78,21 @@ Third-party service integrations:
 Choose your deployment size based on requirements:
 
 ### Small Workspace (~$30-100/month)
+
 - Basic agent compute (3 agents: conductor, critic, sweeper)
 - Simple orchestration workflows
 - CloudWatch monitoring
 - Perfect for development and small teams
 
-### Medium Workspace (~$100-500/month) 
+### Medium Workspace (~$100-500/month)
+
 - Full agent orchestration with Step Functions
 - Enhanced monitoring and alerting
 - Multiple agent lanes (read-only, dry-run, execute)
 - Suitable for production workloads
 
 ### Large Workspace (~$500-1000+/month)
+
 - All medium features plus ML capabilities
 - Aurora pgvector for semantic search
 - Advanced analytics and reporting
@@ -91,13 +102,16 @@ Choose your deployment size based on requirements:
 ## Quick Start
 
 ### Prerequisites
+
 1. Deploy MCP server infrastructure first:
+
    ```bash
    cd ../mcp-server/terraform/workspaces/core
    terraform init && terraform apply
    ```
 
 2. Get MCP server outputs:
+
    ```bash
    terraform output mcp_server_config
    ```
@@ -105,6 +119,7 @@ Choose your deployment size based on requirements:
 ### Deploy Agents
 
 #### Small Deployment
+
 ```bash
 cd workspaces/small/agents
 terraform init
@@ -114,6 +129,7 @@ terraform apply \
 ```
 
 #### Medium Deployment
+
 ```bash
 cd workspaces/medium/mesh_agents
 terraform init
@@ -125,7 +141,9 @@ terraform apply \
 ## Agent Configuration
 
 ### Environment Variables
+
 Agents automatically receive MCP server configuration:
+
 ```bash
 AGENT_MESH_KV_TABLE=agent-mesh-dev-kv
 AGENT_MESH_ARTIFACTS_BUCKET=agent-mesh-dev-artifacts-abc123
@@ -134,6 +152,7 @@ AGENT_MESH_QUEUE_URL=https://sqs.us-west-2.amazonaws.com/.../agent-mesh-dev-subt
 ```
 
 ### Agent Lanes
+
 Agents operate in different "lanes" with increasing permissions:
 
 - **read_only**: Can read from MCP services, no write access
@@ -141,7 +160,9 @@ Agents operate in different "lanes" with increasing permissions:
 - **execute**: Full read/write access to make changes
 
 ### Agent Coordination
+
 Agents coordinate through the MCP server infrastructure:
+
 1. **State Storage**: DynamoDB for coordination state
 2. **Artifacts**: S3 for files and large data
 3. **Events**: EventBridge for async communication
@@ -162,12 +183,14 @@ Each specialized agent can be deployed using the agent compute module with speci
 ## Monitoring and Observability
 
 ### CloudWatch Integration
+
 - Automatic log aggregation for all agents
 - Custom metrics for agent performance
 - Alarms for failure conditions
 - Dashboards for operational visibility
 
 ### Tracing and Debugging
+
 - X-Ray integration for distributed tracing
 - Agent execution timelines in S3
 - Event correlation across services
@@ -176,12 +199,14 @@ Each specialized agent can be deployed using the agent compute module with speci
 ## Security
 
 ### IAM Security Model
+
 - Least-privilege access policies
 - Lane-based permission escalation
 - Secure secrets management
 - Audit logging for all actions
 
 ### Network Security
+
 - VPC isolation (optional)
 - Security groups with minimal access
 - Encryption in transit and at rest
@@ -190,12 +215,14 @@ Each specialized agent can be deployed using the agent compute module with speci
 ## Cost Optimization
 
 ### Resource Right-sizing
+
 - Fargate Spot for non-critical workloads
 - Automatic scaling based on demand
 - Scheduled scaling for predictable patterns
 - Reserved capacity for baseline workloads
 
 ### Storage Optimization
+
 - S3 Intelligent Tiering for artifacts
 - DynamoDB on-demand billing
 - CloudWatch log retention policies
@@ -204,6 +231,7 @@ Each specialized agent can be deployed using the agent compute module with speci
 ## Best Practices
 
 ### Agent Development
+
 1. Start with read-only lane for testing
 2. Use dry-run lane for validation
 3. Graduate to execute lane for production
@@ -211,6 +239,7 @@ Each specialized agent can be deployed using the agent compute module with speci
 5. Use structured logging
 
 ### Infrastructure Management
+
 1. Use separate environments (dev/staging/prod)
 2. Version your agent containers
 3. Monitor resource utilization
@@ -220,12 +249,14 @@ Each specialized agent can be deployed using the agent compute module with speci
 ## Troubleshooting
 
 ### Common Issues
+
 - **Permission Errors**: Check IAM roles and lane configuration
 - **Connectivity Issues**: Verify VPC and security group settings
 - **Performance Problems**: Review resource allocation and scaling
 - **Cost Overruns**: Implement budget alerts and right-sizing
 
 ### Debug Tools
+
 - CloudWatch Logs for agent output
 - X-Ray for distributed tracing  
 - Step Functions execution history

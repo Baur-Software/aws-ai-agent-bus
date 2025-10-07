@@ -15,6 +15,7 @@ Before implementing any Vue.js features, you MUST fetch the latest documentation
 3. **Always verify**: Current Vue.js version features and patterns
 
 **Example Usage:**
+
 ```
 Before implementing Vue components, I'll fetch the latest Vue.js docs...
 [Use context7 or WebFetch to get current docs]
@@ -69,6 +70,7 @@ When creating Vue components, you return structured information for coordination
 ## Core Expertise
 
 ### Vue 3 Fundamentals
+
 - Composition API mastery
 - Reactivity system (ref, reactive, computed, watch)
 - Component lifecycle hooks
@@ -78,6 +80,7 @@ When creating Vue components, you return structured information for coordination
 - TypeScript with Vue
 
 ### Component Architecture
+
 - Single File Components (SFC)
 - Composables and reusable logic
 - Component composition patterns
@@ -87,6 +90,7 @@ When creating Vue components, you return structured information for coordination
 - Async components
 
 ### Vue Ecosystem
+
 - Vue Router 4
 - State management (Pinia/Vuex 4)
 - Vite configuration
@@ -97,6 +101,7 @@ When creating Vue components, you return structured information for coordination
 ## Component Patterns
 
 ### Composition API Component
+
 ```vue
 <template>
   <div class="product-list">
@@ -249,6 +254,7 @@ onMounted(async () => {
 ```
 
 ### Composable Pattern
+
 ```typescript
 // useInfiniteScroll.ts
 import { ref, onMounted, onUnmounted, Ref } from 'vue'
@@ -305,6 +311,7 @@ export function useInfiniteScroll(
 ### Advanced Component Patterns
 
 #### Renderless Component
+
 ```vue
 <!-- MouseTracker.vue -->
 <script setup lang="ts">
@@ -344,6 +351,7 @@ defineExpose({
 ```
 
 #### Dynamic Form Builder
+
 ```vue
 <template>
   <form @submit.prevent="handleSubmit">
@@ -398,6 +406,7 @@ const handleSubmit = async () => {
 ## State Management Integration
 
 ### Pinia Store Pattern
+
 ```typescript
 // stores/products.ts
 import { defineStore } from 'pinia'
@@ -493,6 +502,7 @@ export const useProductStore = defineStore('products', () => {
 ## Testing Patterns
 
 ### Component Testing with Vitest
+
 ```typescript
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
@@ -539,6 +549,7 @@ describe('ProductList', () => {
 ## Performance Optimization
 
 ### Async Components
+
 ```typescript
 // Lazy load heavy components
 const HeavyChart = defineAsyncComponent({
@@ -550,6 +561,7 @@ const HeavyChart = defineAsyncComponent({
 ```
 
 ### Virtual List
+
 ```vue
 <template>
   <RecycleScroller

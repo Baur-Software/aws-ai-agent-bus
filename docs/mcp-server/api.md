@@ -9,12 +9,15 @@ The Agent Mesh MCP Server exposes tools through the Model Context Protocol for A
 ### 🔑 Key-Value Storage
 
 #### `mcp__aws__kv_get`
+
 Retrieve a value from DynamoDB by key.
 
 **Parameters:**
+
 - `key` (string, required): The key to retrieve
 
 **Returns:**
+
 ```json
 {
   "value": "stored-data",
@@ -24,6 +27,7 @@ Retrieve a value from DynamoDB by key.
 ```
 
 **Example:**
+
 ```javascript
 await mcpClient.request({
   method: 'tools/call',
@@ -35,14 +39,17 @@ await mcpClient.request({
 ```
 
 #### `mcp__aws__kv_set`
+
 Store a value in DynamoDB with optional TTL.
 
 **Parameters:**
+
 - `key` (string, required): The key to store
 - `value` (string, required): The value to store
 - `ttl_hours` (number, optional): Time to live in hours (default: 24)
 
 **Returns:**
+
 ```json
 {
   "success": true,
@@ -54,12 +61,15 @@ Store a value in DynamoDB with optional TTL.
 ### 🗂️ Artifact Management
 
 #### `mcp__aws__artifacts_list`
+
 List artifacts in S3 with optional prefix filtering.
 
 **Parameters:**
+
 - `prefix` (string, optional): Filter artifacts by prefix
 
 **Returns:**
+
 ```json
 {
   "artifacts": [
@@ -75,12 +85,15 @@ List artifacts in S3 with optional prefix filtering.
 ```
 
 #### `mcp__aws__artifacts_get`
+
 Download an artifact from S3.
 
 **Parameters:**
+
 - `key` (string, required): The artifact key
 
 **Returns:**
+
 ```json
 {
   "content": "base64-encoded-content",
@@ -94,14 +107,17 @@ Download an artifact from S3.
 ```
 
 #### `mcp__aws__artifacts_put`
+
 Upload an artifact to S3.
 
 **Parameters:**
+
 - `key` (string, required): The artifact key
 - `content` (string, required): The content to store
 - `content_type` (string, optional): MIME type (default: "text/plain")
 
 **Returns:**
+
 ```json
 {
   "success": true,
@@ -114,13 +130,16 @@ Upload an artifact to S3.
 ### 📊 Google Analytics
 
 #### `mcp__aws__ga_getTopPages`
+
 Get top performing pages from Google Analytics.
 
 **Parameters:**
+
 - `propertyId` (string, required): GA4 property ID
 - `days` (number, optional): Number of days to analyze (default: 30)
 
 **Returns:**
+
 ```json
 {
   "success": true,
@@ -143,13 +162,16 @@ Get top performing pages from Google Analytics.
 ```
 
 #### `mcp__aws__ga_getSearchConsoleData`
+
 Get Search Console keyword data.
 
 **Parameters:**
+
 - `siteUrl` (string, required): Website URL in Search Console  
 - `days` (number, optional): Number of days to analyze (default: 30)
 
 **Returns:**
+
 ```json
 {
   "success": true,
@@ -172,13 +194,16 @@ Get Search Console keyword data.
 ```
 
 #### `mcp__aws__ga_analyzeContentOpportunities`
+
 Analyze content opportunities combining GA and Search Console data.
 
 **Parameters:**
+
 - `propertyId` (string, required): GA4 property ID
 - `siteUrl` (string, required): Website URL in Search Console
 
 **Returns:**
+
 ```json
 {
   "success": true,
@@ -220,14 +245,17 @@ Analyze content opportunities combining GA and Search Console data.
 ```
 
 #### `mcp__aws__ga_generateContentCalendar`
+
 Generate a monthly content calendar based on analytics insights.
 
 **Parameters:**
+
 - `propertyId` (string, required): GA4 property ID
 - `siteUrl` (string, required): Website URL in Search Console
 - `targetMonth` (string, optional): Target month in YYYY-MM format
 
 **Returns:**
+
 ```json
 {
   "success": true,
@@ -265,14 +293,17 @@ Generate a monthly content calendar based on analytics insights.
 ### 📧 Event Management
 
 #### `mcp__aws__events_send`
+
 Send an event to EventBridge.
 
 **Parameters:**
+
 - `detailType` (string, required): The event type
 - `detail` (object, required): Event details
 - `source` (string, optional): Event source (default: "mcp-client")
 
 **Returns:**
+
 ```json
 {
   "eventId": "12345678-1234-5678-9012-123456789012",
@@ -284,13 +315,16 @@ Send an event to EventBridge.
 ### 🔄 Workflow Management
 
 #### `mcp__aws__workflow_start`
+
 Start a Step Functions workflow.
 
 **Parameters:**
+
 - `name` (string, required): The workflow name
 - `input` (object, optional): Input data for the workflow
 
 **Returns:**
+
 ```json
 {
   "executionArn": "arn:aws:states:us-west-2:123456789012:execution:MyWorkflow:execution-name",
@@ -300,12 +334,15 @@ Start a Step Functions workflow.
 ```
 
 #### `mcp__aws__workflow_status`
+
 Get workflow execution status.
 
 **Parameters:**
+
 - `executionArn` (string, required): The execution ARN
 
 **Returns:**
+
 ```json
 {
   "status": "RUNNING",
@@ -336,6 +373,7 @@ All tools return consistent error structures:
 ```
 
 ### Common Error Codes
+
 - `INVALID_PARAMETER`: Required parameter missing or invalid
 - `NOT_FOUND`: Requested resource not found
 - `ACCESS_DENIED`: Insufficient permissions
@@ -345,12 +383,16 @@ All tools return consistent error structures:
 ## Authentication
 
 ### AWS Services
+
 AWS services use IAM roles and credentials. Ensure your environment has:
+
 - Appropriate IAM permissions for DynamoDB, S3, EventBridge, Step Functions
 - AWS CLI configured or instance/container role
 
 ### Google Analytics
+
 Requires OAuth2 setup with service account or web application credentials:
+
 - Service account: Requires `private_key` and `client_email`
 - OAuth2: Requires `access_token` and `refresh_token`
 

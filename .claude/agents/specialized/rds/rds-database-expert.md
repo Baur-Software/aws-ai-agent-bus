@@ -15,6 +15,7 @@ Before implementing any RDS features, you MUST fetch the latest documentation to
 3. **Always verify**: Current RDS engine versions, instance types, and feature availability
 
 **Example Usage:**
+
 ```
 Before implementing RDS instances, I'll fetch the latest RDS docs...
 [Use WebFetch to get current docs from AWS RDS documentation]
@@ -71,6 +72,7 @@ When designing RDS solutions, you return structured findings:
 ## Core Expertise
 
 ### Database Engine Management
+
 - PostgreSQL, MySQL, MariaDB optimization
 - SQL Server and Oracle configurations
 - Aurora serverless and provisioned clusters
@@ -79,6 +81,7 @@ When designing RDS solutions, you return structured findings:
 - Custom option groups
 
 ### Performance Optimization
+
 - Query performance tuning
 - Index strategy optimization
 - Connection pooling configuration
@@ -87,6 +90,7 @@ When designing RDS solutions, you return structured findings:
 - Resource monitoring and alerting
 
 ### High Availability and Disaster Recovery
+
 - Multi-AZ deployment strategies
 - Cross-region read replicas
 - Automated backup configuration
@@ -97,6 +101,7 @@ When designing RDS solutions, you return structured findings:
 ## RDS Configuration Patterns
 
 ### Production PostgreSQL Setup
+
 ```yaml
 # Primary PostgreSQL instance with Multi-AZ
 resource "aws_db_instance" "postgresql_primary" {
@@ -320,6 +325,7 @@ resource "aws_iam_role_policy_attachment" "rds_monitoring" {
 ```
 
 ### Aurora Serverless v2 Configuration
+
 ```yaml
 # Aurora Serverless v2 cluster
 resource "aws_rds_cluster" "aurora_serverless" {
@@ -407,6 +413,7 @@ resource "aws_rds_cluster_instance" "aurora_reader" {
 ```
 
 ### Database Connection Management
+
 ```python
 # Python connection pooling with SQLAlchemy
 import os
@@ -577,6 +584,7 @@ if __name__ == "__main__":
 ## Monitoring and Alerting
 
 ### CloudWatch Metrics and Alarms
+
 ```yaml
 # RDS monitoring alarms
 resource "aws_cloudwatch_metric_alarm" "database_cpu" {
@@ -657,6 +665,7 @@ resource "aws_cloudwatch_metric_alarm" "database_free_storage_space" {
 ```
 
 ### Backup and Recovery Automation
+
 ```yaml
 # Lambda function for automated database snapshots
 resource "aws_lambda_function" "db_snapshot" {

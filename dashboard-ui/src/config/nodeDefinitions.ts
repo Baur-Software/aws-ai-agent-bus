@@ -289,57 +289,6 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
     }
   },
 
-  // Google Analytics
-  {
-    type: 'ga-top-pages',
-    name: 'GA: Top Pages',
-    description: 'Get top performing pages from Google Analytics',
-    category: 'analytics',
-    icon: '📊',
-    color: 'bg-orange-500',
-    requiresIntegration: 'google-analytics',
-    requiresCredentials: true,
-    configFields: [
-      { key: 'connectionId', label: 'Google Analytics Connection', type: 'credential', integrationId: 'google-analytics', required: true },
-      { key: 'days', label: 'Days', type: 'number', defaultValue: 30 },
-      { key: 'limit', label: 'Limit', type: 'number', defaultValue: 10 }
-    ],
-    defaultSampleOutput: {
-      pages: [
-        { page: '/blog/seo-guide-2025', views: 15234, users: 12450, avgTime: 245, bounceRate: 0.32 },
-        { page: '/products/analytics-tool', views: 9876, users: 8123, avgTime: 189, bounceRate: 0.45 },
-        { page: '/pricing', views: 7543, users: 6234, avgTime: 156, bounceRate: 0.38 },
-        { page: '/about', views: 5432, users: 4567, avgTime: 134, bounceRate: 0.41 },
-        { page: '/blog/content-marketing', views: 4321, users: 3456, avgTime: 298, bounceRate: 0.29 }
-      ],
-      timeframe: '30 days',
-      totalViews: 42406,
-      totalUsers: 34830
-    }
-  },
-  {
-    type: 'ga-search-data',
-    name: 'GA: Search Console Data',
-    description: 'Get search performance from Google Search Console',
-    category: 'analytics',
-    icon: '🔍',
-    color: 'bg-blue-500',
-    configFields: [
-      { key: 'days', label: 'Days', type: 'number', defaultValue: 30 }
-    ],
-    defaultSampleOutput: {
-      queries: [
-        { query: 'best seo tools', clicks: 1234, impressions: 45678, ctr: 0.027, position: 3.2 },
-        { query: 'content marketing tips', clicks: 987, impressions: 32145, ctr: 0.031, position: 2.8 },
-        { query: 'analytics platform', clicks: 765, impressions: 28934, ctr: 0.026, position: 4.1 }
-      ],
-      totalClicks: 2986,
-      totalImpressions: 106757,
-      avgCtr: 0.028,
-      avgPosition: 3.4
-    }
-  },
-
   // Data Transformation
   {
     type: 'json-parse',

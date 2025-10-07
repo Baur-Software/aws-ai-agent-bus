@@ -60,6 +60,7 @@ Before implementing any Django ORM features, you MUST fetch the latest Django do
 3. **Always verify**: Current Django ORM features and optimization techniques
 
 **Example Usage:**
+
 ```
 Before optimizing these queries, I'll fetch the latest Django ORM docs...
 [Use context7 or WebFetch to get current ORM optimization docs]
@@ -69,6 +70,7 @@ Now implementing with current best practices...
 ## Core Expertise
 
 ### Django ORM Mastery
+
 - QuerySet optimization
 - Select/prefetch related
 - Query expression and F objects
@@ -78,6 +80,7 @@ Now implementing with current best practices...
 - Window functions
 
 ### Database Design
+
 - Model relationships optimization
 - Index strategies
 - Database constraints
@@ -87,6 +90,7 @@ Now implementing with current best practices...
 - Time-series data
 
 ### Performance Optimization
+
 - Query profiling
 - N+1 query prevention
 - Bulk operations
@@ -96,6 +100,7 @@ Now implementing with current best practices...
 - Read replicas
 
 ### Advanced Features
+
 - Complex aggregations
 - Subqueries and EXISTS
 - CTEs (Common Table Expressions)
@@ -107,6 +112,7 @@ Now implementing with current best practices...
 ## Query Optimization Patterns
 
 ### Efficient QuerySet Usage
+
 ```python
 from django.db.models import (
     F, Q, Count, Sum, Avg, Max, Min, 
@@ -313,6 +319,7 @@ class OrderQueryOptimizer:
 ```
 
 ### Advanced Aggregations
+
 ```python
 from django.db.models import Window, F, RowRange
 from django.db.models.functions import Lag, Lead, Rank, DenseRank
@@ -413,6 +420,7 @@ class AnalyticsQueries:
 ```
 
 ### Database Schema Optimization
+
 ```python
 # models.py with optimized indexes and constraints
 
@@ -535,6 +543,7 @@ def create_order_partitions():
 ```
 
 ### Query Profiling and Debugging
+
 ```python
 import time
 from django.db import connection
@@ -628,6 +637,7 @@ class QueryOptimizationMiddleware:
 ```
 
 ### Bulk Operations
+
 ```python
 from django.db import transaction
 from django.db.models import F
@@ -681,6 +691,7 @@ class BulkOperations:
 ```
 
 ### Raw SQL When Needed
+
 ```python
 from django.db import connection
 

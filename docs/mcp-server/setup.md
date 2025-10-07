@@ -7,13 +7,16 @@ This guide covers complete setup of the Agent Mesh MCP Server including AWS infr
 ## Prerequisites
 
 ### System Requirements
+
 - **Node.js**: 18.x LTS or higher
 - **npm**: 8.0.0 or higher
 - **AWS CLI**: 2.x configured with appropriate permissions
 - **Terraform**: 1.0+ (for infrastructure deployment)
 
 ### AWS Permissions
+
 Your AWS credentials need the following permissions:
+
 ```json
 {
   "Version": "2012-10-17",
@@ -57,11 +60,13 @@ npm test
 ### 2. Environment Configuration
 
 Create your environment file:
+
 ```bash
 cp .env.example .env
 ```
 
 Configure the following variables in `.env`:
+
 ```bash
 # AWS Configuration
 AWS_REGION=us-west-2
@@ -84,9 +89,11 @@ LOG_LEVEL=info
 ### 3. AWS Infrastructure Setup
 
 #### Option A: Use Existing Infrastructure
+
 If you have AWS resources already deployed, update `.env` with your resource names.
 
 #### Option B: Deploy with Terraform
+
 ```bash
 # Navigate to infrastructure
 cd ../infra
@@ -122,6 +129,7 @@ npm run dev
    - Create new project or select existing: `your-project-name`
 
 2. **Enable APIs**
+
    ```bash
    # Enable required APIs
    gcloud services enable analyticsdata.googleapis.com
@@ -137,6 +145,7 @@ npm run dev
 ### Step 2: OAuth2 Flow Implementation
 
 #### Web Application Credentials
+
 For server-to-server access, use service account credentials:
 
 ```json
@@ -153,9 +162,11 @@ For server-to-server access, use service account credentials:
 ```
 
 #### OAuth2 Web Flow (Interactive)
+
 For user-authenticated access:
 
 1. **Generate Authorization URL**
+
    ```javascript
    const authUrl = oauth2Client.generateAuthUrl({
      access_type: 'offline',
@@ -168,12 +179,14 @@ For user-authenticated access:
    ```
 
 2. **Exchange Authorization Code**
+
    ```javascript
    const { tokens } = await oauth2Client.getToken(authorizationCode);
    oauth2Client.setCredentials(tokens);
    ```
 
 3. **Store Tokens Securely**
+
    ```json
    {
      "client_id": "your-client-id",
@@ -313,6 +326,7 @@ CLOUDWATCH_LOGS_GROUP=/aws/mcp/agent-mesh
 ### Common Issues
 
 #### 1. AWS Credentials Not Found
+
 ```bash
 # Check AWS credentials
 aws sts get-caller-identity
@@ -322,11 +336,13 @@ aws configure --profile your-profile
 ```
 
 #### 2. Google Analytics Access Denied
+
 - Verify service account has proper permissions
 - Check credentials in Secrets Manager
 - Ensure APIs are enabled in Google Cloud Console
 
 #### 3. DynamoDB Access Issues
+
 ```bash
 # Test DynamoDB access
 aws dynamodb describe-table --table-name agent-mesh-dev-kv
@@ -339,6 +355,7 @@ aws iam simulate-principal-policy \
 ```
 
 #### 4. EventBridge Events Not Delivered
+
 - Verify EventBridge bus exists
 - Check IAM permissions for `events:PutEvents`
 - Review CloudWatch Logs for errors
@@ -365,6 +382,7 @@ DEBUG=mcp:*,aws:* npm start
 ## Next Steps
 
 After setup, refer to:
+
 - [API Documentation](./API.md) for tool usage
 - [Examples](../examples/) for integration patterns
 - [Contributing Guide](../CONTRIBUTING.md) for development

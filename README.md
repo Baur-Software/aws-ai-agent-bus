@@ -40,6 +40,7 @@ A comprehensive workflow automation platform:
 ### Data Architecture
 
 **Agent Storage**:
+
 ```
 S3: agents/
 ├── public/system/              # Bootstrap agents from .claude/agents
@@ -52,6 +53,7 @@ S3: agents/
 ```
 
 **Multi-Tenant Context**:
+
 - **Organizations**: Multiple users, shared resources, admin controls
 - **Users**: Individual workspaces, private agents, personal integrations
 - **MCP Tenant Isolation**: Each user/org has isolated MCP server context
@@ -105,19 +107,23 @@ npm run tf:apply
 ### **Human-in-the-Loop Operations**
 
 **Financial Approval Workflows**:
+
 ```
 API Request → Data Validation → Human Approval → Payment Processing → Notification
     🤖             🤖               👤                🤖               🤖
 ```
+
 - Finance manager gets Slack notification for payments >$10k
 - Mobile-friendly approval with full context
 - Automatic escalation if no response within 2 hours
 
 **Customer Onboarding with Review**:
+
 ```
 Form Submission → Data Enrichment → Compliance Check → Manual Review → Account Creation
       🤖               🤖               🤖             👤              🤖
 ```
+
 - Compliance officer reviews flagged applications
 - Customizable notification preferences per person
 - Real-time workflow state visible to all stakeholders
@@ -125,12 +131,14 @@ Form Submission → Data Enrichment → Compliance Check → Manual Review → A
 ### **Auto-Generated Integration Workflows**
 
 **Connect Stripe → Instant Specialized Agents**:
+
 1. User connects Stripe MCP server to tenant context
 2. System auto-generates: `stripe-payments-expert`, `stripe-webhooks-specialist`, `stripe-subscriptions-manager`
 3. Workflow nodes populate with Stripe capabilities
 4. Pre-built payment processing workflows become available
 
 **GitHub Integration → Development Workflows**:
+
 1. Connect GitHub MCP server
 2. Auto-generate: `github-pr-manager`, `github-deployment-specialist`, `github-issue-tracker`
 3. CI/CD workflow templates with human review gates
@@ -139,11 +147,13 @@ Form Submission → Data Enrichment → Compliance Check → Manual Review → A
 ### **Multi-Tenant Agent Management**
 
 **Organization-Level Sharing**:
+
 - `acme-corp` creates custom `salesforce-lead-qualifier` agent
 - Available to all `acme-corp` users in workflow designer
 - Version controlled with change logs
 
 **Personal Agent Development**:
+
 - Individual users create private specialized agents
 - Fork organization agents for personal customization
 - Markdown editor with live preview and templates

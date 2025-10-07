@@ -3,9 +3,11 @@
 ## 📊 Overall Progress: Phases 1-3 Complete, Phase 4 Engine Ready
 
 ### ✅ Phase 1: Complete MCP Event Tools (Rust Backend) - **DONE**
+
 **Status**: 26/26 tests passing
 
 All 5 MCP event handlers implemented in Rust:
+
 - `events_send` - Publish events to EventBridge → DynamoDB
 - `events_query` - Query historical events from DynamoDB
 - `events_analytics` - Generate analytics (volume, priority, sources, types)
@@ -14,6 +16,7 @@ All 5 MCP event handlers implemented in Rust:
 - `events_health_check` - Check event system health
 
 **Files**:
+
 - `mcp-rust/src/rest/events_send.rs`
 - `mcp-rust/src/rest/events_query.rs`
 - `mcp-rust/src/rest/events_analytics.rs`
@@ -24,9 +27,11 @@ All 5 MCP event handlers implemented in Rust:
 ---
 
 ### ✅ Phase 2: Dashboard-Server Event Hub Enhancement - **DONE**
+
 **Status**: Central pub/sub system complete
 
 Transformed dashboard-server into full event hub:
+
 - WebSocket pub/sub with pattern matching (`*`, `workflow.*`)
 - Tenant isolation (userId/organizationId filtering)
 - EventBridge persistence via MCP `events_send`
@@ -34,10 +39,12 @@ Transformed dashboard-server into full event hub:
 - Event rule processing (SNS, webhooks, workflow triggers)
 
 **Files**:
+
 - `dashboard-server/src/handlers/events.ts` - EventsHandler class (364 lines)
 - `dashboard-server/src/websocket/handlers.ts` - subscribe_events, publish_event handlers
 
 **Event Flow**:
+
 ```
 Client → WebSocket → EventsHandler.publish() → [EventBridge, WebSocket Broadcast, SNS]
                                                     ↓
@@ -47,9 +54,11 @@ Client → WebSocket → EventsHandler.publish() → [EventBridge, WebSocket Bro
 ---
 
 ### ✅ Phase 3: Events.tsx - Remove Mocks, Use Real Data - **DONE**
+
 **Status**: Real-time event streaming active
 
 Completely rewrote Events.tsx (605 lines):
+
 - **Removed**: 150+ lines of mock data
 - **Added**: Real-time WebSocket event subscription
 - **Added**: MCP `events_query` for historical events
@@ -59,9 +68,11 @@ Completely rewrote Events.tsx (605 lines):
 - **Fixed**: Proper null checking for analytics data
 
 **Files**:
+
 - `dashboard-ui/src/pages/Events.tsx` - Live Events + Analytics tabs
 
 **Features**:
+
 - Real-time event feed (sub-100ms updates)
 - Historical event pagination (100 events)
 - 4 analytics charts (volume, priority, top sources, event types)
@@ -71,11 +82,13 @@ Completely rewrote Events.tsx (605 lines):
 ---
 
 ### ✅ Phase 4: Workflow Engine Event Emission - **ENGINE READY**
+
 **Status**: Event emission implemented, awaiting UI integration
 
 #### Completed Work
 
 **1. Simple WorkflowEngine Enhancement**
+
 - File: `dashboard-ui/src/utils/workflowEngine.ts`
 - Constructor now accepts `eventEmitter` (dashboard server sendMessage)
 - Added `emitEvent()` method for publishing to EventBridge
@@ -88,6 +101,7 @@ Completely rewrote Events.tsx (605 lines):
   - `workflow.node.data_flowing` (for edge animation)
 
 **2. ModularWorkflowEngine EventBridge Bridge**
+
 - File: `dashboard-ui/src/workflow/index.ts`
 - Created `createDashboardEventEmitter()` helper
 - Bridges EventEmitter interface to EventBridge pub/sub
@@ -95,6 +109,7 @@ Completely rewrote Events.tsx (605 lines):
 - Drop-in replacement for default event emitter
 
 **3. Comprehensive Documentation**
+
 - File: `dashboard-ui/PHASE4_WORKFLOW_EVENTS.md`
 - Implementation guide
 - Event types reference table
@@ -104,12 +119,14 @@ Completely rewrote Events.tsx (605 lines):
 #### Remaining Work for Phase 4
 
 **UI Integration Required**:
+
 1. Add workflow execution trigger in Canvas.tsx
 2. Pass `sendMessage` to WorkflowEngine constructor
 3. Add execution controls (run, stop, status)
 4. Test event flow end-to-end
 
 **Example Integration**:
+
 ```typescript
 // In Canvas.tsx or WorkflowContext.tsx
 import { WorkflowEngine } from '../utils/workflowEngine';
@@ -131,15 +148,18 @@ const runWorkflow = async () => {
 ---
 
 ### 🚧 Phase 5: Real-Time Canvas Visualization - **PENDING**
+
 **Status**: Awaiting Phase 4 UI integration
 
 **What's Needed**:
+
 1. Subscribe to workflow events in Canvas.tsx
 2. Update node visuals based on state changes
 3. Animate edges during data flow
 4. Show output inspector on completion
 
 **Event Subscriptions**:
+
 ```typescript
 // In Canvas.tsx
 onMount(() => {
@@ -165,6 +185,7 @@ const handleWorkflowEvent = (event) => {
 ```
 
 **Visual Effects**:
+
 - Node border colors: gray (pending) → blue (executing) → green (completed) → red (failed)
 - Edge animation: Particles flowing from source to target
 - Output inspector: Expandable JSON viewer
@@ -173,15 +194,18 @@ const handleWorkflowEvent = (event) => {
 ---
 
 ### 🚧 Phase 6: FloatingNodePanel Integration - **PENDING**
+
 **Status**: Awaiting Phase 4 & 5 completion
 
 **What's Needed**:
+
 1. Dynamic MCP node generation from tool schemas
 2. Dynamic agent node generation from S3 markdown files
 3. Custom shape nodes from S3
 4. Seed with `.claude/agents` defaults
 
 **MCP Tool → Node Mapping**:
+
 ```typescript
 const mcpTools = await callMCPTool('list_tools');
 const dynamicNodes = mcpTools.map(tool => ({
@@ -195,6 +219,7 @@ const dynamicNodes = mcpTools.map(tool => ({
 ```
 
 **Agent → Node Mapping**:
+
 ```typescript
 const agentFiles = await callMCPTool('artifacts_list', { prefix: 'agents/' });
 const agentNodes = agentFiles.map(agent => ({
@@ -209,9 +234,11 @@ const agentNodes = agentFiles.map(agent => ({
 ---
 
 ### 🚧 Phase 7: SolidJS Specialist Review - **PENDING**
+
 **Status**: Final optimization pass
 
 **Review Areas**:
+
 1. Signal composition patterns
 2. Reactive effect cleanup
 3. Memory leak prevention
@@ -299,18 +326,21 @@ const agentNodes = agentFiles.map(agent => ({
 ## 🎯 Next Steps
 
 ### Immediate (Complete Phase 4)
+
 1. Wire WorkflowEngine into Canvas.tsx
 2. Add "Run Workflow" button
 3. Test event flow end-to-end
 4. Verify events appear in Events panel
 
 ### Short-term (Phase 5)
+
 1. Subscribe to workflow events in Canvas
 2. Implement node state visualization
 3. Add edge animation
 4. Build output inspector
 
 ### Medium-term (Phase 6-7)
+
 1. Dynamic MCP/agent node generation
 2. Custom shape nodes from S3
 3. SolidJS optimization review

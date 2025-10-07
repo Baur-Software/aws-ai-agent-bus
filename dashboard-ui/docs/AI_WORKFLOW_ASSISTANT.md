@@ -1,11 +1,13 @@
 # AI Workflow Assistant - Implementation Plan
 
 ## Overview
+
 An AI-powered workflow design assistant that helps users create workflows through natural language conversation using Claude via AWS Bedrock.
 
 ## User Experience Flow
 
 ### 1. Opening the Assistant
+
 - **UI**: Floating chat button (bottom-right of canvas)
 - **States**:
   - `launcher`: Collapsed button with notification dot
@@ -13,6 +15,7 @@ An AI-powered workflow design assistant that helps users create workflows throug
   - `planning`: Full-screen planning mode with workflow preview
 
 ### 2. Conversation Example
+
 ```
 User: "Create a workflow that monitors my top Google Analytics pages daily and posts them to Slack"
 
@@ -37,11 +40,13 @@ Would you like me to:
 ```
 
 ### 3. Deep Linking
+
 - AI can generate links: `[Install Slack →](/apps/slack)`
 - Links open apps tab and pre-filter to specific app
 - One-click connection flow
 
 ### 4. Planning Mode
+
 - Split screen: AI chat on left, workflow canvas preview on right
 - Live editing: User can drag/drop nodes while chatting
 - AI updates suggestions based on manual changes
@@ -51,9 +56,11 @@ Would you like me to:
 ### Frontend Components
 
 #### 1. CollapsibleAgentChat (existing, needs fixes)
+
 **Location**: `dashboard-ui/src/components/workflow/ui/CollapsibleAgentChat.tsx`
 **State Management**: WorkflowUIContext
 **Missing Properties**:
+
 ```typescript
 // Add to WorkflowUIState interface:
 agentChatState: () => 'launcher' | 'agentchat' | 'planning';
@@ -65,12 +72,15 @@ setIsAgentChatPinned: (pinned: boolean) => void;
 ```
 
 #### 2. AgentChat (existing, needs API wiring)
+
 **Location**: `dashboard-ui/src/components/AgentChat.tsx`
 **Current Issues**:
+
 - References `agents` property that doesn't exist in DashboardServerContext
 - Needs to use ChatService API instead
 
 **Required Changes**:
+
 ```typescript
 // Remove:
 const { agents } = useDashboardServer(); // ❌ doesn't exist
@@ -86,19 +96,23 @@ chat: {
 ### Backend Services
 
 #### 1. ChatService (existing, ready to use!)
+
 **Location**: `dashboard-server/src/services/ChatService.ts`
 **Already Has**:
+
 - ✅ Bedrock integration
 - ✅ Session management
 - ✅ Message history
 - ✅ MCP tool integration
 
 **Needs**:
+
 - WebSocket handler integration
 - Workflow generation system prompt
 - Response parsing for workflow JSON
 
 #### 2. WebSocket Message Handlers (new)
+
 **Location**: `dashboard-server/src/websocket/chatHandler.ts` (create)
 
 ```typescript
@@ -116,7 +130,9 @@ interface ChatMessages {
 ```
 
 #### 3. Workflow Generation Prompt
+
 **System Prompt** (added to ChatService):
+
 ```typescript
 const WORKFLOW_ASSISTANT_PROMPT = `You are an AI workflow design assistant.
 Help users create automation workflows using available MCP tools and integrations.
@@ -147,6 +163,7 @@ Be conversational and helpful!`;
 ## Implementation Phases
 
 ### Phase 1: Fix Broken UI (1-2 hours)
+
 - [x] Document architecture
 - [ ] Add missing properties to WorkflowUIContext
 - [ ] Add `chat` API to DashboardServerContext
@@ -154,6 +171,7 @@ Be conversational and helpful!`;
 - [ ] Test: Chat panel opens/closes without crashing
 
 ### Phase 2: Wire Up Bedrock (2-3 hours)
+
 - [ ] Create `chatHandler.ts` WebSocket handlers
 - [ ] Add workflow generation system prompt to ChatService
 - [ ] Integrate ChatService with WebSocket server
@@ -161,6 +179,7 @@ Be conversational and helpful!`;
 - [ ] Test: Send message, get Claude response
 
 ### Phase 3: Workflow Generation (3-4 hours)
+
 - [ ] Parse Claude responses for workflow JSON
 - [ ] Add workflow preview in planning mode
 - [ ] Implement "Create Workflow" button
@@ -168,6 +187,7 @@ Be conversational and helpful!`;
 - [ ] Test: Full workflow generation flow
 
 ### Phase 4: Deep Linking & Polish (2-3 hours)
+
 - [ ] Parse AI responses for app links
 - [ ] Implement app navigation from chat
 - [ ] Add workflow editing in planning mode
@@ -177,6 +197,7 @@ Be conversational and helpful!`;
 ## Total Estimate: 8-12 hours of focused work
 
 ## Success Criteria
+
 1. ✅ Chat panel opens without errors
 2. ✅ User can send messages and get Claude responses
 3. ✅ AI understands available MCP tools and apps
@@ -186,6 +207,7 @@ Be conversational and helpful!`;
 7. ✅ Planning mode shows live preview
 
 ## Future Enhancements
+
 - Workflow templates library
 - Multi-step workflow refinement
 - Cost estimation before creating

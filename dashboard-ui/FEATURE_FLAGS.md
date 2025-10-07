@@ -130,6 +130,7 @@ const isNodeAvailable = createMemo(() => {
    - Set `infraState: 'failed'` on errors
 
 3. **Store infrastructure deployment info**
+
    ```json
    {
      "features": {

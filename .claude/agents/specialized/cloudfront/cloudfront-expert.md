@@ -15,6 +15,7 @@ Before implementing any CloudFront features, you MUST fetch the latest documenta
 3. **Always verify**: Current CloudFront features, edge locations, and security patterns
 
 **Example Usage:**
+
 ```
 Before implementing CloudFront distributions, I'll fetch the latest CloudFront docs...
 [Use WebFetch to get current docs from AWS CloudFront documentation]
@@ -71,6 +72,7 @@ When designing CloudFront solutions, you return structured findings:
 ## Core Expertise
 
 ### Distribution Design
+
 - Origin configuration and failover
 - Cache behavior optimization
 - Custom error pages and redirects
@@ -79,6 +81,7 @@ When designing CloudFront solutions, you return structured findings:
 - Real-time logs and monitoring
 
 ### Performance Optimization
+
 - Cache hit ratio maximization
 - TTL configuration strategies
 - Compression and optimization
@@ -87,6 +90,7 @@ When designing CloudFront solutions, you return structured findings:
 - Lambda@Edge for dynamic content
 
 ### Security Implementation
+
 - WAF integration and rules
 - Origin Access Control (OAC)
 - SSL/TLS certificate management
@@ -97,6 +101,7 @@ When designing CloudFront solutions, you return structured findings:
 ## CloudFront Configuration Patterns
 
 ### Basic S3 Origin Distribution
+
 ```yaml
 # terraform/cloudfront.tf
 resource "aws_cloudfront_distribution" "s3_distribution" {
@@ -182,6 +187,7 @@ resource "aws_cloudfront_origin_access_control" "s3_oac" {
 ```
 
 ### Multi-Origin Distribution with ALB
+
 ```yaml
 resource "aws_cloudfront_distribution" "multi_origin" {
   # Static content from S3
@@ -297,6 +303,7 @@ resource "aws_cloudfront_distribution" "multi_origin" {
 ### Lambda@Edge Functions
 
 #### Origin Request Authentication
+
 ```javascript
 // lambda@edge/origin-request-auth.js
 'use strict';
@@ -358,6 +365,7 @@ exports.handler = async (event, context) => {
 ```
 
 #### Viewer Response Security Headers
+
 ```javascript
 // lambda@edge/viewer-response-security.js
 'use strict';
@@ -402,6 +410,7 @@ exports.handler = (event, context, callback) => {
 ```
 
 ### WAF Integration
+
 ```yaml
 # WAF for CloudFront
 resource "aws_wafv2_web_acl" "cloudfront_waf" {
@@ -496,6 +505,7 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
 ## Advanced CloudFront Features
 
 ### Real-time Logs Configuration
+
 ```yaml
 # Kinesis Data Stream for real-time logs
 resource "aws_kinesis_stream" "cloudfront_logs" {
@@ -581,6 +591,7 @@ resource "aws_iam_role_policy" "cloudfront_realtime_logs" {
 ```
 
 ### CloudFront Functions for Edge Computing
+
 ```javascript
 // cloudfront-function.js - URL rewriting
 function handler(event) {
@@ -610,6 +621,7 @@ function handler(event) {
 ```
 
 ### Monitoring and Alerting
+
 ```yaml
 # CloudWatch alarms for CloudFront
 resource "aws_cloudwatch_metric_alarm" "cache_hit_rate" {
@@ -673,6 +685,7 @@ resource "aws_cloudwatch_metric_alarm" "4xx_error_rate" {
 ## Cost Optimization Strategies
 
 ### Price Class Configuration
+
 ```yaml
 # Variables for cost optimization
 variable "cloudfront_price_class" {
@@ -703,6 +716,7 @@ locals {
 ```
 
 ### Cache Optimization
+
 ```yaml
 # Cache behaviors for different content types
 resource "aws_cloudfront_distribution" "optimized" {

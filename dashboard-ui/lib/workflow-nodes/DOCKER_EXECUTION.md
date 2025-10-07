@@ -3,6 +3,7 @@
 ## Problem Statement
 
 AWS Lambda **cannot run arbitrary Docker containers** during execution. Lambda supports:
+
 - ✅ Being deployed **as** a container image
 - ❌ Running Docker containers **inside** Lambda execution
 
@@ -11,6 +12,7 @@ AWS Lambda **cannot run arbitrary Docker containers** during execution. Lambda s
 ### Option 1: AWS Fargate (Recommended for Workflows)
 
 **Architecture:**
+
 ```
 Workflow Execution → Step Functions → ECS Fargate Task
                                     ↓
@@ -20,6 +22,7 @@ Workflow Execution → Step Functions → ECS Fargate Task
 ```
 
 **Pros:**
+
 - Run any Docker image
 - Full container capabilities (volumes, networking, etc.)
 - Scales automatically
@@ -27,11 +30,13 @@ Workflow Execution → Step Functions → ECS Fargate Task
 - No infrastructure management
 
 **Cons:**
+
 - Cold start ~30-60 seconds
 - More expensive than Lambda for short tasks
 - Minimum 1 vCPU / 2GB RAM
 
 **Implementation:**
+
 ```typescript
 // Workflow engine would call Step Functions
 const params = {
@@ -56,6 +61,7 @@ await ecs.runTask(params).promise();
 ### Option 2: AWS Batch
 
 **Architecture:**
+
 ```
 Workflow Execution → AWS Batch Job → EC2/Fargate
                                     ↓
@@ -63,12 +69,14 @@ Workflow Execution → AWS Batch Job → EC2/Fargate
 ```
 
 **Pros:**
+
 - Optimized for batch/long-running jobs
 - Automatic scaling and job queuing
 - Spot instance support for cost savings
 - Job dependencies and array jobs
 
 **Cons:**
+
 - More complex setup
 - Higher cold start for EC2-based jobs
 - Overkill for simple workflows
@@ -76,6 +84,7 @@ Workflow Execution → AWS Batch Job → EC2/Fargate
 ### Option 3: Lambda + ECS Trigger (Hybrid)
 
 **Architecture:**
+
 ```
 Workflow Node → Lambda (Orchestrator) → Trigger ECS Task
      ↓                                        ↓
@@ -87,11 +96,13 @@ Retrieve Results from S3/EventBridge
 ```
 
 **Pros:**
+
 - Lambda stays responsive (doesn't block)
 - Full Docker capabilities
 - Can handle long-running containers
 
 **Cons:**
+
 - Async execution adds complexity
 - Need result storage mechanism
 - Polling or event-driven architecture required
@@ -99,6 +110,7 @@ Retrieve Results from S3/EventBridge
 ### Option 4: Self-Hosted Docker Runner (Enterprise)
 
 **Architecture:**
+
 ```
 Workflow → API Gateway → Docker Host (EC2/EKS)
                               ↓
@@ -108,12 +120,14 @@ Workflow → API Gateway → Docker Host (EC2/EKS)
 ```
 
 **Pros:**
+
 - Full control over Docker daemon
 - Can use advanced features (DinD, privileged mode)
 - Persistent storage options
 - Custom networking
 
 **Cons:**
+
 - Infrastructure to manage
 - Need to handle scaling
 - Security considerations (Docker daemon access)
@@ -213,10 +227,12 @@ export class DockerExecutor {
 For volumes and ports, we need additional infrastructure:
 
 **Volumes:**
+
 - Use EFS (Elastic File System) mounted to Fargate tasks
 - Or S3 for file transfer (download before, upload after)
 
 **Ports:**
+
 - Use AWS App Mesh or ALB for port mapping
 - Or expose via API Gateway + VPC Link
 
@@ -287,10 +303,12 @@ resource "aws_cloudwatch_log_group" "docker_logs" {
 ### Cost Estimates
 
 **Fargate Pricing (us-west-2):**
+
 - 0.25 vCPU: $0.04048 per hour ($0.00001124 per second)
 - 0.5 GB RAM: $0.004445 per hour ($0.000001235 per second)
 
 **Example:**
+
 - 30-second execution: ~$0.0004 per run
 - 1000 executions/day: ~$0.40/day = $12/month
 

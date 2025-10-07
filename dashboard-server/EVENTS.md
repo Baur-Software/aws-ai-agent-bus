@@ -39,12 +39,14 @@ Dashboard-server serves as the WebSocket API gateway, handling real-time events 
 ### WebSocket Message Types
 
 #### MCP Protocol Messages
+
 - `health_check` - Server health status
 - `server_info` - Server information and capabilities
 - `list_tools` - Available MCP tools listing
 - `mcp_call` - Direct MCP tool invocation
 
 #### Dashboard Events
+
 - `subscribe_events` - Event subscription management
 - `request_metrics` - Metrics data request
 - `context_switch` - User context switching
@@ -52,6 +54,7 @@ Dashboard-server serves as the WebSocket API gateway, handling real-time events 
 - `ping/pong` - Connection health check
 
 #### Real-time Updates
+
 - `metrics_update` - KV/S3 metrics changes
 - `activity_update` - System activity events
 - `context_switched` - Context change confirmation
@@ -60,6 +63,7 @@ Dashboard-server serves as the WebSocket API gateway, handling real-time events 
 ### Event Data Structures
 
 #### Metrics Event
+
 ```typescript
 interface MetricsEvent {
   kv: {
@@ -75,6 +79,7 @@ interface MetricsEvent {
 ```
 
 #### Activity Event
+
 ```typescript
 interface ActivityEvent {
   id: number;
@@ -85,6 +90,7 @@ interface ActivityEvent {
 ```
 
 #### Context Switch Event
+
 ```typescript
 interface ContextSwitchEvent {
   userId: string;
@@ -99,6 +105,7 @@ interface ContextSwitchEvent {
 ## Event Flow
 
 ### Client Connection Flow
+
 1. WebSocket connection established
 2. Authentication via AuthMiddleware
 3. User context stored on connection
@@ -107,6 +114,7 @@ interface ContextSwitchEvent {
 6. Real-time updates begin
 
 ### Event Broadcasting Flow
+
 1. Event generated (metrics update, user action, etc.)
 2. EventSubscriber processes event
 3. Callbacks triggered for registered listeners
@@ -114,6 +122,7 @@ interface ContextSwitchEvent {
 5. Clients receive and process updates
 
 ### MCP Tool Integration
+
 1. Client sends `mcp_call` message
 2. WebSocket handler routes to appropriate handler (KV, Agent, etc.)
 3. Handler processes request with user context
@@ -123,10 +132,12 @@ interface ContextSwitchEvent {
 ## Supported MCP Tools
 
 ### KV Store Operations
+
 - `mcp__aws__kv_get` - Get value by key
 - `mcp__aws__kv_set` - Set key-value pair
 
 ### Agent Operations
+
 - `agent.listAvailableAgents` - List .claude/agents
 - `agent.processRequest` - Process via agent governance
 - `agent.delegateToAgent` - Direct agent delegation
@@ -136,16 +147,19 @@ interface ContextSwitchEvent {
 ## Security & Permissions
 
 ### Authentication
+
 - WebSocket connections require authentication
 - JWT tokens validated via AuthMiddleware
 - User context attached to each connection
 
 ### Authorization
+
 - Permission checks for agent operations
 - User/organization-based access control
 - Resource ownership validation
 
 ### User Context
+
 ```typescript
 interface UserContext {
   userId: string;
@@ -158,12 +172,14 @@ interface UserContext {
 ## Development vs Production
 
 ### Current State (Development)
+
 - Event simulation via intervals (5-second updates)
 - Console logging for events
 - Mock activity data
 - Direct WebSocket handling
 
 ### Planned Production Architecture
+
 - EventBridge rule-based event processing
 - Lambda functions for event handling
 - DynamoDB event persistence
@@ -173,6 +189,7 @@ interface UserContext {
 ## Event Simulation
 
 During development, EventSubscriber simulates:
+
 - **KV Metrics Updates**: Random changes in key count/size every ~7 seconds
 - **Activity Events**: Random system actions every ~8 seconds
 - **Connection Health**: Automatic ping/pong for connection monitoring
@@ -180,12 +197,14 @@ During development, EventSubscriber simulates:
 ## Error Handling
 
 ### WebSocket Errors
+
 - Invalid message format → `error` response
 - Authentication failure → Connection closed (1008)
 - Permission denied → `error` response with details
 - Tool not found → Specific error message
 
 ### Event Processing Errors
+
 - Failed event generation → Logged to console
 - Broadcast failure → Connection cleanup
 - MCP tool errors → Structured error responses
@@ -193,6 +212,7 @@ During development, EventSubscriber simulates:
 ## Configuration
 
 ### Environment Variables
+
 ```bash
 AGENT_MESH_KV_TABLE=agent-mesh-dev-kv
 AGENT_MESH_ARTIFACTS_BUCKET=agent-mesh-dev-artifacts
@@ -200,6 +220,7 @@ AGENT_MESH_EVENT_BUS=agent-mesh-events
 ```
 
 ### Event Timing
+
 - Metrics simulation: Every 5 seconds
 - Activity simulation: Every 5 seconds (30% chance)
 - Connection health: Ping/pong on demand
@@ -207,6 +228,7 @@ AGENT_MESH_EVENT_BUS=agent-mesh-events
 ## Future Enhancements
 
 ### Planned Features
+
 1. **EventBridge Integration** - Real AWS event processing
 2. **Event Persistence** - DynamoDB event storage
 3. **Real-time Metrics** - Live AWS resource monitoring
@@ -215,6 +237,7 @@ AGENT_MESH_EVENT_BUS=agent-mesh-events
 6. **Webhook Support** - External event notifications
 
 ### Performance Optimizations
+
 1. Connection pooling for MCP services
 2. Event batching for high-volume scenarios
 3. Client-side event caching
@@ -223,12 +246,14 @@ AGENT_MESH_EVENT_BUS=agent-mesh-events
 ## Testing
 
 ### Unit Tests
+
 - Event handler validation
 - WebSocket message processing
 - Metrics aggregation logic
 - Permission checking
 
 ### Integration Tests
+
 - End-to-end WebSocket communication
 - MCP tool integration
 - Event broadcasting verification
@@ -237,6 +262,7 @@ AGENT_MESH_EVENT_BUS=agent-mesh-events
 ## Monitoring
 
 ### Key Metrics
+
 - Active WebSocket connections
 - Event processing latency
 - MCP tool success/failure rates
@@ -244,6 +270,7 @@ AGENT_MESH_EVENT_BUS=agent-mesh-events
 - Broadcasting efficiency
 
 ### Health Checks
+
 - WebSocket server availability
 - MCP service connectivity
 - AWS service accessibility (DynamoDB, S3)

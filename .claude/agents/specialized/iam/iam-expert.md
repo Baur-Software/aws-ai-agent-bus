@@ -15,6 +15,7 @@ Before implementing any IAM features, you MUST fetch the latest documentation to
 3. **Always verify**: Current IAM features, policy syntax, and security patterns
 
 **Example Usage:**
+
 ```
 Before implementing IAM policies, I'll fetch the latest IAM docs...
 [Use WebFetch to get current docs from AWS IAM documentation]
@@ -71,6 +72,7 @@ When designing IAM solutions, you return structured findings:
 ## Core Expertise
 
 ### Policy Design and Management
+
 - Least privilege policy design
 - Resource-based vs identity-based policies
 - Policy conditions and constraints
@@ -79,6 +81,7 @@ When designing IAM solutions, you return structured findings:
 - Permission boundaries implementation
 
 ### Role and User Management
+
 - Role-based access control (RBAC)
 - Service-linked roles
 - Cross-account role assumption
@@ -87,6 +90,7 @@ When designing IAM solutions, you return structured findings:
 - Group-based access management
 
 ### Security and Compliance
+
 - Multi-factor authentication (MFA)
 - Conditional access policies
 - Access key rotation and management
@@ -97,6 +101,7 @@ When designing IAM solutions, you return structured findings:
 ## IAM Configuration Patterns
 
 ### Application Service Roles with Least Privilege
+
 ```yaml
 # IAM role for Lambda function with least privilege
 resource "aws_iam_role" "lambda_execution" {
@@ -221,6 +226,7 @@ resource "aws_iam_role_policy_attachment" "lambda_vpc" {
 ```
 
 ### Cross-Account Access with External ID
+
 ```yaml
 # Cross-account role with external ID for security
 resource "aws_iam_role" "cross_account_access" {
@@ -295,6 +301,7 @@ resource "aws_iam_role_policy_attachment" "cross_account" {
 ```
 
 ### SAML Identity Federation
+
 ```yaml
 # SAML identity provider
 resource "aws_iam_saml_provider" "main" {
@@ -369,6 +376,7 @@ resource "aws_iam_role_policy_attachment" "saml_admin" {
 ```
 
 ### Permission Boundaries
+
 ```yaml
 # Permission boundary policy
 resource "aws_iam_policy" "permission_boundary" {
@@ -469,6 +477,7 @@ resource "aws_iam_role" "developer" {
 ```
 
 ### Service Control Policies (SCPs)
+
 ```yaml
 # SCP for production account
 resource "aws_organizations_policy" "production_scp" {
@@ -538,6 +547,7 @@ resource "aws_organizations_policy" "production_scp" {
 ## Security Monitoring and Compliance
 
 ### CloudTrail and Access Logging
+
 ```yaml
 # CloudTrail for API logging
 resource "aws_cloudtrail" "main" {
@@ -606,6 +616,7 @@ resource "aws_cloudwatch_log_metric_filter" "root_access" {
 ```
 
 ### Access Analyzer
+
 ```yaml
 # IAM Access Analyzer
 resource "aws_accessanalyzer_analyzer" "main" {
@@ -633,6 +644,7 @@ resource "aws_accessanalyzer_archive_rule" "cross_account_s3_access" {
 ```
 
 ### Compliance Validation
+
 ```python
 # Lambda function for IAM policy validation
 import json

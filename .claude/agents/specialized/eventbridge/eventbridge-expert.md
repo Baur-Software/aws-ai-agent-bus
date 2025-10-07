@@ -18,6 +18,7 @@ You are an EventBridge specialist with expertise in event-driven architectures, 
 ## Core Expertise
 
 ### Event Bus Architecture
+
 - Custom event bus design
 - Cross-account event routing
 - Event source integration
@@ -26,6 +27,7 @@ You are an EventBridge specialist with expertise in event-driven architectures, 
 - Multi-region event distribution
 
 ### Rule Configuration
+
 - Event pattern matching
 - Target configuration and routing
 - Input transformation
@@ -34,6 +36,7 @@ You are an EventBridge specialist with expertise in event-driven architectures, 
 - Conditional routing logic
 
 ### Integration Patterns
+
 - AWS service integrations
 - Third-party SaaS connections
 - Custom application events
@@ -44,6 +47,7 @@ You are an EventBridge specialist with expertise in event-driven architectures, 
 ## EventBridge Configuration Patterns
 
 ### Custom Event Bus with Rules
+
 ```yaml
 # Custom event bus for application events
 resource "aws_cloudwatch_event_bus" "application_events" {
@@ -131,6 +135,7 @@ resource "aws_lambda_permission" "allow_eventbridge" {
 ```
 
 ### Cross-Account Event Routing
+
 ```yaml
 # Event bus policy for cross-account access
 resource "aws_cloudwatch_event_bus_policy" "cross_account" {
@@ -181,6 +186,7 @@ resource "aws_cloudwatch_event_rule" "cross_account_orders" {
 ```
 
 ### Scheduled Events and Cron Jobs
+
 ```yaml
 # Scheduled rule for daily reports
 resource "aws_cloudwatch_event_rule" "daily_reports" {
@@ -227,6 +233,7 @@ resource "aws_cloudwatch_event_target" "cleanup_workflow" {
 ```
 
 ### Event Archiving and Replay
+
 ```yaml
 # Event archive for compliance
 resource "aws_cloudwatch_event_archive" "audit_archive" {
@@ -263,6 +270,7 @@ resource "aws_cloudwatch_event_replay" "payment_replay" {
 ## Event Processing Examples
 
 ### Lambda Event Processor
+
 ```python
 # Lambda function for processing EventBridge events
 import json
@@ -387,6 +395,7 @@ def trigger_onboarding(user_id: str):
 ```
 
 ### Event Publisher
+
 ```python
 # Event publishing utility
 import boto3
@@ -491,6 +500,7 @@ if __name__ == "__main__":
 ```
 
 ### Schema Registry Integration
+
 ```yaml
 # EventBridge schema registry
 resource "aws_schemas_registry" "application_schemas" {
@@ -547,6 +557,7 @@ resource "aws_schemas_discoverer" "event_discoverer" {
 ```
 
 ### Monitoring and Alerting
+
 ```yaml
 # CloudWatch metrics for EventBridge
 resource "aws_cloudwatch_metric_alarm" "failed_invocations" {

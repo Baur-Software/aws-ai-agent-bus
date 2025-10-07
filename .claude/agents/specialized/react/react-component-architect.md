@@ -59,6 +59,7 @@ Before implementing any React features, you MUST fetch the latest React document
 3. **Always verify**: Current React version features and patterns
 
 **Example Usage:**
+
 ```
 Before implementing this component, I'll fetch the latest React docs...
 [Use context7 or WebFetch to get current React patterns and hooks docs]
@@ -68,6 +69,7 @@ Now implementing with current best practices...
 ## Core Expertise
 
 ### React Fundamentals
+
 - Functional components and hooks
 - React 18 features (Suspense, Concurrent, Transitions)
 - Component lifecycle and optimization
@@ -77,6 +79,7 @@ Now implementing with current best practices...
 - TypeScript with React
 
 ### Component Patterns
+
 - Compound components
 - Render props pattern
 - Higher-order components (HOCs)
@@ -86,6 +89,7 @@ Now implementing with current best practices...
 - Design system architecture
 
 ### React Ecosystem
+
 - React Router v6
 - State management solutions
 - React Query/TanStack Query
@@ -96,6 +100,7 @@ Now implementing with current best practices...
 ## Modern Component Patterns
 
 ### Data Grid with Virtual Scrolling
+
 ```tsx
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -319,6 +324,7 @@ export function DataGrid<T extends Record<string, any>>({
 ```
 
 ### Advanced Form with Validation
+
 ```tsx
 import React from 'react';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
@@ -815,6 +821,7 @@ export function useIntersectionObserver<T extends Element>({
 ## Performance Patterns
 
 ### Code Splitting
+
 ```tsx
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
@@ -845,6 +852,7 @@ export function App() {
 ```
 
 ### Memoization
+
 ```tsx
 import React, { memo, useMemo, useCallback } from 'react';
 

@@ -1,9 +1,11 @@
 # Configurable Dashboard Vision
 
 ## Current State
+
 Dashboard component has been removed (was drifting from original implementation).
 
 ## Future Vision
+
 Rebuild Dashboard as a **configurable canvas-based system** that reuses workflow datavis nodes.
 
 ### Architecture
@@ -19,6 +21,7 @@ Dashboard = Special Workflow Canvas
 ### Features
 
 **1. Reusable DataVis Nodes**
+
 - Bar Chart Node
 - Line Chart Node
 - Pie Chart Node
@@ -28,6 +31,7 @@ Dashboard = Special Workflow Canvas
 - Live Activity Feed Node
 
 **2. Data Sources**
+
 - MCP `events_analytics` for metrics
 - Real-time WebSocket event streams
 - KV Store metrics
@@ -35,6 +39,7 @@ Dashboard = Special Workflow Canvas
 - Workflow execution stats
 
 **3. Configuration**
+
 - Drag & drop node placement
 - Resize nodes
 - Connect nodes to data sources
@@ -107,5 +112,6 @@ Dashboard = Special Workflow Canvas
 
 **Status**: Awaiting implementation after workflow engine core is complete
 **Related Files**:
+
 - `dashboard-ui/src/pages/Canvas.tsx` (architecture reference)
 - `dashboard-ui/src/components/workflow/nodes/` (node examples)

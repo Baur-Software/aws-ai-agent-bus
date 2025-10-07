@@ -174,41 +174,6 @@ export default function WorkflowMarketplace(props: WorkflowMarketplaceProps = {}
       // Load from API in production (TODO: implement API endpoint)
       const sampleTemplates: WorkflowTemplate[] = [
         {
-          id: 'google-analytics-report',
-          name: 'Google Analytics Weekly Report',
-          description: 'Automated weekly analytics report generation with email delivery',
-          category: 'analytics',
-          tags: ['analytics', 'automation', 'popular', 'email'],
-          author: {
-            id: 'system',
-            name: 'Agent Mesh',
-            organizationName: 'Official Templates'
-          },
-          stats: {
-            starCount: 245,
-            forkCount: 89,
-            usageCount: 1200,
-            rating: 4.8,
-            reviewCount: 67
-          },
-          metadata: {
-            version: '2.1.0',
-            createdAt: '2024-01-15T10:00:00Z',
-            updatedAt: '2024-02-28T14:30:00Z',
-            complexity: 'beginner',
-            estimatedTime: '5-10 minutes',
-            requiredIntegrations: ['google-analytics', 'email']
-          },
-          preview: {
-            nodeCount: 8,
-            connectionCount: 12,
-            hasScreenshots: true
-          },
-          isOfficial: true,
-          isFeatured: true,
-          context: 'public'
-        },
-        {
           id: 'slack-incident-response',
           name: 'Incident Response Workflow',
           description: 'Automated incident detection, notification, and response coordination',

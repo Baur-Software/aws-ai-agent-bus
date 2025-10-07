@@ -61,15 +61,18 @@ A high-performance, multi-tenant Model Context Protocol (MCP) server implemented
 ## Available Tools
 
 ### Key-Value Store
+
 - `kv_get`: Retrieve values by key (requires `ReadKV` permission)
 - `kv_set`: Store values with optional TTL (requires `WriteKV` permission)
 
 ### Artifacts
+
 - `artifacts_get`: Retrieve artifacts by key (requires `GetArtifacts` permission)
 - `artifacts_put`: Store artifacts with content type (requires `PutArtifacts` permission)
 - `artifacts_list`: List artifacts with optional prefix (requires `ListArtifacts` permission)
 
 ### Events
+
 - `events_send`: Publish events to EventBridge (requires `SendEvents` permission)
 
 ## Configuration

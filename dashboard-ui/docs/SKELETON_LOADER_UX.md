@@ -11,6 +11,7 @@ Added professional skeleton loaders to the Events panel to provide instant visua
 A full-page skeleton that mimics the exact structure of the Events panel:
 
 #### Features
+
 - **Header skeleton**: Context indicator, tabs, connection status
 - **Search & filters skeleton**: Search bar, priority dropdown, source dropdown
 - **Event cards skeleton**: 8 placeholder event cards with:
@@ -27,6 +28,7 @@ A full-page skeleton that mimics the exact structure of the Events panel:
 Analytics tab skeleton with dashboard-style placeholders:
 
 #### Features
+
 - **Stats grid**: 4 stat cards (1x4 grid on desktop, responsive)
 - **Charts grid**: 4 chart placeholders (2x2 grid)
 - **Chart bars**: 5 progressively-sized horizontal bars per chart
@@ -36,6 +38,7 @@ Analytics tab skeleton with dashboard-style placeholders:
 ### 3. **Integration into Events.tsx**
 
 #### Before (Simple Spinner)
+
 ```tsx
 <Show
   when={!isLoading()}
@@ -50,6 +53,7 @@ Analytics tab skeleton with dashboard-style placeholders:
 ```
 
 #### After (Context-Aware Skeleton)
+
 ```tsx
 <Show
   when={!isLoading()}
@@ -67,12 +71,14 @@ Analytics tab skeleton with dashboard-style placeholders:
 ```
 
 **Smart skeleton selection**:
+
 - Live Events tab → `<EventsSkeleton />`
 - Analytics tab → `<AnalyticsSkeleton />`
 
 ## 🎨 Visual Design
 
 ### Skeleton Color Palette
+
 ```css
 /* Light Mode */
 bg-gray-200    /* Placeholder backgrounds */
@@ -88,6 +94,7 @@ border-gray-700 /* Card borders */
 ### Layout Structure
 
 **EventsSkeleton** - Matches actual Events panel:
+
 ```
 ┌─────────────────────────────────────────────────┐
 │ Context: [████] (████████████)                  │
@@ -110,6 +117,7 @@ border-gray-700 /* Card borders */
 ```
 
 **AnalyticsSkeleton** - Matches analytics dashboard:
+
 ```
 ┌─────────────────────────────────────────────────┐
 │ [████████]  [████████]  [████████]  [████████] │
@@ -133,12 +141,14 @@ border-gray-700 /* Card borders */
 ### Before vs After
 
 **Before (Spinner)**:
+
 - ❌ Generic spinner → No hint of what's loading
 - ❌ Centered in empty space → Feels disconnected
 - ❌ No context about content structure
 - ❌ User sees "flash" when content appears
 
 **After (Skeleton)**:
+
 - ✅ Shows exact layout → User knows what to expect
 - ✅ Fills entire panel → Feels intentional and polished
 - ✅ Progressive disclosure → Content slides in smoothly
@@ -147,12 +157,14 @@ border-gray-700 /* Card borders */
 ### Performance Metrics
 
 **Perceived Performance**:
+
 - **Skeleton renders instantly** (0ms - static markup)
 - **No layout shift** when real content loads
 - **Smooth transition** with matching dimensions
 - **Professional appearance** throughout load
 
 **Actual Load Times** (unchanged):
+
 - Historical events: ~500-1000ms (MCP `events_query`)
 - Analytics data: ~300-800ms (MCP `events_analytics`)
 - WebSocket connection: ~100-300ms
@@ -220,21 +232,25 @@ const loadHistoricalEvents = async () => {
 ## 🎯 Best Practices Applied
 
 ### 1. **Match Real Layout**
+
 - Skeleton dimensions match actual content
 - Spacing and padding identical
 - Colors blend with actual UI
 
 ### 2. **Progressive Width**
+
 - Text placeholders vary in width (48px, 32px, 24px)
 - Creates realistic "text" appearance
 - Avoids uniform "blocks" look
 
 ### 3. **Appropriate Element Count**
+
 - 8 event cards (matches typical first load)
 - 4 stat cards (exact match)
 - 5 chart bars (realistic data viz)
 
 ### 4. **Dark Mode Support**
+
 ```tsx
 // Dual color classes
 class="bg-gray-200 dark:bg-gray-700"
@@ -243,6 +259,7 @@ class="text-gray-500 dark:text-gray-400"
 ```
 
 ### 5. **Semantic Structure**
+
 - Uses semantic HTML where appropriate
 - Maintains accessibility (still reads as content loading)
 - Proper nesting and hierarchy
@@ -250,6 +267,7 @@ class="text-gray-500 dark:text-gray-400"
 ## 🚀 Usage Examples
 
 ### Example 1: Initial Page Load
+
 ```
 User opens Events panel
         ↓
@@ -263,6 +281,7 @@ Skeleton fades out, content fades in
 ```
 
 ### Example 2: Context Switch
+
 ```
 User switches from Personal → Acme Corp
         ↓
@@ -276,6 +295,7 @@ Skeleton → Real content transition
 ```
 
 ### Example 3: Analytics Tab
+
 ```
 User clicks Analytics tab
         ↓
@@ -291,12 +311,14 @@ Smooth skeleton → charts transition
 ## 📈 Impact Metrics
 
 ### User Experience
+
 - ✅ **0% layout shift** (skeleton matches real layout)
 - ✅ **Instant feedback** (skeleton renders <16ms)
 - ✅ **30% faster perception** (content feels immediate)
 - ✅ **Professional polish** (no blank screens)
 
 ### Developer Experience
+
 - ✅ **Reusable components** (2 skeleton types)
 - ✅ **Easy maintenance** (update skeleton when UI changes)
 - ✅ **Type-safe** (SolidJS TypeScript)
@@ -312,6 +334,7 @@ Smooth skeleton → charts transition
 ## 🎨 Future Enhancements
 
 ### Potential Improvements
+
 - [ ] Add shimmer effect (left-to-right gradient animation)
 - [ ] Staggered fade-in for event cards
 - [ ] Skeleton for Rules tab
@@ -320,6 +343,7 @@ Smooth skeleton → charts transition
 - [ ] Skeleton for notification settings panel
 
 ### Advanced Patterns
+
 - [ ] Content-aware skeletons (adjust based on data)
 - [ ] Progressive skeleton (show more detail as load progresses)
 - [ ] Skeleton with inline loaders (show which sections are loading)

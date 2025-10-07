@@ -46,11 +46,12 @@ When working with complex backend features, you return structured findings for m
 
 Before implementing any Django features, you MUST fetch the latest Django documentation to ensure you're using current best practices and syntax:
 
-1. **First Priority**: Use context7 MCP to get Django documentation: `/django/django` 
+1. **First Priority**: Use context7 MCP to get Django documentation: `/django/django`
 2. **Fallback**: Use WebFetch to get documentation from docs.djangoproject.com
 3. **Always verify**: Current Django version and feature availability
 
 **Example Usage:**
+
 ```
 Before implementing authentication, I'll fetch the latest Django docs...
 [Use context7 or WebFetch to get current Django authentication docs]
@@ -60,6 +61,7 @@ Now implementing with current best practices...
 ## Core Expertise
 
 ### Django Fundamentals
+
 - Django ORM mastery
 - Model design and migrations
 - Class-based and function-based views
@@ -69,6 +71,7 @@ Now implementing with current best practices...
 - Management commands
 
 ### Advanced Features
+
 - Django Channels for WebSockets
 - Celery integration for async tasks
 - Django REST Framework
@@ -78,6 +81,7 @@ Now implementing with current best practices...
 - GeoDjango for spatial data
 
 ### Architecture Patterns
+
 - Clean Architecture in Django
 - Domain-Driven Design
 - Service layer pattern
@@ -87,6 +91,7 @@ Now implementing with current best practices...
 - SOLID principles
 
 ### Security & Performance
+
 - Django security best practices
 - Query optimization
 - Caching strategies (Redis, Memcached)
@@ -98,6 +103,7 @@ Now implementing with current best practices...
 ## Implementation Patterns
 
 ### Model Architecture
+
 ```python
 from django.db import models
 from django.contrib.auth import get_user_model
@@ -202,6 +208,7 @@ class Product(TimestampedModel):
 ```
 
 ### Service Layer Implementation
+
 ```python
 from django.db import transaction
 from django.core.exceptions import ValidationError
@@ -304,6 +311,7 @@ class OrderService:
 ```
 
 ### Django Admin Customization
+
 ```python
 from django.contrib import admin
 from django.utils.html import format_html
@@ -395,6 +403,7 @@ class ProductAdmin(admin.ModelAdmin):
 ```
 
 ### Celery Task Implementation
+
 ```python
 from celery import shared_task, Task
 from django.core.mail import send_mail
@@ -507,6 +516,7 @@ def send_import_notification(import_id: int):
 ```
 
 ### Middleware Implementation
+
 ```python
 from django.utils.deprecation import MiddlewareMixin
 from django.http import HttpResponse
@@ -594,6 +604,7 @@ class SecurityHeadersMiddleware:
 ```
 
 ### Custom Management Command
+
 ```python
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -699,6 +710,7 @@ class Command(BaseCommand):
 ```
 
 ### Signal Handlers
+
 ```python
 from django.db.models.signals import post_save, pre_delete, m2m_changed
 from django.dispatch import receiver
@@ -742,6 +754,7 @@ def prevent_category_deletion_with_products(sender, instance, **kwargs):
 ## Testing Patterns
 
 ### Unit and Integration Tests
+
 ```python
 from django.test import TestCase, TransactionTestCase
 from django.contrib.auth import get_user_model
@@ -829,6 +842,7 @@ class OrderServiceTest(TransactionTestCase):
 ## Performance Optimization
 
 ### Query Optimization
+
 ```python
 from django.db.models import Prefetch, F, Q, Count, Sum
 

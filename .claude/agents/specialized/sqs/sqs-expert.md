@@ -19,6 +19,7 @@ You are an SQS specialist with deep expertise in message queuing, asynchronous p
 ## Core Expertise
 
 ### Queue Design and Configuration
+
 - Standard vs FIFO queue selection
 - Visibility timeout optimization
 - Message retention and batching
@@ -27,6 +28,7 @@ You are an SQS specialist with deep expertise in message queuing, asynchronous p
 - Cross-region queue replication
 
 ### Message Processing Patterns
+
 - Producer-consumer architectures
 - Fan-out with SNS integration
 - Batch processing optimization
@@ -35,6 +37,7 @@ You are an SQS specialist with deep expertise in message queuing, asynchronous p
 - Long polling vs short polling
 
 ### Performance and Scaling
+
 - Queue throughput optimization
 - Lambda integration patterns
 - Auto-scaling based on queue depth
@@ -45,6 +48,7 @@ You are an SQS specialist with deep expertise in message queuing, asynchronous p
 ## SQS Configuration Patterns
 
 ### Standard Queue with Dead Letter Queue
+
 ```yaml
 # Main processing queue
 resource "aws_sqs_queue" "main_processing" {
@@ -114,6 +118,7 @@ resource "aws_sqs_queue_policy" "main_processing" {
 ```
 
 ### FIFO Queue for Ordered Processing
+
 ```yaml
 # FIFO queue for ordered message processing
 resource "aws_sqs_queue" "order_processing" {
@@ -152,6 +157,7 @@ resource "aws_sqs_queue" "order_dlq" {
 ```
 
 ### High-Throughput Queue Configuration
+
 ```yaml
 # High-throughput queue with optimized settings
 resource "aws_sqs_queue" "high_throughput" {
@@ -199,6 +205,7 @@ resource "aws_lambda_event_source_mapping" "high_throughput_processing" {
 ## Message Processing Examples
 
 ### Python SQS Consumer with Error Handling
+
 ```python
 import boto3
 import json
@@ -411,6 +418,7 @@ def process_message_data(data: Dict[str, Any]):
 ```
 
 ### SQS Producer with Batch Operations
+
 ```python
 import boto3
 import json
@@ -581,6 +589,7 @@ if __name__ == "__main__":
 ## Monitoring and Cost Optimization
 
 ### CloudWatch Metrics and Alarms
+
 ```yaml
 # Queue depth alarm
 resource "aws_cloudwatch_metric_alarm" "queue_depth" {
@@ -644,6 +653,7 @@ resource "aws_cloudwatch_metric_alarm" "scale_up" {
 ```
 
 ### Cost Optimization Strategies
+
 ```yaml
 # Environment-based queue configuration
 locals {

@@ -5,12 +5,14 @@ Git-like version control for workflows with automatic versioning, undo/redo, and
 ## Features
 
 ### 1. Automatic Versioning on Save
+
 - Every workflow save creates a new immutable version
 - SHA-256 checksum for data integrity verification
 - Commit-like messages for each version
 - Parent version tracking for complete history
 
 ### 2. Undo/Redo with Command Pattern
+
 - In-memory command stack for immediate undo/redo
 - 100-command history limit per workflow
 - Support for all canvas operations:
@@ -20,12 +22,14 @@ Git-like version control for workflows with automatic versioning, undo/redo, and
   - Add/remove connections
 
 ### 3. Version History Browser
+
 - Git-style commit list with timestamps
 - Visual diff between any two versions
 - Quick rollback to any previous version
 - Checksum verification for corrupted data detection
 
 ### 4. Keyboard Shortcuts
+
 - **Ctrl+Z / Cmd+Z**: Undo last action
 - **Ctrl+Y / Cmd+Y**: Redo last undone action
 - **Ctrl+Shift+Z / Cmd+Shift+Z**: Redo (alternative)
@@ -269,15 +273,18 @@ Users can only access versions for workflows they have permissions to view.
 ## Performance Considerations
 
 ### Storage
+
 - Each version is ~5-50KB depending on workflow complexity
 - 100 versions ≈ 0.5-5MB total
 - DynamoDB read/write capacity scales automatically
 
 ### Memory
+
 - Undo/redo stack limited to 100 commands per workflow
 - ~1KB per command = ~100KB max per workflow in memory
 
 ### Network
+
 - Version history fetched on-demand (not on page load)
 - Diff calculations happen client-side (no server round-trip)
 - Checksums computed during save (no extra API calls)
@@ -285,6 +292,7 @@ Users can only access versions for workflows they have permissions to view.
 ## Best Practices
 
 1. **Meaningful commit messages**: Use descriptive messages when saving
+
    ```typescript
    await workflow.saveWorkflow('Added lead qualification logic');
    ```
@@ -294,6 +302,7 @@ Users can only access versions for workflows they have permissions to view.
    - Saved versions persist forever
 
 3. **Review before rollback**: Use diff view to understand changes
+
    ```typescript
    const diff = await workflow.getVersionDiff(currentVersion, targetVersion);
    // Review diff before calling rollbackToVersion()
@@ -332,21 +341,25 @@ npm test -- WorkflowVersioning.test.ts
 ## Troubleshooting
 
 ### "Checksum mismatch" warning
+
 - Indicates data corruption or modification outside version control
 - Safe to continue, but version may not match original state
 - Check KV store for manual modifications
 
 ### Undo/redo not working
+
 - Ensure commands are being recorded: `workflow.recordCommand()`
 - Check browser console for errors
 - Undo stack clears on page refresh (expected behavior)
 
 ### Version history empty
+
 - Verify workflow has been saved at least once
 - Check DynamoDB for version keys
 - Ensure versioning service is initialized (userId must be present)
 
 ### Performance issues with large workflows
+
 - Consider reducing version history limit
 - Implement pagination for version list
 - Use diff view instead of loading full versions

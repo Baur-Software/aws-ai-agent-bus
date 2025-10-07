@@ -7,12 +7,14 @@ Workflows, custom shapes, and other files are now stored in **S3 artifacts** wit
 ## ✅ Implementation Complete
 
 ### Files Modified
+
 - ✅ [dashboard-ui/src/services/ArtifactService.ts](src/services/ArtifactService.ts) - New service for context-aware S3 storage
 - ✅ [dashboard-ui/src/contexts/WorkflowContext.tsx](src/contexts/WorkflowContext.tsx) - Updated to use S3 artifacts
 
 ### Storage Architecture
 
 #### S3 Path Structure
+
 ```
 s3://agent-mesh-artifacts/
 ├── users/{userId}/
@@ -53,9 +55,11 @@ s3://agent-mesh-artifacts/
 ## 📋 Artifact Types
 
 ### 1. Workflows
+
 **Path**: `users/{userId}/workflows/{workflowId}.json` OR `orgs/{orgId}/workflows/{workflowId}.json`
 
 **Structure**:
+
 ```json
 {
   "metadata": {
@@ -91,6 +95,7 @@ s3://agent-mesh-artifacts/
 ```
 
 **Metadata**:
+
 ```json
 {
   "type": "workflow",
@@ -104,9 +109,11 @@ s3://agent-mesh-artifacts/
 ```
 
 ### 2. Custom Shapes
+
 **Path**: `users/{userId}/shapes/{shapeId}.json` OR `orgs/{orgId}/shapes/{shapeId}.json`
 
 **Structure**:
+
 ```json
 {
   "id": "custom-shape-123",
@@ -125,9 +132,11 @@ s3://agent-mesh-artifacts/
 ```
 
 ### 3. Templates
+
 **Path**: `system/templates/{templateId}.json` (system-wide)
 
 **Structure**:
+
 ```json
 {
   "id": "template-onboarding",
@@ -145,6 +154,7 @@ s3://agent-mesh-artifacts/
 ## 🔧 ArtifactService API
 
 ### Save Workflow
+
 ```typescript
 // Personal workflow
 await artifactService.save(workflowId, workflowData, {
@@ -162,6 +172,7 @@ await artifactService.save(workflowId, workflowData, {
 ```
 
 ### Load Workflow
+
 ```typescript
 // Load from current context (auto-detects personal/org)
 const workflow = await artifactService.get(workflowId, 'workflow');
@@ -175,6 +186,7 @@ const orgWorkflow = await artifactService.get(
 ```
 
 ### List Workflows
+
 ```typescript
 // List all workflows in current context
 const workflows = await artifactService.listWorkflows();
@@ -184,6 +196,7 @@ const shapes = await artifactService.listShapes();
 ```
 
 ### Share Workflow (Personal → Organizational)
+
 ```typescript
 // Copy workflow from personal to organizational context
 const result = await artifactService.shareWorkflow(workflowId);
@@ -192,6 +205,7 @@ console.log('Shared to:', result.key);
 ```
 
 ### Search Across Contexts
+
 ```typescript
 // Search workflows across personal and organizational
 const results = await artifactService.search(
@@ -204,6 +218,7 @@ const results = await artifactService.search(
 ## 🚀 Usage in WorkflowContext
 
 ### Save Workflow (Updated)
+
 ```typescript
 const saveWorkflow = async () => {
   const workflow = currentWorkflow();
@@ -238,6 +253,7 @@ const saveWorkflow = async () => {
 ```
 
 ### Load Workflow (Updated)
+
 ```typescript
 const loadWorkflow = async (workflowId: string) => {
   const context = currentOrganization() ? 'organizational' : 'personal';
@@ -268,6 +284,7 @@ const loadWorkflow = async (workflowId: string) => {
 ## 🔄 Context Switching Behavior
 
 ### Personal Context
+
 ```
 User: user-123
 Context: Personal
@@ -275,11 +292,13 @@ Storage: users/user-123/workflows/
 ```
 
 **When user saves a workflow**:
+
 - Saves to: `users/user-123/workflows/{workflowId}.json`
 - Only visible to user-123
 - Not accessible to organization
 
 ### Organizational Context
+
 ```
 User: user-123
 Organization: acme
@@ -288,11 +307,13 @@ Storage: orgs/acme/workflows/
 ```
 
 **When user saves a workflow**:
+
 - Saves to: `orgs/acme/workflows/{workflowId}.json`
 - Visible to all org members (with permissions)
 - Separate from personal workflows
 
 ### Switching Contexts
+
 ```typescript
 // User switches from Personal → Acme Corp
 switchOrganization('acme');
@@ -307,6 +328,7 @@ switchOrganization('acme');
 ## 📊 Benefits Over KV Store
 
 ### Before (KV Store)
+
 ❌ All workflows in single flat namespace
 ❌ Manual key prefixing (`workflow-{id}`)
 ❌ No automatic context detection
@@ -315,6 +337,7 @@ switchOrganization('acme');
 ❌ Difficult to list/search
 
 ### After (S3 Artifacts)
+
 ✅ Hierarchical structure (users/orgs/system)
 ✅ Automatic context-aware paths
 ✅ Built-in personal vs org isolation
@@ -327,6 +350,7 @@ switchOrganization('acme');
 ## 🎯 Migration Path
 
 ### Existing KV-stored Workflows
+
 ```typescript
 // Old KV pattern
 const kvKey = `workflow-${workflowId}`;
@@ -342,6 +366,7 @@ await callMCPTool('artifacts_put', {
 ```
 
 ### Automatic Migration (TODO)
+
 ```typescript
 // Scan all workflow-* keys in KV
 const kvWorkflows = await kvStore.list('workflow-');
@@ -371,24 +396,28 @@ for (const kvWorkflow of kvWorkflows) {
 ## 📝 Next Steps
 
 ### Custom Shapes Integration
+
 - [ ] Update FloatingNodePanel to load shapes from artifacts
 - [ ] Add shape editor UI
 - [ ] Support drag-and-drop shape upload
 - [ ] Shape marketplace (browse community shapes)
 
 ### Template System
+
 - [ ] Seed system templates to S3
 - [ ] Template browser UI
 - [ ] One-click template instantiation
 - [ ] Template versioning
 
 ### File Management
+
 - [ ] General file upload (images, docs, etc.)
 - [ ] File browser UI
 - [ ] Direct S3 download links
 - [ ] File sharing (personal → org)
 
 ### Advanced Features
+
 - [ ] Workflow versioning (S3 versioning API)
 - [ ] Workflow comparison (diff tool)
 - [ ] Bulk operations (export all, backup)

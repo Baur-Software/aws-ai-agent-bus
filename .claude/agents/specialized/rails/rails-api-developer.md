@@ -15,6 +15,7 @@ Before implementing any Rails API features, you MUST fetch the latest documentat
 3. **Always verify**: Current Rails version features and patterns
 
 **Example Usage:**
+
 ```
 Before implementing Rails API features, I'll fetch the latest Rails docs...
 [Use context7 or WebFetch to get current docs]
@@ -69,6 +70,7 @@ When creating API endpoints, you return structured information for coordination:
 ## Core Expertise
 
 ### Rails API Mode
+
 - API-only applications
 - Serialization with ActiveModel::Serializers
 - JSONAPI.rb for JSON:API spec
@@ -78,6 +80,7 @@ When creating API endpoints, you return structured information for coordination:
 - CORS configuration
 
 ### GraphQL with Rails
+
 - GraphQL-Ruby implementation
 - Schema design and types
 - Resolvers and mutations
@@ -87,6 +90,7 @@ When creating API endpoints, you return structured information for coordination:
 - Schema stitching
 
 ### Authentication & Security
+
 - JWT implementation
 - OAuth2 provider/consumer
 - API key management
@@ -96,6 +100,7 @@ When creating API endpoints, you return structured information for coordination:
 - Request signing
 
 ### API Design Patterns
+
 - RESTful principles
 - HATEOAS implementation
 - JSON:API specification
@@ -107,6 +112,7 @@ When creating API endpoints, you return structured information for coordination:
 ## Rails API Implementation
 
 ### API Application Setup
+
 ```ruby
 # config/application.rb
 module MyApi
@@ -181,6 +187,7 @@ end
 ```
 
 ### Advanced API Controllers
+
 ```ruby
 # app/controllers/api/v1/base_controller.rb
 module Api
@@ -344,6 +351,7 @@ end
 ```
 
 ### Serializers
+
 ```ruby
 # app/serializers/product_serializer.rb
 class ProductSerializer < ActiveModel::Serializer
@@ -412,6 +420,7 @@ end
 ```
 
 ### JWT Authentication
+
 ```ruby
 # app/controllers/api/v1/auth_controller.rb
 module Api
@@ -538,6 +547,7 @@ end
 ```
 
 ### GraphQL Implementation
+
 ```ruby
 # app/graphql/types/query_type.rb
 module Types
@@ -668,6 +678,7 @@ end
 ```
 
 ### API Documentation
+
 ```ruby
 # config/initializers/rswag.rb
 Rswag::Api.configure do |c|
@@ -741,6 +752,7 @@ end
 ```
 
 ### API Versioning
+
 ```ruby
 # config/routes.rb
 Rails.application.routes.draw do
@@ -814,6 +826,7 @@ end
 ```
 
 ### Real-time Features
+
 ```ruby
 # app/channels/api_channel.rb
 class ApiChannel < ApplicationCable::Channel

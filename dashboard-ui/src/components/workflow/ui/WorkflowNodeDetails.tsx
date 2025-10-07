@@ -313,19 +313,6 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
         ]
       },
 
-      // Analytics
-      'ga-top-pages': {
-        title: 'Google Analytics Top Pages',
-        description: 'Get top performing pages',
-        icon: BarChart3,
-        color: 'bg-green-600',
-        fields: [
-          { key: 'propertyId', label: 'Property ID', type: 'text', required: true },
-          { key: 'days', label: 'Days', type: 'number', default: 30 },
-          { key: 'limit', label: 'Limit', type: 'number', default: 10 }
-        ]
-      },
-
       // Integrations
       'slack-message': {
         title: 'Send Slack Message',

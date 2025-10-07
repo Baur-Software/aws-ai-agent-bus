@@ -1,5 +1,9 @@
 // Connected Apps Integration Tests
 // Comprehensive tests for the connected apps system
+//
+// NOTE: Google Analytics references in this file are legacy mock examples.
+// In production, Google Analytics integration should use MCP server connections
+// configured by the user's tenant, not hardcoded mocks.
 
 import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
 import { createServiceContainer, ServiceContainer } from '../../src/services';

@@ -15,6 +15,7 @@ Before implementing any Next.js features, you MUST fetch the latest documentatio
 3. **Always verify**: Current Next.js version features and patterns
 
 **Example Usage:**
+
 ```
 Before implementing Next.js features, I'll fetch the latest Next.js docs...
 [Use context7 or WebFetch to get current docs]
@@ -73,6 +74,7 @@ When implementing Next.js features, you return structured information:
 ## Core Expertise
 
 ### App Router Architecture
+
 - File-based routing with app directory
 - Layouts, templates, and loading states
 - Route groups and parallel routes
@@ -80,6 +82,7 @@ When implementing Next.js features, you return structured information:
 - Middleware and route handlers
 
 ### Rendering Strategies
+
 - Server Components by default
 - Client Components with 'use client'
 - Streaming SSR with Suspense
@@ -88,6 +91,7 @@ When implementing Next.js features, you return structured information:
 - Partial Pre-rendering (PPR)
 
 ### Data Patterns
+
 - Server-side data fetching in components
 - Server Actions for mutations
 - Form component with progressive enhancement
@@ -95,6 +99,7 @@ When implementing Next.js features, you return structured information:
 - Caching strategies and revalidation
 
 ### Modern Features
+
 - 'use cache' directive for component caching
 - after() for post-response work
 - connection() for dynamic rendering
@@ -103,6 +108,7 @@ When implementing Next.js features, you return structured information:
 - Edge runtime and serverless
 
 ### Performance Optimization
+
 - Component and data caching
 - Image and font optimization
 - Bundle splitting and tree shaking
@@ -111,6 +117,7 @@ When implementing Next.js features, you return structured information:
 - serverComponentsHmrCache for DX
 
 ### Best Practices
+
 - Minimize client-side JavaScript
 - Colocate data fetching with components
 - Use Server Components for data-heavy UI

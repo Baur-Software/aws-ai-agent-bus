@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **NEVER IGNORE SKIPPED TESTS** - They represent production bugs waiting to happen.
 
 Current test debt status:
+
 - **11 skipped tests** in dashboard-ui (see `dashboard-ui/TODO_TESTS.md`)
 - **1 timer logic bug** - could cause data loss in production
 - **10 component integration gaps** - no coverage for critical UI flows
@@ -14,12 +15,14 @@ Current test debt status:
 Before claiming "production ready": ALL tests must pass without `.skip()`.
 
 See detailed tracking in:
+
 - `dashboard-ui/TECHNICAL_DEBT.md` - Strategic overview
 - `dashboard-ui/TODO_TESTS.md` - Specific failing tests and solutions
 
 ## Core Commands
 
 ### MCP Server Setup
+
 ```bash
 # Configure Claude Code to use the Rust MCP server
 # This enables Claude Code to directly use MCP tools while developing!
@@ -42,6 +45,7 @@ See detailed tracking in:
 ```
 
 ### Development
+
 ```bash
 # MCP Server development (Rust implementation)
 cd mcp-rust
@@ -94,6 +98,7 @@ powershell -ExecutionPolicy Bypass -File apply.ps1    # Apply changes
 ### Environment Variables
 
 #### Infrastructure & AWS
+
 ```bash
 # Required for infrastructure operations
 export WS=small/kv_store    # Workspace path
@@ -107,6 +112,7 @@ export AGENT_MESH_EVENT_BUS=agent-mesh-events
 ```
 
 #### Dashboard UI Configuration (dashboard-ui/.env)
+
 ```bash
 # MCP Server Configuration
 VITE_MCP_SERVER_URL=http://localhost:3001    # MCP server URL for proxy
@@ -121,6 +127,7 @@ VITE_API_ENDPOINT=http://localhost:3001/api
 ## Architecture Overview
 
 ### Core Components
+
 - **MCP Server** (`mcp-rust/`): Rust-based Model Context Protocol server providing AI assistants with AWS service access
 - **Dashboard Server** (`dashboard-server/`): WebSocket API gateway for the SolidJS dashboard UI
 - **Dashboard UI** (`dashboard-ui/`): SolidJS-based frontend for workflow management and real-time monitoring
@@ -128,12 +135,14 @@ VITE_API_ENDPOINT=http://localhost:3001/api
 - **Agent System** (`.claude/`): Sophisticated agent orchestration with conductors, critics, and specialists
 
 ### MCP Server Structure (Rust)
+
 - `src/`: Rust implementation of MCP server with AWS integrations
 - Features: KV storage, artifacts, events, workflows, analytics
 - Performance-optimized with async/await and tokio runtime
 - Type-safe AWS SDK integration
 
 ### Event Monitoring System
+
 - **6 MCP Tools**: send, query, analytics, create-rule, create-alert, health-check
 - **Real-time Processing**: Enhanced event ingestion with metadata and timestamps
 - **Historical Storage**: All events stored in DynamoDB with queryable indexes
@@ -141,6 +150,7 @@ VITE_API_ENDPOINT=http://localhost:3001/api
 - **SNS Integration**: Built on existing notification system for persistent messaging
 
 ### Infrastructure Workspaces
+
 - **Small**: Basic AWS components (DynamoDB, S3, EventBridge, Secrets Manager)
   - `small/kv_store`: Key-value storage with DynamoDB
   - `small/events_monitoring`: Event monitoring system with 3 DynamoDB tables (events, subscriptions, event_rules)
@@ -152,6 +162,7 @@ VITE_API_ENDPOINT=http://localhost:3001/api
 ### Quick Setup Process
 
 **Complete Automated Setup (One Command!)**
+
 1. **Configure AWS credentials**: `aws sso login --profile your-profile`
 2. **Run the setup assistant**: `npm run setup:ga-google-cloud`
    - Guides through Google Cloud Console setup
@@ -161,11 +172,14 @@ VITE_API_ENDPOINT=http://localhost:3001/api
 3. **Test with live data**: `npm run report:users-by-country`
 
 **Manual Setup (Alternative)**
+
 1. Run `npm run setup:ga-credentials` if you already have OAuth2 credentials
 2. Follow prompts to enter credentials and complete OAuth flow
 
 ### Required Credentials Format
+
 AWS Secrets Manager secret: `agent-mesh-mcp/google-analytics`
+
 ```json
 {
   "client_id": "...",
@@ -179,6 +193,7 @@ AWS Secrets Manager secret: `agent-mesh-mcp/google-analytics`
 ## Development Patterns
 
 ### Technology Preferences
+
 - **TypeScript**: Preferred for all frontend and backend JavaScript/Node.js code
 - **Terraform**: Preferred for all infrastructure as code
 - **Modern ES6+**: Use latest JavaScript features with proper typing
@@ -186,6 +201,7 @@ AWS Secrets Manager secret: `agent-mesh-mcp/google-analytics`
 - **Vite**: TypeScript configuration with proper typing
 
 ### Testing Strategy
+
 - 100% test pass rate requirement
 - Comprehensive AWS and Google API mocking
 - Unit tests: `test/unit/`
@@ -193,6 +209,7 @@ AWS Secrets Manager secret: `agent-mesh-mcp/google-analytics`
 - OAuth2 validation: `test/ga-oauth2-simple.test.mjs`
 
 ### Code Architecture
+
 - **TypeScript Modules**: Modern ES6+ with proper typing
 - **Event-Driven**: All major operations publish EventBridge events
 - **Stateless Services**: Minimal state, external storage via DynamoDB/S3
@@ -200,6 +217,7 @@ AWS Secrets Manager secret: `agent-mesh-mcp/google-analytics`
 - **Mock-Friendly**: Designed for reliable CI/CD testing
 
 ### Infrastructure Management
+
 - Use Terraform workspaces in `infra/workspaces/`
 - **Workspace Tiers**:
   - `extra-small`: $10/month target, minimal services, no hardcoded profiles ✅
@@ -212,6 +230,7 @@ AWS Secrets Manager secret: `agent-mesh-mcp/google-analytics`
 ## Agent System
 
 ### Specialized Agents (`.claude/agents/`)
+
 - **Mentor**: Finds latest documentation and teaches agents new methods
 - **Conductor**: Goal-driven planner and delegator
 - **Critic**: Safety and verification agent  
@@ -222,11 +241,13 @@ AWS Secrets Manager secret: `agent-mesh-mcp/google-analytics`
 ### Integration System (Multiple Connections Support)
 
 #### Connection Architecture
+
 - **App Configurations**: Stored as `integration-<service>` keys containing OAuth2 metadata, UI fields, and workflow capabilities
 - **User Connections**: Stored as `user-{userId}-integration-{service}-{connectionId}` keys containing encrypted credentials and settings
 - **Connection Naming**: Users can create multiple named connections per service (e.g., "Work Account", "Personal", "Backup")
 
 #### KV Store Patterns
+
 ```bash
 # App configuration (shared template)
 integration-google-analytics  # OAuth2 config, UI fields, workflow capabilities
@@ -238,16 +259,19 @@ user-demo-user-123-integration-google-analytics-personal    # Personal account
 ```
 
 #### Workflow Integration
+
 - **Node Filtering**: Workflow nodes become available when ANY connection exists for required service
 - **Legacy Support**: Automatic migration from old `user-{userId}-integration-{service}` pattern
 - **Dynamic Detection**: WorkflowBuilder checks both legacy and new connection patterns
 
 #### Dashboard UI Components
+
 - **IntegrationsSettings**: Supports multiple connections per service with expandable cards
 - **Connection Management**: Individual test/disconnect actions per connection
 - **User Experience**: Clickable cards, connection naming, "Add Another Connection" workflow
 
 ### Memory System
+
 - KV store for agent state and user connections
 - Timeline for event tracking  
 - Vector embeddings for contextual memory
@@ -255,16 +279,19 @@ user-demo-user-123-integration-google-analytics-personal    # Personal account
 ## Common Troubleshooting
 
 ### MCP Server Issues
+
 - `npm test` must pass 100% before deployment
 - Check AWS credentials with `aws configure`
 - Verify environment variables are set correctly
 
 ### Google Analytics Setup
+
 - `Could not load credentials`: Run `npm run setup:ga-credentials`
 - `Failed to initialize Google Analytics`: Use option 3 in setup script to test
 - Detailed guide: `mcp-server/docs/google-analytics-setup.md`
 
 ### Infrastructure Deployment
+
 - Always run `npm run tf:fmt` before commits
 - Set WS and ENV variables before Terraform operations
 - Use small workspaces for development, scale as needed
@@ -272,6 +299,7 @@ user-demo-user-123-integration-google-analytics-personal    # Personal account
 - Profile configuration centralized to avoid duplication across modules
 
 ### Integration Multiple Connections
+
 - **Migration Issues**: Legacy connections automatically migrate to new format with `default` connectionId
 - **Connection Naming**: Empty connection names default to "{ServiceName} (connectionId)" format
 - **Workflow Availability**: Nodes become available when ANY connection exists for the required service

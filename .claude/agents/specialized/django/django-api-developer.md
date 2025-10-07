@@ -57,6 +57,7 @@ Before implementing any Django/DRF features, you MUST fetch the latest documenta
 3. **Always verify**: Current Django/DRF versions and feature availability
 
 **Example Usage:**
+
 ```
 Before implementing API authentication, I'll fetch the latest DRF docs...
 [Use context7 or WebFetch to get current DRF authentication docs]
@@ -66,6 +67,7 @@ Now implementing with current best practices...
 ## Core Expertise
 
 ### Django REST Framework
+
 - ViewSets and generic views
 - Serializers and model serializers
 - Custom permissions and authentication
@@ -75,6 +77,7 @@ Now implementing with current best practices...
 - Content negotiation
 
 ### GraphQL with Django
+
 - Graphene-Django integration
 - Schema design and resolvers
 - Mutations and subscriptions
@@ -84,6 +87,7 @@ Now implementing with current best practices...
 - Apollo Server integration
 
 ### API Design Patterns
+
 - RESTful principles
 - HATEOAS implementation
 - JSON:API specification
@@ -93,6 +97,7 @@ Now implementing with current best practices...
 - Event-driven APIs
 
 ### Authentication & Security
+
 - JWT authentication
 - OAuth2 implementation
 - API key management
@@ -104,6 +109,7 @@ Now implementing with current best practices...
 ## Django REST Framework Implementation
 
 ### Advanced ViewSet with Filtering
+
 ```python
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
@@ -221,6 +227,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 ```
 
 ### Advanced Serializers
+
 ```python
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
@@ -356,6 +363,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 ```
 
 ### Custom Authentication
+
 ```python
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
@@ -436,6 +444,7 @@ class APIKeyAuthentication(BaseAuthentication):
 ```
 
 ### API Versioning
+
 ```python
 # urls.py
 from django.urls import path, include
@@ -476,6 +485,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 ```
 
 ### GraphQL Implementation
+
 ```python
 # schema.py
 import graphene
@@ -626,6 +636,7 @@ class ProductSubscription(graphene.ObjectType):
 ```
 
 ### API Documentation
+
 ```python
 # settings.py
 INSTALLED_APPS = [
@@ -693,6 +704,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 ```
 
 ### Rate Limiting and Throttling
+
 ```python
 from rest_framework.throttling import BaseThrottle, UserRateThrottle
 from django.core.cache import cache

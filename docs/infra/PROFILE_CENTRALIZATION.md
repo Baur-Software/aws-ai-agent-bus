@@ -3,6 +3,7 @@
 ## Problem
 
 AWS profile name "baursoftware" was hardcoded in multiple places:
+
 - `infra/workspaces/small/main.tf` - backend and provider blocks
 - `infra/workspaces/small/*/providers.tf` - 6+ module provider blocks
 - Difficult to change profile across all modules
@@ -22,6 +23,7 @@ export AWS_REGION=us-west-2
 Terraform automatically picks up `AWS_PROFILE` environment variable.
 
 **Benefits:**
+
 - No hardcoding in files
 - Works across all Terraform commands
 - Easy to switch profiles
@@ -41,11 +43,13 @@ encrypt = true
 ```
 
 Usage:
+
 ```bash
 terraform init -backend-config=backend.hcl
 ```
 
 **Benefits:**
+
 - Centralized backend configuration
 - Profile specified in one file per module
 - Easy to version control
@@ -78,6 +82,7 @@ provider "aws" {
 ```
 
 **Benefits:**
+
 - Can override with `-var` flag
 - Can use `terraform.tfvars` file
 - Default value for convenience
@@ -93,10 +98,12 @@ provider "aws" {
 ## Files To Update (If Needed)
 
 Each module directory should have:
+
 - `backend.hcl` - Module-specific backend configuration
 - `providers.tf` - Updated to use variables instead of hardcoded values
 
 Modules that need updating:
+
 - `artifacts_bucket/`
 - `event_bus/`
 - `events_monitoring/`

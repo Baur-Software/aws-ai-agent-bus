@@ -3,6 +3,7 @@
 ## Architecture Overview
 
 **Event-Driven Chat with MCP Tool Access:**
+
 ```
 User (WebSocket) → Dashboard Server → ChatService → AWS Bedrock (Claude 3)
                                            ↓
@@ -17,6 +18,7 @@ User (WebSocket) → Dashboard Server → ChatService → AWS Bedrock (Claude 3)
 ## What Already Exists ✅
 
 ### Backend
+
 - **ChatService** (`dashboard-server/src/services/ChatService.ts`)
   - Bedrock integration configured
   - `getAvailableTools()` queries MCP registry
@@ -33,6 +35,7 @@ User (WebSocket) → Dashboard Server → ChatService → AWS Bedrock (Claude 3)
   - User context
 
 ### Frontend
+
 - **CollapsibleAgentChat** component (needs fixes)
 - **AgentChat** component (needs API wiring)
 - **DashboardServerContext** with `sendMessageWithResponse()`
@@ -40,6 +43,7 @@ User (WebSocket) → Dashboard Server → ChatService → AWS Bedrock (Claude 3)
 ## What Needs to Be Built 🔨
 
 ### 1. WebSocket Chat Handlers (30 min)
+
 **File:** `dashboard-server/src/websocket/handlers.ts`
 
 Add to `handleWebSocketMessage` switch:
@@ -97,6 +101,7 @@ case 'chat.get_history': {
 ```
 
 ### 2. Initialize ChatService Globally (5 min)
+
 **File:** `dashboard-server/src/websocket/handlers.ts`
 
 ```typescript
@@ -123,6 +128,7 @@ function getChatService(): ChatService {
 ```
 
 ### 3. Add Agent Chat State to WorkflowUIContext (15 min)
+
 **File:** `dashboard-ui/src/contexts/WorkflowUIContext.tsx`
 
 ```typescript
@@ -153,6 +159,7 @@ setIsAgentChatPinned,
 ```
 
 ### 4. Fix AgentChat Component (20 min)
+
 **File:** `dashboard-ui/src/components/AgentChat.tsx`
 
 ```typescript
@@ -182,11 +189,14 @@ setCurrentSessionId(response.data.sessionId);
 ```
 
 ### 5. Remove REST Chat Routes (2 min)
+
 **Files to delete/modify:**
+
 - Delete: `dashboard-server/src/routes/chatRoutes.ts`
 - Edit: `dashboard-server/src/server.ts` - Remove chatRoutes import and app.use
 
 ### 6. Configure Bedrock with Workflow Generation Prompt (30 min)
+
 **File:** `dashboard-server/src/services/ChatService.ts`
 
 Enhance `getDefaultSystemPrompt()`:
@@ -238,23 +248,27 @@ Be conversational, helpful, and proactive!`;
 ## Testing Plan
 
 ### Phase 1: Basic Chat (30 min)
+
 1. Start dashboard-server and dashboard-ui
 2. Open browser console
 3. Send test message via WebSocket
 4. Verify response from Bedrock
 
 ### Phase 2: MCP Tool Access (30 min)
+
 1. Prompt: "What integrations do I have connected?"
 2. Claude should use `kv_get` to check
 3. Verify tool calls in logs
 
 ### Phase 3: Workflow Generation (1 hour)
+
 1. Prompt: "Create a workflow that posts daily analytics to Slack"
 2. Claude generates workflow JSON
 3. Add "Create Workflow" button in UI
 4. Load JSON onto canvas
 
 ## Success Criteria
+
 - ✅ Chat panel opens without errors
 - ✅ Messages send/receive via WebSocket
 - ✅ Claude can access MCP tools
@@ -263,7 +277,9 @@ Be conversational, helpful, and proactive!`;
 - ✅ No REST endpoints remain
 
 ## Estimated Time
+
 **Total: 2-3 hours for full implementation**
+
 - WebSocket handlers: 30 min
 - Frontend fixes: 35 min
 - Bedrock configuration: 30 min

@@ -60,6 +60,7 @@ Before implementing any Rust features, you MUST fetch the latest Rust documentat
 3. **Always verify**: Current Rust version features and patterns
 
 **Example Usage:**
+
 ```
 Before implementing this async pattern, I'll fetch the latest Rust docs...
 [Use context7 or WebFetch to get current async/await and concurrency docs]
@@ -69,6 +70,7 @@ Now implementing with current best practices...
 ## Core Expertise
 
 ### Rust Fundamentals
+
 - Ownership, borrowing, and lifetimes
 - Pattern matching and enums
 - Traits and generics
@@ -78,6 +80,7 @@ Now implementing with current best practices...
 - Procedural macros
 
 ### Async Programming
+
 - Tokio runtime and ecosystem
 - async/await patterns
 - Futures and streams
@@ -87,6 +90,7 @@ Now implementing with current best practices...
 - Error handling in async contexts
 
 ### Performance & Safety
+
 - Memory management patterns
 - RAII and Drop trait
 - Unsafe Rust when necessary
@@ -97,6 +101,7 @@ Now implementing with current best practices...
 ## Modern Rust Patterns
 
 ### Async HTTP Server with Error Handling
+
 ```rust
 use axum::{
     extract::{Path, Query, State},
@@ -345,6 +350,7 @@ mod tests {
 ```
 
 ### Advanced Async Patterns with Channels
+
 ```rust
 use tokio::{
     sync::{mpsc, oneshot, Mutex},
@@ -694,6 +700,7 @@ mod tests {
 ```
 
 ### Memory-Efficient Data Structures
+
 ```rust
 use std::{
     collections::HashMap,
@@ -836,6 +843,7 @@ impl<T> Drop for LockFreeStack<T> {
 ## Performance & Benchmarking
 
 ### Criterion Benchmarks
+
 ```rust
 use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
 use std::collections::{HashMap, BTreeMap};
@@ -879,6 +887,7 @@ criterion_main!(benches);
 ## Testing Patterns
 
 ### Property-Based Testing
+
 ```rust
 use proptest::prelude::*;
 

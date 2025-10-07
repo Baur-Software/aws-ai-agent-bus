@@ -15,6 +15,7 @@ Before implementing any S3 features, you MUST fetch the latest documentation to 
 3. **Always verify**: Current S3 features, storage classes, and security patterns
 
 **Example Usage:**
+
 ```
 Before implementing S3 buckets, I'll fetch the latest S3 docs...
 [Use WebFetch to get current docs from AWS S3 documentation]
@@ -71,6 +72,7 @@ When designing S3 solutions, you return structured findings:
 ## Core Expertise
 
 ### Bucket Configuration and Management
+
 - Bucket naming and organization strategies
 - Versioning and MFA delete configuration
 - Storage class selection and optimization
@@ -79,6 +81,7 @@ When designing S3 solutions, you return structured findings:
 - Request routing and static website hosting
 
 ### Security and Access Control
+
 - Bucket policies and IAM integration
 - Access Control Lists (ACLs)
 - Encryption configuration (SSE-S3, SSE-KMS, SSE-C)
@@ -87,6 +90,7 @@ When designing S3 solutions, you return structured findings:
 - Presigned URLs and temporary access
 
 ### Lifecycle and Cost Optimization
+
 - Intelligent tiering configuration
 - Lifecycle policy design
 - Storage class transitions
@@ -97,6 +101,7 @@ When designing S3 solutions, you return structured findings:
 ## S3 Configuration Patterns
 
 ### Production S3 Bucket with Security Hardening
+
 ```yaml
 # KMS key for S3 encryption
 resource "aws_kms_key" "s3_encryption" {
@@ -320,6 +325,7 @@ resource "aws_s3_bucket_cors_configuration" "main" {
 ```
 
 ### Static Website Hosting with CloudFront
+
 ```yaml
 # S3 bucket for static website
 resource "aws_s3_bucket" "website" {
@@ -447,6 +453,7 @@ resource "aws_cloudfront_distribution" "website" {
 ```
 
 ### Cross-Region Replication
+
 ```yaml
 # Destination bucket for replication
 resource "aws_s3_bucket" "replica" {
@@ -567,6 +574,7 @@ resource "aws_s3_bucket_replication_configuration" "replication" {
 ```
 
 ### S3 Transfer Acceleration
+
 ```yaml
 # Transfer acceleration configuration
 resource "aws_s3_bucket_accelerate_configuration" "main" {
@@ -600,6 +608,7 @@ resource "aws_lambda_function" "presigned_url_generator" {
 ### Advanced S3 Features
 
 #### S3 Object Lambda for Data Processing
+
 ```yaml
 # S3 Object Lambda Access Point
 resource "aws_s3_object_lambda_access_point" "data_processor" {
@@ -649,6 +658,7 @@ resource "aws_lambda_function" "data_transformer" {
 ```
 
 #### S3 Batch Operations
+
 ```python
 # Lambda function for S3 Batch Operations
 import json
@@ -736,6 +746,7 @@ def process_object(bucket, key):
 ### Monitoring and Cost Optimization
 
 #### CloudWatch Metrics and Alarms
+
 ```yaml
 # S3 request metrics
 resource "aws_s3_bucket_metric" "main" {
@@ -787,6 +798,7 @@ resource "aws_cloudwatch_metric_alarm" "s3_storage_cost" {
 ```
 
 #### Intelligent Tiering Configuration
+
 ```yaml
 # S3 Intelligent Tiering configuration
 resource "aws_s3_bucket_intelligent_tiering_configuration" "main" {

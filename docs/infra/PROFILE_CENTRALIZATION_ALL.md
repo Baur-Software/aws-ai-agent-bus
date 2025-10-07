@@ -3,18 +3,21 @@
 ## Status by Workspace
 
 ### ✅ extra-small - CLEAN
+
 - No hardcoded AWS profiles
 - No backend configuration (stateless)
 - Uses environment variables only
 - **No changes needed**
 
 ### ✅ medium - CLEAN
+
 - No hardcoded AWS profiles
 - Backend configuration commented out (not using remote state yet)
 - Uses environment variables only
 - **No changes needed**
 
 ### ✅ large - CLEAN
+
 - No hardcoded AWS profiles
 - Backend configuration commented out (not using remote state yet)
 - Uses environment variables only
@@ -23,12 +26,14 @@
 ### ⚠️ small - NEEDS CLEANUP
 
 **Main workspace:**
+
 - ✅ `main.tf` - Updated to use partial backend config
 - ✅ `variables.tf` - Has `aws_profile` variable with default
 - ✅ `backend.hcl` - Created centralized backend config
 - ✅ `README.md` - Documentation added
 
 **Submodules with hardcoded profiles:**
+
 - ⚠️ `artifacts_bucket/providers.tf` - profile = "baursoftware"
 - ⚠️ `event_bus/providers.tf` - profile = "baursoftware"
 - ⚠️ `events_monitoring/providers.tf` - profile = "baursoftware"
@@ -48,7 +53,8 @@ export AWS_PROFILE=baursoftware
 export AWS_REGION=us-west-2
 ```
 
-Then remove the hardcoded `profile = "baursoftware"` lines from all providers.tf files.
+Then remove the hardcoded `profile = "baursoftware"` lines from all
+providers.tf files.
 
 ### Option 2: Backend Config Files (More Explicit)
 
@@ -72,10 +78,10 @@ for module in artifacts_bucket event_bus events_monitoring secrets timeline_stor
     cp "$module/providers.tf" "$module/providers.tf.bak"
 
     # Remove hardcoded profile from provider block
-    sed -i '/provider "aws" {/,/^}/s/profile = "baursoftware"/# profile managed by AWS_PROFILE environment variable/' "$module/providers.tf"
+    sed -i '/provider "aws" {/,/^}/s/profile = "baursoftware"/# profile managed by AWS_PROFILE env var/' "$module/providers.tf"
 
     # Remove hardcoded profile from backend block
-    sed -i '/backend "s3" {/,/^}/s/profile = "baursoftware"/# profile managed by AWS_PROFILE environment variable/' "$module/providers.tf"
+    sed -i '/backend "s3" {/,/^}/s/profile = "baursoftware"/# profile managed by AWS_PROFILE env var/' "$module/providers.tf"
   fi
 done
 

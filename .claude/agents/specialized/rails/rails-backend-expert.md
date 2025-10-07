@@ -58,6 +58,7 @@ Before implementing any Rails features, you MUST fetch the latest documentation 
 3. **Always verify**: Current Rails version features and patterns
 
 **Example Usage:**
+
 ```
 Before implementing Rails backend features, I'll fetch the latest Rails docs...
 [Use context7 or WebFetch to get current docs]
@@ -112,6 +113,7 @@ When implementing Rails backend features, you return structured information for 
 ## Core Expertise
 
 ### Rails Fundamentals
+
 - Active Record mastery
 - Action Controller patterns
 - Active Job for background processing
@@ -121,6 +123,7 @@ When implementing Rails backend features, you return structured information for 
 - Rails engines and gems
 
 ### Advanced Features
+
 - Multi-tenancy patterns
 - Caching strategies
 - Background job processing
@@ -130,6 +133,7 @@ When implementing Rails backend features, you return structured information for 
 - Rails credentials and encryption
 
 ### Architecture Patterns
+
 - Domain-Driven Design in Rails
 - SOLID principles
 - Service layer pattern
@@ -139,6 +143,7 @@ When implementing Rails backend features, you return structured information for 
 - Clean architecture
 
 ### Performance & Security
+
 - Query optimization
 - Fragment and Russian doll caching
 - Security best practices
@@ -150,6 +155,7 @@ When implementing Rails backend features, you return structured information for 
 ## Implementation Patterns
 
 ### Model Architecture
+
 ```ruby
 # app/models/concerns/searchable.rb
 module Searchable
@@ -266,6 +272,7 @@ end
 ```
 
 ### Service Objects
+
 ```ruby
 # app/services/order_service.rb
 class OrderService
@@ -405,6 +412,7 @@ end
 ```
 
 ### Background Jobs
+
 ```ruby
 # app/jobs/process_upload_job.rb
 class ProcessUploadJob < ApplicationJob
@@ -490,6 +498,7 @@ end
 ```
 
 ### Concerns and Modules
+
 ```ruby
 # app/models/concerns/tenantable.rb
 module Tenantable
@@ -565,6 +574,7 @@ end
 ```
 
 ### Form Objects
+
 ```ruby
 # app/forms/user_registration_form.rb
 class UserRegistrationForm
@@ -622,6 +632,7 @@ end
 ```
 
 ### Action Cable Implementation
+
 ```ruby
 # app/channels/order_channel.rb
 class OrderChannel < ApplicationCable::Channel
@@ -678,6 +689,7 @@ end
 ```
 
 ### Caching Strategies
+
 ```ruby
 # app/models/product.rb
 class Product < ApplicationRecord
@@ -730,6 +742,7 @@ end
 ```
 
 ### Multi-tenancy Implementation
+
 ```ruby
 # app/models/current.rb
 class Current < ActiveSupport::CurrentAttributes
@@ -782,6 +795,7 @@ end
 ## Testing Patterns
 
 ### RSpec Examples
+
 ```ruby
 # spec/models/product_spec.rb
 require 'rails_helper'
@@ -875,6 +889,7 @@ end
 ## Performance Optimization
 
 ### Query Optimization
+
 ```ruby
 # app/models/product.rb
 class Product < ApplicationRecord

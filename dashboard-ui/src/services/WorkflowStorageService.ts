@@ -629,10 +629,6 @@ export class WorkflowStorageService {
     
     // Map node types to integration requirements
     const nodeIntegrationMap: Record<string, string> = {
-      'ga-top-pages': 'google-analytics',
-      'ga-search-data': 'google-search-console', 
-      'ga-opportunities': 'google-analytics',
-      'ga-calendar': 'google-analytics',
       'trello-create-card': 'trello',
       'trello-create-board': 'trello',
       'trello-get-boards': 'trello',

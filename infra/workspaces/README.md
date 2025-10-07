@@ -5,21 +5,25 @@ Tiered workspace structure designed for different usage levels and cost targets.
 ## Workspace Tiers
 
 ### 🔷 **extra-small/** - $10/month target
+
 **Perfect for:** Individual developers, prototyping, learning
 
 **Components:**
+
 - DynamoDB KV Store (on-demand)
 - EventBridge Bus (basic events)
 - Secrets Manager (1 secret)
 - ECS Dashboard Service (0.25 vCPU, 0.5GB, Fargate Spot)
 
 **Features:**
+
 - Dashboard server with embedded Rust MCP binary
 - No Application Load Balancer (direct ECS access)
 - Fargate Spot for 70% cost savings
 - Minimal logging retention (7 days)
 
 **Estimated Cost:** ~$10/month
+
 - DynamoDB: ~$1-2/month
 - EventBridge: ~$1/month
 - Secrets Manager: ~$0.40/month
@@ -27,9 +31,11 @@ Tiered workspace structure designed for different usage levels and cost targets.
 - Total: ~$5-7/month (under $10 target)
 
 ### 🔶 **small/** - $15-20/month
+
 **Perfect for:** Small teams, development environments
 
 **Components:**
+
 - All extra-small components +
 - S3 Artifacts Bucket
 - S3 Timeline Store
@@ -37,6 +43,7 @@ Tiered workspace structure designed for different usage levels and cost targets.
 - Application Load Balancer
 
 **Features:**
+
 - External HTTP access via ALB
 - Extended event monitoring
 - Artifact storage for workflows
@@ -45,9 +52,11 @@ Tiered workspace structure designed for different usage levels and cost targets.
 **Estimated Cost:** ~$15-18/month
 
 ### 🔸 **medium/** - $50-80/month
+
 **Perfect for:** Production workloads, larger teams
 
 **Components:**
+
 - All small components +
 - Step Functions Workflows
 - Agent Orchestration
@@ -55,6 +64,7 @@ Tiered workspace structure designed for different usage levels and cost targets.
 - Enhanced CloudWatch monitoring
 
 **Features:**
+
 - Multi-agent orchestration
 - Workflow automation via Step Functions
 - Advanced monitoring and alerting
@@ -63,9 +73,11 @@ Tiered workspace structure designed for different usage levels and cost targets.
 **Estimated Cost:** ~$50-75/month
 
 ### 🔺 **large/** - $200+/month
+
 **Perfect for:** Enterprise, high-availability production
 
 **Components:**
+
 - All medium components +
 - Aurora PostgreSQL with pgvector
 - Multi-AZ deployments
@@ -73,6 +85,7 @@ Tiered workspace structure designed for different usage levels and cost targets.
 - Auto-scaling configurations
 
 **Features:**
+
 - Vector database for AI embeddings
 - High availability across zones
 - Enterprise monitoring and alerting
@@ -83,6 +96,7 @@ Tiered workspace structure designed for different usage levels and cost targets.
 ## Deployment Guide
 
 ### 1. Choose Your Tier
+
 ```bash
 # For individual development
 export WS=extra-small ENV=dev
@@ -98,6 +112,7 @@ export WS=large ENV=prod
 ```
 
 ### 2. Deploy Infrastructure
+
 ```bash
 # Initialize Terraform
 npm run tf:init
@@ -110,7 +125,9 @@ npm run tf:apply
 ```
 
 ### 3. Scale Up When Ready
+
 Move between tiers by deploying the next level:
+
 ```bash
 # Graduate from extra-small to small
 export WS=small ENV=dev
@@ -122,19 +139,22 @@ npm run tf:apply
 
 ## Cost Optimization Tips
 
-### For extra-small workspaces:
+### For extra-small workspaces
+
 - Use Fargate Spot (70% savings)
 - No ALB (save ~$18/month)
 - Short log retention (7 days)
 - On-demand DynamoDB only
 
-### For all workspaces:
+### For all workspaces
+
 - Monitor usage with AWS Cost Explorer
 - Set up billing alerts
 - Use Reserved Instances for predictable workloads
 - Consider Savings Plans for Fargate
 
-### Upgrade path:
+### Upgrade path
+
 - Start with extra-small for development
 - Move to small when you need external access
 - Scale to medium for production features

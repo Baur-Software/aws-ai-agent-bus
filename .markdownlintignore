@@ -1,0 +1,5 @@
+docs/infra/**
+infra/**
+.claude/**
+dashboard-ui/**
+node_modules/**

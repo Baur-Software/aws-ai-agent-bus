@@ -68,7 +68,7 @@ If you have existing Terraform state:
 terraform init -backend-config=backend.hcl -reconfigure
 ```
 
-##Best Practice
+## Best Practice
 
 Use environment variables for profile management:
 

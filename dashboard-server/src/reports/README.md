@@ -11,7 +11,8 @@ This directory contains pre-built report scripts that utilize the Google Analyti
 
 Generates a comprehensive report of unique users segmented by country for the last 30 days.
 
-#### Features:
+#### Features
+
 - **Total Users**: Unique users count by country
 - **Active Users**: Engaged users within the period  
 - **Sessions**: Total session count per country
@@ -19,7 +20,7 @@ Generates a comprehensive report of unique users segmented by country for the la
 - **Geographic Insights**: Regional distribution analysis
 - **Top Performers**: Highest traffic and engagement countries
 
-#### Usage:
+#### Usage
 
 ```bash
 # From project root
@@ -30,11 +31,12 @@ node src/reports/users-by-country.js
 npm run report:users-by-country
 ```
 
-#### Prerequisites:
+#### Prerequisites
 
 1. **AWS Credentials**: Must be configured with access to AWS Secrets Manager
 2. **Google Analytics Secret**: Secret named `myproject-content-pipeline/google-analytics` must exist in AWS Secrets Manager
 3. **Secret Format**:
+
    ```json
    {
      "client_id": "your-oauth-client-id",
@@ -45,7 +47,7 @@ npm run report:users-by-country
    }
    ```
 
-#### Sample Output:
+#### Sample Output
 
 ```
 === UNIQUE USERS BY COUNTRY - LAST 30 DAYS ===
@@ -65,17 +67,19 @@ Summary:
 • Top performing countries by engagement
 ```
 
-#### Troubleshooting:
+#### Troubleshooting
 
 **Error**: `Could not load credentials from any providers`
+
 - **Solution**: Configure AWS credentials using AWS CLI, environment variables, or IAM roles
 - **Check**: Verify AWS credentials with `aws sts get-caller-identity`
 
 **Error**: `Failed to initialize Google Analytics`  
+
 - **Solution**: Verify the secret exists and contains valid Google OAuth credentials
 - **Check**: Test secret access with `aws secretsmanager get-secret-value --secret-id myproject-content-pipeline/google-analytics`
 
-#### Development:
+#### Development
 
 To create new reports:
 
@@ -85,7 +89,7 @@ To create new reports:
 4. Add comprehensive error handling and logging
 5. Include sample data version for testing
 
-#### Integration with MCP:
+#### Integration with MCP
 
 These reports can be integrated into the MCP server as tools by:
 
@@ -106,6 +110,7 @@ reports/
 ```
 
 Each report:
+
 - Uses the centralized `GoogleAnalyticsService`
 - Handles AWS authentication consistently
 - Provides comprehensive error handling

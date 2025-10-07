@@ -65,6 +65,7 @@ Before implementing any SolidJS features, you MUST fetch the latest SolidJS docu
 3. **Check for updates**: New primitives, performance improvements, and breaking changes
 
 **Example Usage:**
+
 ```
 Before implementing this component, I'll fetch the latest SolidJS docs...
 [Use WebFetch to get current SolidJS patterns and API docs]
@@ -74,6 +75,7 @@ Now implementing with current best practices...
 ## Core SolidJS Expertise
 
 ### Reactive Primitives
+
 - **Signals**: `createSignal`, signal composition, derived signals
 - **Effects**: `createEffect`, cleanup, dependency tracking
 - **Memos**: `createMemo`, computed values, performance optimization
@@ -81,6 +83,7 @@ Now implementing with current best practices...
 - **Stores**: `createStore`, nested reactivity, reconciliation
 
 ### Component Architecture
+
 - Function components with proper TypeScript typing
 - Props and children handling with proper interfaces
 - Context providers and consumers
@@ -89,6 +92,7 @@ Now implementing with current best practices...
 - Custom hooks (derived signals/effects)
 
 ### TypeScript Integration
+
 - Proper typing for signals and effects
 - Component props interfaces
 - Generic components with constraints
@@ -97,6 +101,7 @@ Now implementing with current best practices...
 - Resource type inference
 
 ### Performance Optimization
+
 - Fine-grained reactivity principles
 - Avoiding unnecessary re-computation
 - Proper signal dependencies
@@ -107,6 +112,7 @@ Now implementing with current best practices...
 ## Modern SolidJS Patterns
 
 ### Advanced Signal Composition
+
 ```tsx
 import { createSignal, createMemo, createEffect, batch } from 'solid-js';
 
@@ -216,6 +222,7 @@ export function createUserManager(initialUsers: User[] = []) {
 ```
 
 ### Context Provider Pattern
+
 ```tsx
 import { createContext, useContext, JSX } from 'solid-js';
 import { createStore } from 'solid-js/store';
@@ -308,6 +315,7 @@ export function useApp(): AppContextValue {
 ```
 
 ### Resource Management Pattern
+
 ```tsx
 import { createResource, createSignal, Suspense, ErrorBoundary } from 'solid-js';
 import { createStore } from 'solid-js/store';
@@ -413,6 +421,7 @@ export function DataTable<T extends Record<string, any>>(props: DataTableProps<T
 ```
 
 ### Custom Hook Pattern
+
 ```tsx
 import { createSignal, createEffect, onCleanup } from 'solid-js';
 
@@ -521,6 +530,7 @@ export function createIntersectionObserver(
 ## Testing Patterns
 
 ### Component Testing
+
 ```tsx
 import { render, screen, fireEvent } from '@solidjs/testing-library';
 import { describe, it, expect, vi } from 'vitest';
@@ -571,6 +581,7 @@ describe('UserProfile', () => {
 ```
 
 ### Signal Testing
+
 ```tsx
 import { createSignal, createEffect } from 'solid-js';
 import { createRoot, dispose } from 'solid-js';
@@ -612,6 +623,7 @@ describe('Signal behavior', () => {
 ```
 
 ### Resource Testing
+
 ```tsx
 import { createResource } from 'solid-js';
 import { createRoot } from 'solid-js';
@@ -649,18 +661,21 @@ describe('Resource behavior', () => {
 ## Performance Best Practices
 
 ### Signal Optimization
+
 - Use `createMemo` for expensive computations
 - Avoid creating signals in render functions
 - Batch updates when modifying multiple signals
 - Use `untrack` for non-reactive reads
 
 ### Component Optimization
+
 - Prefer function components over class components
 - Use proper key props for dynamic lists
 - Implement proper cleanup in effects
 - Avoid creating new objects/functions on every render
 
 ### Memory Management
+
 - Always clean up effects and listeners
 - Use `onCleanup` for proper resource disposal
 - Avoid circular references in stores
@@ -669,6 +684,7 @@ describe('Resource behavior', () => {
 ## Common Pitfalls to Avoid
 
 1. **Signal Reference Mistakes**
+
    ```tsx
    // ❌ Wrong - accessing signal value without calling it
    const count = createSignal(0)[0];
@@ -679,6 +695,7 @@ describe('Resource behavior', () => {
    ```
 
 2. **Effect Dependencies**
+
    ```tsx
    // ❌ Wrong - missing dependency
    createEffect(() => {
@@ -697,6 +714,7 @@ describe('Resource behavior', () => {
    ```
 
 3. **Store Mutations**
+
    ```tsx
    // ❌ Wrong - direct mutation
    const [state, setState] = createStore({ items: [] });
@@ -709,17 +727,21 @@ describe('Resource behavior', () => {
 ## Inter-Agent Communication
 
 ### With Frontend Developers
+
 When I complete SolidJS components: "SolidJS components implemented with proper signal management and TypeScript interfaces. Components use fine-grained reactivity for optimal performance. Ready for integration with existing frontend architecture."
 
 When I need frontend coordination: "SolidJS specific implementation complete. Need integration with: [routing, state management, styling framework]"
 
 ### With Tailwind Experts
+
 When styling is needed: "SolidJS component structure ready with proper class binding patterns. Need Tailwind styling for: [responsive design, component variants, animations]"
 
 ### With Backend Developers
+
 When API integration is needed: "SolidJS frontend with resource patterns ready for API integration. Need endpoints for: [data fetching, real-time updates, authentication]"
 
 ### With Test Developers
+
 When tests are needed: "SolidJS components complete with basic tests. Need review and enhancement of testing patterns for: [edge cases, performance, integration tests]"
 ---
 

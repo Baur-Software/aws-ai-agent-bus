@@ -61,7 +61,9 @@ if (hasDedicatedComponent(nodeType)) {
 ### Logic Nodes
 
 #### ConditionalNodeConfig
+
 Handles if/else if/else branching logic with:
+
 - Visual condition builder
 - JavaScript expression support
 - Two evaluation modes: first-match and all-matches
@@ -69,6 +71,7 @@ Handles if/else if/else branching logic with:
 - Validation and help text
 
 **Config Interface:**
+
 ```typescript
 interface ConditionalConfig {
   conditions: Condition[];
@@ -83,13 +86,16 @@ interface Condition {
 ```
 
 #### SwitchNodeConfig
+
 Handles switch/case routing with:
+
 - Case builder with add/remove/reorder
 - Default case support (catch-all)
 - Output port naming
 - Visual feedback for default case
 
 **Config Interface:**
+
 ```typescript
 interface SwitchConfig {
   value: string;  // Expression to evaluate
@@ -105,7 +111,9 @@ interface SwitchCase {
 ### HTTP Nodes
 
 #### HttpNodeConfig
+
 Handles all HTTP methods (GET, POST, PUT, DELETE, PATCH) with:
+
 - Method selector buttons
 - URL input with variable interpolation
 - Headers builder (add/remove/edit)
@@ -113,6 +121,7 @@ Handles all HTTP methods (GET, POST, PUT, DELETE, PATCH) with:
 - Advanced options (timeout, redirects, SSL validation)
 
 **Config Interface:**
+
 ```typescript
 interface HttpConfig {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
@@ -128,13 +137,16 @@ interface HttpConfig {
 ### Storage Nodes
 
 #### KVStoreNodeConfig
+
 Handles both KV get and set operations with:
+
 - Key input with variable support
 - Get-specific: default value, JSON parsing
 - Set-specific: value editor, TTL, scope selector
 - Contextual help and output examples
 
 **Config Interfaces:**
+
 ```typescript
 interface KVGetConfig {
   operation: 'get';
@@ -155,12 +167,15 @@ interface KVSetConfig {
 ### Trigger Nodes
 
 #### TriggerNodeConfig
+
 Handles all trigger types (manual, webhook, schedule) with:
+
 - Manual: description field
 - Webhook: path, method, authentication, API key
 - Schedule: cron presets, custom expressions, timezone, enable/disable
 
 **Config Interfaces:**
+
 ```typescript
 interface ManualTriggerConfig {
   type: 'manual';
@@ -186,7 +201,9 @@ interface ScheduleTriggerConfig {
 ### Compute Nodes
 
 #### DockerNodeConfig
+
 Handles Docker container execution with comprehensive configuration:
+
 - **Basic**: Image, tag, command, arguments
 - **Environment**: Key-value environment variables with add/remove
 - **Volumes**: Host-to-container volume mounts with read-only option
@@ -194,6 +211,7 @@ Handles Docker container execution with comprehensive configuration:
 - **Advanced**: Working directory, user, network mode, resource limits (CPU/memory), timeout, auto-remove
 
 **Config Interface:**
+
 ```typescript
 interface DockerConfig {
   image: string;
@@ -270,6 +288,7 @@ import { ConditionalNodeConfig, SwitchNodeConfig } from '@ai-agent-bus/workflow-
 ## Current Coverage
 
 **Static System Nodes (Dedicated Components):**
+
 - ✅ Logic: Conditional, Switch
 - ✅ HTTP: GET, POST, PUT, DELETE, PATCH
 - ✅ Storage: KV Get, KV Set
@@ -277,6 +296,7 @@ import { ConditionalNodeConfig, SwitchNodeConfig } from '@ai-agent-bus/workflow-
 - ✅ Compute: Docker Container
 
 **Dynamic/Generic Nodes (Fallback to Generic Form):**
+
 - 🔌 MCP-generated agents and tools (discovered at runtime)
 - 🤖 Agent nodes (conductor, critic, terraform, etc.)
 - 📊 Analytics nodes (Google Analytics, custom integrations)
@@ -330,6 +350,7 @@ In `nodeDefinitions.ts`, add credential fields to nodes that need authentication
 ### Credential Selector UI
 
 The `CredentialSelector` component provides:
+
 - Dropdown of available connections
 - "No connection" warning with setup link
 - Test connection functionality
@@ -374,6 +395,7 @@ Node Execution Uses Credentials
 ## Future Node Candidates
 
 Consider creating dedicated components for:
+
 - Database Query nodes (query builder, result mapping)
 - Transform nodes (data mapping, filtering, enrichment)
 - Agent nodes (system prompt builder, tool selection)

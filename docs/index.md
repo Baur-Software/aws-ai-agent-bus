@@ -11,6 +11,7 @@ Welcome to the AWS AI Agent Bus documentation! This project provides a comprehen
 ## 📚 Core Components
 
 ### MCP Server
+
 The Model Context Protocol server provides AI assistants with AWS service access.
 
 - [**API Reference**](mcp-server/api.md) - Complete API documentation
@@ -19,7 +20,8 @@ The Model Context Protocol server provides AI assistants with AWS service access
 - [**Examples**](mcp-server/examples.md) - Usage examples
 - [**Google Analytics Setup**](mcp-server/google-analytics-setup.md) - Analytics integration
 
-### Infrastructure 
+### Infrastructure
+
 Terraform modules for scalable AWS deployment organized by workspaces.
 
 - [**Infrastructure Overview**](infra/) - Architecture and components
@@ -27,6 +29,7 @@ Terraform modules for scalable AWS deployment organized by workspaces.
 - **Integrations**: [Stripe](infra/integrations/stripe/) | [Supabase](infra/integrations/supabase/) | [Vercel](infra/integrations/vercel/)
 
 ### Agent System
+
 Sophisticated agent orchestration with conductors, critics, and specialists.
 
 - [**Agent Architecture**](agents/) - System overview

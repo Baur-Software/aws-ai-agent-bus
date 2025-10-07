@@ -15,6 +15,7 @@ Before implementing any Route 53 features, you MUST fetch the latest documentati
 3. **Always verify**: Current record types, routing policies, and health check capabilities
 
 **Example Usage:**
+
 ```
 Before implementing Route 53 configurations, I'll fetch the latest Route 53 docs...
 [Use WebFetch to get current docs from AWS Route 53 documentation]
@@ -71,6 +72,7 @@ When designing Route 53 solutions, you return structured findings:
 ## Core Expertise
 
 ### DNS Management and Optimization
+
 - Hosted zone configuration and management
 - Record set optimization and consolidation
 - TTL tuning for performance and cost
@@ -79,6 +81,7 @@ When designing Route 53 solutions, you return structured findings:
 - Subdomain delegation strategies
 
 ### Traffic Routing and Load Balancing
+
 - Weighted routing for A/B testing
 - Latency-based routing for global performance
 - Geolocation routing for compliance
@@ -87,6 +90,7 @@ When designing Route 53 solutions, you return structured findings:
 - Failover routing for high availability
 
 ### Health Monitoring and Failover
+
 - Health check configuration and monitoring
 - Application and endpoint health validation
 - DNS failover automation
@@ -97,6 +101,7 @@ When designing Route 53 solutions, you return structured findings:
 ## Route 53 Configuration Patterns
 
 ### Production Hosted Zone Setup
+
 ```yaml
 # Primary hosted zone for domain
 resource "aws_route53_zone" "primary" {
@@ -237,6 +242,7 @@ resource "aws_route53_record" "dmarc" {
 ```
 
 ### Health Checks Configuration
+
 ```yaml
 # Primary endpoint health check
 resource "aws_route53_health_check" "primary" {
@@ -337,6 +343,7 @@ resource "aws_cloudwatch_metric_alarm" "health_check_failure" {
 ```
 
 ### Global Traffic Routing
+
 ```yaml
 # Latency-based routing for global performance
 resource "aws_route53_record" "global_latency" {
@@ -438,6 +445,7 @@ resource "aws_route53_record" "weighted_v2" {
 ```
 
 ### AWS Service Integration
+
 ```yaml
 # CloudFront distribution alias
 resource "aws_route53_record" "cloudfront_alias" {
@@ -500,6 +508,7 @@ resource "aws_route53_record" "elasticache_private" {
 ```
 
 ### Private Hosted Zone
+
 ```yaml
 # Private hosted zone for internal services
 resource "aws_route53_zone" "private" {
@@ -544,6 +553,7 @@ resource "aws_route53_record" "monitoring" {
 ```
 
 ### DNS Query Logging
+
 ```python
 # Python script for Route 53 query log analysis
 import boto3
@@ -725,6 +735,7 @@ if __name__ == "__main__":
 ## Monitoring and Alerting
 
 ### Route 53 Metrics and Alarms
+
 ```yaml
 # Route 53 query count alarm
 resource "aws_cloudwatch_metric_alarm" "query_count_high" {

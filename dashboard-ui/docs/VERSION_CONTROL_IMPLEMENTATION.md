@@ -5,7 +5,9 @@
 ## What Was Implemented
 
 ### 1. WorkflowVersioningService (`src/services/WorkflowVersioning.ts`)
+
 Core versioning engine providing:
+
 - **Automatic versioning**: Every save creates immutable version with SHA-256 checksum
 - **Version history**: Query all versions for a workflow (newest first)
 - **Rollback**: Restore any previous version (creates new version as copy)
@@ -14,7 +16,9 @@ Core versioning engine providing:
 - **Command pattern**: Record all canvas operations for undo/redo
 
 ### 2. WorkflowContext Integration (`src/contexts/WorkflowContext.tsx`)
+
 Enhanced workflow context with:
+
 - **saveWorkflow(message?)**: Now accepts optional commit message
 - **undo()**: Undo last canvas operation
 - **redo()**: Redo last undone operation
@@ -26,13 +30,17 @@ Enhanced workflow context with:
 - **recordCommand(command)**: Track operations for undo/redo
 
 ### 3. Keyboard Shortcuts (`src/pages/Canvas.tsx`)
+
 Global keyboard shortcuts:
+
 - **Ctrl+Z / Cmd+Z**: Undo
 - **Ctrl+Y / Cmd+Shift+Z**: Redo
 - **Ctrl+S / Cmd+S**: Save workflow
 
 ### 4. Version History UI (`src/components/workflow/ui/VersionHistoryPanel.tsx`)
+
 Git-like version browser with:
+
 - **Version list**: All versions with metadata, timestamps, checksums
 - **Visual diff**: Compare any two versions with color-coded changes
   - Green: Added nodes/connections
@@ -45,6 +53,7 @@ Git-like version browser with:
 ## Storage Schema
 
 ### DynamoDB Keys
+
 ```
 # Main workflow (latest state)
 workflow-{workflowId}
@@ -57,6 +66,7 @@ workflow-versions-index-{context}-{workflowId}
 ```
 
 ### Version Document
+
 ```typescript
 {
   versionId: "workflow-123-v5",
@@ -97,6 +107,7 @@ Each canvas operation creates a command:
 ```
 
 ### Example: Add Node
+
 ```typescript
 // When user adds a node
 workflow.recordCommand({
@@ -113,6 +124,7 @@ workflow.recordCommand({
 ## Multi-Tenancy
 
 Versions are scoped by context:
+
 - **Personal**: `user-{userId}` prefix
 - **Organizational**: `org-{orgId}` prefix
 - **System**: `system` prefix
@@ -120,6 +132,7 @@ Versions are scoped by context:
 ## Data Integrity
 
 SHA-256 checksums ensure data integrity:
+
 ```typescript
 // Calculated on save
 checksum = sha256({ nodes, connections, storyboards })
@@ -133,6 +146,7 @@ if (calculatedChecksum !== storedChecksum) {
 ## Usage Examples
 
 ### Recording Commands
+
 ```typescript
 const handleAddNode = (node) => {
   // Update state
@@ -152,6 +166,7 @@ const handleAddNode = (node) => {
 ```
 
 ### Undo/Redo
+
 ```typescript
 // Undo last action
 if (workflow.canUndo()) {
@@ -165,22 +180,26 @@ if (workflow.canRedo()) {
 ```
 
 ### Save with Message
+
 ```typescript
 await workflow.saveWorkflow('Added authentication logic');
 ```
 
 ### View History
+
 ```typescript
 const versions = await workflow.getVersionHistory();
 console.log('Version history:', versions);
 ```
 
 ### Rollback
+
 ```typescript
 await workflow.rollbackToVersion(5); // Restore version 5
 ```
 
 ### Compare Versions
+
 ```typescript
 const diff = await workflow.getVersionDiff(3, 5);
 console.log('Changes:', {
@@ -193,15 +212,18 @@ console.log('Changes:', {
 ## Performance
 
 ### Storage
+
 - Each version: ~5-50KB (depends on workflow size)
 - 100 versions: ~0.5-5MB total
 - DynamoDB auto-scales read/write capacity
 
 ### Memory
+
 - Undo stack: Max 100 commands per workflow
 - ~1KB per command = ~100KB max in memory
 
 ### Network
+
 - Version history: On-demand loading
 - Diff calculation: Client-side (no API calls)
 - Checksums: Computed during save (no extra round-trips)
@@ -209,19 +231,24 @@ console.log('Changes:', {
 ## Integration Points
 
 ### Canvas Operations
+
 Every canvas operation should call `workflow.recordCommand()`:
+
 - Node add/remove/update
 - Connection add/remove
 - Node movement
 - Storyboard changes
 
 ### Save Behavior
+
 - `saveWorkflow()` creates new version automatically
 - Optional commit message for context
 - Triggers EventBridge event: `workflow.version_created`
 
 ### UI Integration
+
 Add Version History button to workflow toolbar:
+
 ```typescript
 <button onClick={() => openVersionHistory()}>
   <History class="w-4 h-4" />
@@ -255,12 +282,14 @@ Add Version History button to workflow toolbar:
 ## Files Changed/Created
 
 ### Created
+
 - `dashboard-ui/src/services/WorkflowVersioning.ts` (343 lines)
 - `dashboard-ui/src/components/workflow/ui/VersionHistoryPanel.tsx` (297 lines)
 - `dashboard-ui/WORKFLOW_VERSION_CONTROL.md` (Documentation)
 - `dashboard-ui/VERSION_CONTROL_IMPLEMENTATION.md` (This file)
 
 ### Modified
+
 - `dashboard-ui/src/contexts/WorkflowContext.tsx`
   - Added imports for WorkflowVersioningService
   - Initialized versioning service
@@ -278,6 +307,7 @@ Add Version History button to workflow toolbar:
 To use version control in the UI:
 
 1. **Add Version History button to toolbar**:
+
    ```typescript
    // In FloatingToolbar.tsx
    import VersionHistoryPanel from './VersionHistoryPanel';
@@ -300,6 +330,7 @@ To use version control in the UI:
    - Track connection changes
 
 4. **Add save button with commit message**:
+
    ```typescript
    const [commitMessage, setCommitMessage] = createSignal('');
 

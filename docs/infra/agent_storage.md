@@ -1,6 +1,7 @@
 # Agent Storage Architecture
 
 ## DynamoDB Table: Agents
+
 | Field        | Type      | Description                                 |
 |------------- |---------- |---------------------------------------------|
 | agentId      | String    | Primary key, unique agent identifier        |
@@ -16,12 +17,14 @@
 | tags         | [String]  | Optional tags for filtering                 |
 
 ## S3 Storage Structure
+
 - Bucket: `agent-definitions`
 - Organization agents: `org/{orgId}/agents/{agentId}/v{version}.md`
 - User agents: `user/{userId}/agents/{agentId}/v{version}.md`
 - Each agent definition is a markdown file, versioned by incrementing `v{version}`.
 
 ## Dashboard-Server Event API
+
 - `agent.list` (org/user context)
 - `agent.create` (upload markdown, create metadata)
 - `agent.update` (update markdown, increment version)
@@ -29,6 +32,7 @@
 - `agent.get` (fetch agent details and markdown)
 
 ## UI Integration
+
 - Markdown editor for agent creation/editing
 - CRUD operations via dashboard-server events
 - MCP queries dashboard-server for agent lists

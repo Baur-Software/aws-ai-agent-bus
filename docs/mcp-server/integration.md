@@ -41,6 +41,7 @@ Add the MCP server to your Claude Desktop configuration file (`~/.config/claude-
 ### Environment-Specific Configurations
 
 #### Development Environment
+
 ```json
 {
   "aws-agent-mesh-dev": {
@@ -60,6 +61,7 @@ Add the MCP server to your Claude Desktop configuration file (`~/.config/claude-
 ```
 
 #### Production Environment
+
 ```json
 {
   "aws-agent-mesh-prod": {

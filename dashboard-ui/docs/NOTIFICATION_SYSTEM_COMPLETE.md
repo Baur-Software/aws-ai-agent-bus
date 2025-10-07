@@ -9,6 +9,7 @@ Implemented a comprehensive **context-aware notification preferences system** wi
 ### 1. **Notification Preferences UI** ([NotificationSettings.tsx](dashboard-ui/src/components/NotificationSettings.tsx))
 
 #### Features
+
 - **5 Event Categories**: Workflow, Integration, Agent, System, MCP Tools
 - **4 Notification Channels** per category:
   - 📱 In-App (WebSocket real-time)
@@ -21,6 +22,7 @@ Implemented a comprehensive **context-aware notification preferences system** wi
 - **KV Storage**: Preferences saved per context with 1-year TTL
 
 #### UI Components
+
 ```typescript
 // 5 notification categories with toggleable channels
 DEFAULT_PREFERENCES = [
@@ -38,6 +40,7 @@ channels: { inApp: true, email: false, sms: false, webhook: false }
 ### 2. **Context Switching - Event-Driven** (OrganizationContext.tsx)
 
 #### Before (REST API - Broken)
+
 ```typescript
 // ❌ REST endpoint doesn't exist
 const result = await orgService().switchOrganization(orgId);
@@ -45,6 +48,7 @@ const result = await orgService().switchOrganization(orgId);
 ```
 
 #### After (WebSocket Events - Working)
+
 ```typescript
 // ✅ Send switch_context event via WebSocket
 dashboardServer.sendMessage({
@@ -67,6 +71,7 @@ dashboardServer.sendMessage({
 ### 3. **Context-Aware Events Panel** ([Events.tsx](dashboard-ui/src/pages/Events.tsx))
 
 #### Auto-Reload on Context Switch
+
 ```typescript
 // Reactive effect detects context changes
 createEffect(() => {
@@ -86,6 +91,7 @@ createEffect(() => {
 ```
 
 #### Visual Context Indicator
+
 ```tsx
 <div class="mb-3 flex items-center gap-2 text-sm">
   <span class="text-gray-500">Context:</span>
@@ -101,6 +107,7 @@ createEffect(() => {
 ### 4. **Settings Integration**
 
 #### Enabled Notifications Settings
+
 ```typescript
 // Settings.tsx - Now available!
 {
@@ -113,6 +120,7 @@ createEffect(() => {
 ```
 
 #### Navigation Flow
+
 ```
 Settings → [Notifications Card] → NotificationSettings Component
                                    ↓
@@ -128,6 +136,7 @@ Settings → [Notifications Card] → NotificationSettings Component
 ## 🔐 Security & RBAC
 
 ### Tenant Isolation (Already Implemented)
+
 ```typescript
 // EventsHandler.matchesSubscription() in dashboard-server
 private static matchesSubscription(event, subscription): boolean {
@@ -147,6 +156,7 @@ private static matchesSubscription(event, subscription): boolean {
 ```
 
 ### Permission Checks (Already Implemented)
+
 ```typescript
 // AuthMiddleware.hasPermission() in dashboard-server
 static hasPermission(
@@ -174,6 +184,7 @@ static hasPermission(
 ## 📊 Data Flow
 
 ### Notification Preferences Storage
+
 ```
 User Action: Toggle Email for Workflow Events
          ↓
@@ -196,6 +207,7 @@ KV Store (DynamoDB)
 ```
 
 ### Event Delivery Based on Preferences
+
 ```
 Workflow Execution → workflow.completed event
          ↓
@@ -214,6 +226,7 @@ Deliver to enabled channels only
 ```
 
 ### Context Switching Flow
+
 ```
 User Clicks: [Personal ▼] → [Acme Corp]
          ↓
@@ -240,6 +253,7 @@ UI updates with organization-specific preferences
 ## 🎨 UI/UX Features
 
 ### NotificationSettings Component
+
 1. **Context Badge** - Shows "Personal" or org name at top
 2. **Category Cards** - 5 expandable cards with descriptions
 3. **Channel Toggles** - Visual button groups with icons
@@ -252,6 +266,7 @@ UI updates with organization-specific preferences
 6. **Save/Reset** - Bottom action bar
 
 ### Events Panel Enhancements
+
 1. **Context Indicator Badge** - Always visible at top
 2. **Auto-reload on switch** - Smooth transition
 3. **Loading states** - Spinner during context switch
@@ -260,11 +275,13 @@ UI updates with organization-specific preferences
 ## 📋 Files Modified/Created
 
 ### Created
+
 - ✅ [dashboard-ui/src/components/NotificationSettings.tsx](dashboard-ui/src/components/NotificationSettings.tsx) - Full notification preferences UI
 - ✅ [dashboard-ui/CONTEXT_AWARE_NOTIFICATIONS.md](dashboard-ui/CONTEXT_AWARE_NOTIFICATIONS.md) - Documentation
 - ✅ [NOTIFICATION_SYSTEM_COMPLETE.md](NOTIFICATION_SYSTEM_COMPLETE.md) - This file
 
 ### Modified
+
 - ✅ [dashboard-ui/src/pages/Events.tsx](dashboard-ui/src/pages/Events.tsx)
   - Added context indicator badge
   - Added reactive context switching
@@ -287,6 +304,7 @@ UI updates with organization-specific preferences
 ### User Workflow
 
 **1. Configure Notification Preferences**
+
 ```
 1. Navigate to Settings
 2. Click "Notifications" card
@@ -303,6 +321,7 @@ UI updates with organization-specific preferences
 ```
 
 **2. Switch Context**
+
 ```
 1. Click organization dropdown in header
 2. Select "Acme Corp"
@@ -317,6 +336,7 @@ UI updates with organization-specific preferences
 ```
 
 **3. Receive Notifications**
+
 ```
 Workflow executes → workflow.completed event
          ↓
@@ -332,6 +352,7 @@ Delivered via:
 ## 🔗 Architecture References
 
 ### Event-Driven Components
+
 - ✅ EventsHandler (dashboard-server) - Central pub/sub hub
 - ✅ NotificationSettings (dashboard-ui) - Preferences management
 - ✅ Events.tsx (dashboard-ui) - Real-time event display
@@ -339,12 +360,14 @@ Delivered via:
 - ✅ WebSocket handlers (dashboard-server) - subscribe_events, publish_event, switch_context
 
 ### Data Storage
+
 - ✅ KV Store: `notification-prefs-{userId}` (personal)
 - ✅ KV Store: `notification-prefs-{orgId}` (organizational)
 - ✅ DynamoDB: events table (historical events)
 - ✅ DynamoDB: subscriptions table (event rules)
 
 ### Notification Channels
+
 - ✅ In-App: WebSocket broadcast (EventsHandler)
 - ✅ Email: SNS (notifications.subscribe with protocol='email')
 - ✅ SMS: SNS (notifications.subscribe with protocol='sms')
@@ -366,12 +389,14 @@ Delivered via:
 ## 🎯 Next Steps
 
 ### Phase 4 Completion (Workflow Events)
+
 - [ ] Wire WorkflowEngine into Canvas.tsx
 - [ ] Add "Run Workflow" button
 - [ ] Test workflow events appear in Events panel
 - [ ] Verify notification preferences work with workflow events
 
 ### Future Enhancements
+
 - [ ] Notification history panel
 - [ ] Email templates customization
 - [ ] Notification scheduling (quiet hours)

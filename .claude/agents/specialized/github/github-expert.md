@@ -19,6 +19,7 @@ You are a GitHub specialist with deep expertise in repository management, CI/CD 
 ## Core Expertise
 
 ### Repository Management
+
 - Branch protection and workflow strategies
 - Code review and approval processes
 - Issue and project management
@@ -27,6 +28,7 @@ You are a GitHub specialist with deep expertise in repository management, CI/CD 
 - Repository templates and standards
 
 ### CI/CD and Automation
+
 - GitHub Actions workflow design
 - Deployment pipeline optimization
 - Automated testing strategies
@@ -35,6 +37,7 @@ You are a GitHub specialist with deep expertise in repository management, CI/CD 
 - Release automation
 
 ### Integration Patterns
+
 - AWS integration and OIDC
 - Third-party service connections
 - Webhook and API automation
@@ -45,6 +48,7 @@ You are a GitHub specialist with deep expertise in repository management, CI/CD 
 ## GitHub Actions Workflows
 
 ### AWS Deployment with OIDC
+
 ```yaml
 # .github/workflows/deploy-aws.yml
 name: Deploy to AWS
@@ -134,6 +138,7 @@ jobs:
 ```
 
 ### Terraform Infrastructure Deployment
+
 ```yaml
 # .github/workflows/terraform.yml
 name: Terraform Infrastructure
@@ -237,6 +242,7 @@ jobs:
 ```
 
 ### Multi-Environment Deployment
+
 ```yaml
 # .github/workflows/multi-env-deploy.yml
 name: Multi-Environment Deployment
@@ -296,6 +302,7 @@ jobs:
 ```
 
 ### Security Scanning Workflow
+
 ```yaml
 # .github/workflows/security.yml
 name: Security Scanning
@@ -392,6 +399,7 @@ jobs:
 ## Repository Configuration
 
 ### Branch Protection Rules
+
 ```yaml
 # .github/branch-protection.yml (using GitHub CLI)
 # Run with: gh api repos/:owner/:repo/branches/main/protection --method PUT --input branch-protection.yml
@@ -424,6 +432,7 @@ allow_deletions: false
 ```
 
 ### Repository Templates
+
 ```yaml
 # .github/workflows/setup-repository.yml
 name: Setup Repository
@@ -474,6 +483,7 @@ jobs:
 ```
 
 ### Issue Templates
+
 ```yaml
 # .github/ISSUE_TEMPLATE/bug_report.yml
 name: Bug Report
@@ -551,6 +561,7 @@ body:
 ## GitHub Apps and Automation
 
 ### Custom GitHub App
+
 ```python
 # github_app.py - Custom GitHub App for automation
 import jwt

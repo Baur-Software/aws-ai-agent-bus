@@ -47,7 +47,7 @@ gcloud services enable searchconsole.googleapis.com
 6. Create OAuth2 Client:
    - **Application type**: Web application
    - **Name**: Analytics MCP Client
-   - **Authorized redirect URIs**: 
+   - **Authorized redirect URIs**:
      - `https://www.yourdomain.com` (from route53 setup)
      - `http://localhost:3000/auth/callback` (for local testing)
 
@@ -229,6 +229,7 @@ npm run report:users-by-country
 ```
 
 Expected output:
+
 ```
 Starting users by country report...
 Initializing Google Analytics service...
@@ -242,6 +243,7 @@ Fetching unique users by country report...
 ### 5.2 Common Issues & Solutions
 
 **Issue**: `Could not load credentials from any providers`
+
 ```bash
 # Solution: Configure AWS credentials
 aws configure
@@ -253,6 +255,7 @@ export AWS_DEFAULT_REGION=us-east-1
 ```
 
 **Issue**: `Failed to initialize Google Analytics: Invalid credentials`
+
 ```bash
 # Solution: Verify secret format and refresh tokens
 aws secretsmanager update-secret \
@@ -261,6 +264,7 @@ aws secretsmanager update-secret \
 ```
 
 **Issue**: `Property ID not found`
+
 ```bash
 # Solution: Verify property ID format
 # Should be just the number: "123456789"

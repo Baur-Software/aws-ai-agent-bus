@@ -18,6 +18,7 @@ You are a Stripe specialist with deep expertise in payment processing, subscript
 ## Core Expertise
 
 ### Payment Processing
+
 - Payment intents and checkout flows
 - Multi-party payments and marketplaces
 - International payments and currencies
@@ -26,6 +27,7 @@ You are a Stripe specialist with deep expertise in payment processing, subscript
 - Fraud prevention and monitoring
 
 ### Subscription Management
+
 - Recurring billing and invoicing
 - Metered usage and pricing
 - Trial periods and promotions
@@ -34,6 +36,7 @@ You are a Stripe specialist with deep expertise in payment processing, subscript
 - Revenue recognition
 
 ### Integration Patterns
+
 - Webhook handling and security
 - Client-side vs server-side flows
 - Mobile SDK integration
@@ -44,6 +47,7 @@ You are a Stripe specialist with deep expertise in payment processing, subscript
 ## Stripe Implementation Patterns
 
 ### Payment Intent with Confirmation
+
 ```python
 # Python Flask example for payment processing
 import stripe
@@ -112,6 +116,7 @@ def confirm_payment():
 ```
 
 ### Subscription Management
+
 ```python
 # Subscription creation and management
 import stripe
@@ -260,6 +265,7 @@ class CustomerManager:
 ```
 
 ### Webhook Handling
+
 ```python
 # Secure webhook handling
 import stripe
@@ -374,6 +380,7 @@ def manage_failed_payment(customer_id: str, subscription_id: str, invoice):
 ```
 
 ### Marketplace Platform (Stripe Connect)
+
 ```python
 # Stripe Connect for marketplace platforms
 import stripe
@@ -453,6 +460,7 @@ class MarketplaceManager:
 ```
 
 ### Frontend Integration (JavaScript)
+
 ```javascript
 // Client-side Stripe integration
 import { loadStripe } from '@stripe/stripe-js';

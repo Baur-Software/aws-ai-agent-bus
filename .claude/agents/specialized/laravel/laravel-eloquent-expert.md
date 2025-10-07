@@ -15,6 +15,7 @@ Before implementing any Laravel Eloquent features, you MUST fetch the latest doc
 3. **Always verify**: Current Laravel version features and patterns
 
 **Example Usage:**
+
 ```
 Before implementing Eloquent features, I'll fetch the latest Laravel docs...
 [Use WebFetch to get current docs from laravel.com]
@@ -71,6 +72,7 @@ When optimizing database operations, you return structured findings:
 ## Core Expertise
 
 ### Eloquent Relationships
+
 - Complex relationship modeling
 - Polymorphic relationships
 - Many-to-many with pivot data
@@ -79,6 +81,7 @@ When optimizing database operations, you return structured findings:
 - Relationship existence queries
 
 ### Query Optimization
+
 - N+1 query prevention
 - Eager loading strategies
 - Query scopes and builders
@@ -87,6 +90,7 @@ When optimizing database operations, you return structured findings:
 - Database profiling
 
 ### Advanced Eloquent
+
 - Global scopes
 - Local scopes
 - Model events and observers
@@ -97,6 +101,7 @@ When optimizing database operations, you return structured findings:
 ## Relationship Patterns
 
 ### Complex E-commerce Relationships
+
 ```php
 // Product Model
 class Product extends Model
@@ -158,6 +163,7 @@ class Order extends Model
 ```
 
 ### Polymorphic Implementation
+
 ```php
 // Flexible tagging system
 class Tag extends Model
@@ -191,6 +197,7 @@ trait Taggable
 ## Query Optimization Techniques
 
 ### Preventing N+1 Queries
+
 ```php
 // Bad: N+1 problem
 $posts = Post::all();
@@ -218,6 +225,7 @@ $posts = Post::withCount(['comments', 'likes'])
 ```
 
 ### Efficient Aggregations
+
 ```php
 class ProductQueryBuilder
 {
@@ -245,6 +253,7 @@ class ProductQueryBuilder
 ```
 
 ### Chunking Large Datasets
+
 ```php
 // Memory-efficient processing
 Product::query()
@@ -266,6 +275,7 @@ Product::where('active', true)
 ## Migration Patterns
 
 ### Safe Schema Changes
+
 ```php
 class AddIndexesToProductsTable extends Migration
 {
@@ -302,6 +312,7 @@ class AddIndexesToProductsTable extends Migration
 ```
 
 ### Zero-Downtime Migrations
+
 ```php
 class RenameUsersTableColumn extends Migration
 {
@@ -330,6 +341,7 @@ class RenameUsersTableColumn extends Migration
 ## Advanced Scopes
 
 ### Dynamic Query Scopes
+
 ```php
 trait Filterable
 {
@@ -355,6 +367,7 @@ trait Filterable
 ```
 
 ### Global Scopes
+
 ```php
 class TenantScope implements Scope
 {
@@ -386,6 +399,7 @@ class Product extends Model
 ## Performance Analysis
 
 ### Query Debugging
+
 ```php
 // Enable query log
 DB::enableQueryLog();
@@ -405,6 +419,7 @@ foreach ($queries as $query) {
 ```
 
 ### Database Profiling
+
 ```php
 class DatabaseProfiler
 {

@@ -193,7 +193,7 @@ describe('FloatingNodePanel Drag Events', () => {
 
   beforeEach(() => {
     mockOnDragStart = vi.fn();
-    mockConnectedIntegrations = ['google-analytics', 'slack'];
+    mockConnectedIntegrations = ['slack'];
     mockOnConnectIntegration = vi.fn();
   });
 
@@ -273,7 +273,7 @@ describe('End-to-End Drag and Drop Flow', () => {
       <div>
         <FloatingNodePanel
           onDragStart={mockOnDragStart}
-          connectedIntegrations={['google-analytics']}
+          connectedIntegrations={['slack']}
           onConnectIntegration={() => {}}
         />
         <WorkflowCanvas

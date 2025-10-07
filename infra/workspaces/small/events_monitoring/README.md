@@ -7,6 +7,7 @@ This Terraform workspace manages the DynamoDB tables for the event monitoring an
 The event monitoring system consists of 3 DynamoDB tables:
 
 ### 1. Events Table (`agent-mesh-dev-events`)
+
 - **Purpose**: Store all event history with enhanced metadata
 - **Hash Key**: `eventId` (String) - Unique identifier for each event
 - **Attributes**:
@@ -19,10 +20,12 @@ The event monitoring system consists of 3 DynamoDB tables:
   - `metadata` (String) - Processing metadata as JSON string
 
 **Global Secondary Indexes**:
+
 - `timestamp-index`: `source` (hash) + `timestamp` (range) - For time-based queries by source
 - `user-index`: `userId` (hash) + `timestamp` (range) - For user-specific event history
 
 ### 2. Subscriptions Table (`agent-mesh-dev-subscriptions`)
+
 - **Purpose**: Manage alert subscriptions and notification preferences
 - **Hash Key**: `subscriptionId` (String) - Unique subscription identifier
 - **Attributes**:
@@ -32,9 +35,11 @@ The event monitoring system consists of 3 DynamoDB tables:
   - `status` (String) - active, paused, disabled
 
 **Global Secondary Indexes**:
+
 - `user-index`: `userId` (hash) - For querying user subscriptions
 
 ### 3. Event Rules Table (`agent-mesh-dev-event-rules`)
+
 - **Purpose**: Store monitoring rules and alert configurations
 - **Hash Key**: `ruleId` (String) - Unique rule identifier
 - **Attributes**:
@@ -45,11 +50,13 @@ The event monitoring system consists of 3 DynamoDB tables:
   - `status` (String) - enabled, disabled
 
 **Global Secondary Indexes**:
+
 - `user-index`: `userId` (hash) - For querying user rules
 
 ## Deployment
 
 ### Prerequisites
+
 1. AWS CLI configured with appropriate credentials
 2. Terraform installed
 3. AWS SSO login: `aws sso login --profile your-profile`
@@ -101,6 +108,7 @@ The event monitoring system integrates with:
 ## Cost Optimization
 
 All tables use:
+
 - **Billing Mode**: PAY_PER_REQUEST (no fixed costs)
 - **Point-in-Time Recovery**: Disabled (reduces costs)
 - **Encryption**: AWS managed keys (no additional KMS costs)
@@ -110,6 +118,7 @@ Estimated monthly cost: ~$5-15 depending on usage patterns.
 ## Monitoring
 
 Tables are tagged with:
+
 - `app: agent-mesh`
 - `env: dev`
 - `workspace: dynamodb_events`

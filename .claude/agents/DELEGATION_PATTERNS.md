@@ -7,21 +7,27 @@ This document defines standardized patterns for agent delegation, handoff protoc
 ## Core Delegation Principles
 
 ### 1. Recognition-Based Triggering
+
 Agents should recognize when tasks require expertise outside their domain through:
+
 - **Keyword Detection**: Technology-specific terms, frameworks, tools
 - **Complexity Indicators**: Advanced patterns requiring specialized knowledge
 - **Scope Boundaries**: Tasks crossing domain boundaries
 - **Quality Requirements**: Performance, security, accessibility needs
 
 ### 2. Context-Preserving Handoffs
+
 When delegating, agents must provide:
+
 - **Current State**: What has been accomplished
 - **Specific Requirements**: What the target agent needs to deliver
 - **Integration Context**: How the work fits into the larger system
 - **Quality Standards**: Performance, security, accessibility requirements
 
 ### 3. Bidirectional Communication
+
 Delegation should enable:
+
 - **Clean Handoffs**: Clear transition of responsibility
 - **Context Sharing**: Relevant project details and constraints
 - **Result Integration**: Seamless incorporation of delegated work
@@ -30,6 +36,7 @@ Delegation should enable:
 ## Standard Handoff Message Format
 
 ### Basic Structure
+
 ```
 ## [DOMAIN] Implementation [STATUS]
 
@@ -61,6 +68,7 @@ Delegation should enable:
 ### Example Handoff Messages
 
 #### Frontend to Backend Delegation
+
 ```
 ## Frontend Implementation Complete
 
@@ -94,6 +102,7 @@ Delegation should enable:
 ```
 
 #### Backend to Frontend Delegation
+
 ```
 ## API Implementation Complete
 
@@ -131,30 +140,38 @@ Delegation should enable:
 ### Frontend Development Agents
 
 #### React Component Architect
+
 **Delegates To:**
+
 - **Next.js Expert**: When SSR, routing, or Next.js-specific features needed
 - **State Manager**: When complex state management patterns required
 - **Backend Developer**: When API endpoints needed
 - **Tailwind Expert**: When advanced styling or design system needed
 
 **Receives From:**
+
 - **Backend Developer**: API contracts and authentication requirements
 - **Designer**: Design specifications and component requirements
 - **Product Manager**: Feature requirements and user stories
 
 #### SolidJS Specialist
+
 **Delegates To:**
+
 - **Tailwind Expert**: Advanced styling and responsive design
 - **Backend Developer**: API integration and real-time features
 - **Performance Optimizer**: Bundle optimization and performance tuning
 - **Test Engineer**: Advanced testing strategies
 
 **Receives From:**
+
 - **Frontend Developer**: Component architecture decisions
 - **Backend Developer**: API contracts and data flow requirements
 
 #### Vue Component Architect
+
 **Delegates To:**
+
 - **Nuxt Expert**: For SSR and meta-framework features
 - **State Manager**: For Pinia/Vuex complex patterns
 - **Backend Developer**: For API integration
@@ -163,18 +180,23 @@ Delegation should enable:
 ### Backend Development Agents
 
 #### Django Backend Expert
+
 **Delegates To:**
+
 - **Django ORM Expert**: Complex database relationships
 - **Django API Developer**: REST API and GraphQL implementation
 - **Security Auditor**: Authentication and authorization review
 - **Performance Optimizer**: Database optimization
 
 **Receives From:**
+
 - **Frontend Developer**: API requirements and data structures
 - **Database Expert**: Schema design and migration strategies
 
 #### Rails Backend Expert
+
 **Delegates To:**
+
 - **Rails ActiveRecord Expert**: Complex ORM patterns
 - **Rails API Developer**: API design and implementation
 - **Security Auditor**: Security best practices review
@@ -183,44 +205,56 @@ Delegation should enable:
 ### Infrastructure & DevOps Agents
 
 #### Terraform Architect
+
 **Delegates To:**
+
 - **AWS S3 Expert**: Storage configuration
 - **EKS Expert**: Kubernetes cluster setup
 - **Security Auditor**: Infrastructure security review
 - **Monitoring Expert**: Observability setup
 
 **Receives From:**
+
 - **Backend Developer**: Infrastructure requirements
 - **Security Requirements**: Compliance and security needs
 
 #### AWS Service Experts
+
 **Delegates To:**
+
 - **Security Auditor**: Service security configuration
 - **Monitoring Expert**: Service monitoring setup
 - **Cost Optimizer**: Resource optimization
 
 **Receives From:**
+
 - **Infrastructure Architect**: Service integration requirements
 - **Application Developer**: Application-specific needs
 
 ### Quality & Review Agents
 
 #### Code Reviewer
+
 **Delegates To:**
+
 - **Security Auditor**: Security-specific review
 - **Performance Optimizer**: Performance optimization
 - **Documentation Specialist**: Documentation improvements
 
 **Receives From:**
+
 - **All Development Agents**: Code review requests
 
 #### Security Auditor
+
 **Delegates To:**
+
 - **Penetration Tester**: Security testing
 - **Compliance Expert**: Regulatory compliance
 - **Infrastructure Security**: Infrastructure hardening
 
 **Receives From:**
+
 - **All Agents**: Security review requests
 
 ## Communication Protocols
@@ -228,16 +262,19 @@ Delegation should enable:
 ### Escalation Patterns
 
 #### When Complexity Exceeds Agent Scope
+
 1. **Immediate Delegation**: Hand off to appropriate specialist
 2. **Context Preservation**: Provide complete context and requirements
 3. **Integration Planning**: Ensure smooth reintegration of work
 
 #### When Multiple Agents Needed
+
 1. **Orchestration Request**: Request tech lead or conductor agent
 2. **Parallel Work**: Coordinate simultaneous work streams
 3. **Integration Points**: Define clear interfaces between work streams
 
 #### When Requirements Change
+
 1. **Impact Assessment**: Evaluate impact on current work
 2. **Stakeholder Communication**: Inform affected agents
 3. **Replanning**: Adjust delegation and coordination as needed
@@ -245,18 +282,21 @@ Delegation should enable:
 ### Quality Gates
 
 #### Before Delegation
+
 - [ ] Clear understanding of requirements
 - [ ] Appropriate target agent identified
 - [ ] Context and constraints documented
 - [ ] Success criteria defined
 
 #### During Handoff
+
 - [ ] Complete status communicated
 - [ ] All relevant files and documentation provided
 - [ ] Integration requirements specified
 - [ ] Next steps clearly defined
 
 #### After Completion
+
 - [ ] Work integrated successfully
 - [ ] Quality standards met
 - [ ] Documentation updated
@@ -267,6 +307,7 @@ Delegation should enable:
 ### Multi-Agent Coordination
 
 #### Full-Stack Feature Development
+
 ```mermaid
 graph TD
     A[Product Manager] --> B[Frontend Developer]
@@ -283,6 +324,7 @@ graph TD
 ```
 
 #### Infrastructure Setup
+
 ```mermaid
 graph TD
     A[Infrastructure Request] --> B[Terraform Architect]
@@ -298,6 +340,7 @@ graph TD
 ### Cross-Domain Integration
 
 #### API Development Workflow
+
 1. **Frontend Developer**: Defines data requirements and interface needs
 2. **API Architect**: Designs API structure and contracts
 3. **Backend Developer**: Implements API endpoints
@@ -306,6 +349,7 @@ graph TD
 6. **Frontend Developer**: Integrates with completed API
 
 #### Design System Implementation
+
 1. **Designer**: Provides design specifications
 2. **Tailwind Expert**: Creates utility classes and component styles
 3. **React Specialist**: Implements reusable components
@@ -342,21 +386,25 @@ graph TD
 ## Troubleshooting Common Issues
 
 ### Unclear Requirements
+
 - **Problem**: Target agent asks for clarification
 - **Solution**: Provide more specific requirements and context
 - **Prevention**: Use detailed handoff message format
 
 ### Integration Conflicts
+
 - **Problem**: Delegated work doesn't integrate well
 - **Solution**: Review integration requirements and resolve conflicts
 - **Prevention**: Specify integration points clearly upfront
 
 ### Quality Mismatches
+
 - **Problem**: Delegated work doesn't meet standards
 - **Solution**: Provide feedback and request improvements
 - **Prevention**: Specify quality requirements in delegation
 
 ### Over-Delegation
+
 - **Problem**: Too many handoffs slow down progress
 - **Solution**: Consolidate work and reduce delegation layers
 - **Prevention**: Delegate only when expertise gap exists

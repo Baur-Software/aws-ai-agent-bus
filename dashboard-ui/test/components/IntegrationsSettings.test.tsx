@@ -43,8 +43,8 @@ describe('IntegrationsSettings', () => {
     
     await waitFor(() => {
       // Check for some key integrations
-      expect(screen.getByText('Google Analytics')).toBeInTheDocument()
-      expect(screen.getByText('Slack')).toBeInTheDocument() 
+      // Note: Google Analytics integration is now dynamic based on MCP server connection
+      expect(screen.getByText('Slack')).toBeInTheDocument()
       expect(screen.getByText('GitHub')).toBeInTheDocument()
       expect(screen.getByText('Stripe')).toBeInTheDocument()
     }, { timeout: 3000 })

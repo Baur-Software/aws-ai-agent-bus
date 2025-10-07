@@ -15,6 +15,7 @@ Before implementing any CloudWatch features, you MUST fetch the latest documenta
 3. **Always verify**: Current CloudWatch features, metrics, and integration patterns
 
 **Example Usage:**
+
 ```
 Before implementing CloudWatch monitoring, I'll fetch the latest CloudWatch docs...
 [Use WebFetch to get current docs from AWS CloudWatch documentation]
@@ -71,6 +72,7 @@ When designing CloudWatch solutions, you return structured findings:
 ## Core Expertise
 
 ### Metrics and Monitoring
+
 - Custom metrics and dimensions
 - Composite alarms and metric math
 - Statistical analysis and anomaly detection
@@ -79,6 +81,7 @@ When designing CloudWatch solutions, you return structured findings:
 - Performance baseline establishment
 
 ### Logging and Analysis
+
 - Log group organization and retention
 - Log Insights queries and analysis
 - Structured logging patterns
@@ -87,6 +90,7 @@ When designing CloudWatch solutions, you return structured findings:
 - Compliance and audit logging
 
 ### Alerting and Notifications
+
 - Multi-tier alerting strategies
 - Notification routing and escalation
 - Alert fatigue reduction
@@ -97,6 +101,7 @@ When designing CloudWatch solutions, you return structured findings:
 ## CloudWatch Configuration Patterns
 
 ### Comprehensive Application Monitoring
+
 ```yaml
 # CloudWatch custom metrics
 resource "aws_cloudwatch_metric_alarm" "application_errors" {
@@ -156,6 +161,7 @@ resource "aws_cloudwatch_composite_alarm" "application_health" {
 ```
 
 ### Infrastructure Monitoring
+
 ```yaml
 # EC2 instance monitoring
 resource "aws_cloudwatch_metric_alarm" "high_cpu" {
@@ -240,6 +246,7 @@ resource "aws_cloudwatch_metric_alarm" "elb_healthy_hosts" {
 ```
 
 ### Custom Metrics Implementation
+
 ```python
 # Lambda function for custom metrics
 import boto3
@@ -326,6 +333,7 @@ def lambda_handler(event, context):
 ```
 
 ### Log Management and Analysis
+
 ```yaml
 # CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "application" {
@@ -401,6 +409,7 @@ EOF
 ```
 
 ### Advanced Dashboard Configuration
+
 ```json
 {
   "widgets": [
@@ -527,6 +536,7 @@ EOF
 ```
 
 ### Terraform Dashboard Resource
+
 ```yaml
 resource "aws_cloudwatch_dashboard" "main" {
   dashboard_name = "${var.project_name}-dashboard"
@@ -548,6 +558,7 @@ resource "aws_cloudwatch_dashboard" "main" {
 ## Advanced CloudWatch Features
 
 ### Anomaly Detection
+
 ```yaml
 # CloudWatch Anomaly Detection
 resource "aws_cloudwatch_anomaly_detector" "application_response_time" {
@@ -602,6 +613,7 @@ resource "aws_cloudwatch_metric_alarm" "anomaly_alarm" {
 ```
 
 ### X-Ray Integration
+
 ```yaml
 # X-Ray service map and tracing
 resource "aws_xray_sampling_rule" "main" {
@@ -643,6 +655,7 @@ resource "aws_lambda_function" "traced_function" {
 ```
 
 ### Container Insights
+
 ```yaml
 # ECS Container Insights
 resource "aws_ecs_cluster" "main" {
@@ -701,6 +714,7 @@ resource "aws_cloudwatch_metric_alarm" "container_memory" {
 ## Notification and Integration Patterns
 
 ### SNS Topic Configuration
+
 ```yaml
 # SNS topics for different alert levels
 resource "aws_sns_topic" "critical_alerts" {
@@ -746,6 +760,7 @@ resource "aws_sns_topic_subscription" "lambda_processor" {
 ```
 
 ### Cost Optimization
+
 ```yaml
 # Log retention policies
 resource "aws_cloudwatch_log_group" "short_retention" {

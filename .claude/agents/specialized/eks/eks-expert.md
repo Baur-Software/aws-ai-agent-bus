@@ -15,6 +15,7 @@ Before implementing any EKS features, you MUST fetch the latest documentation to
 3. **Always verify**: Current EKS versions, Kubernetes features, and security patterns
 
 **Example Usage:**
+
 ```
 Before implementing EKS clusters, I'll fetch the latest EKS docs...
 [Use WebFetch to get current docs from AWS EKS documentation]
@@ -71,6 +72,7 @@ When designing EKS solutions, you return structured findings:
 ## Core Expertise
 
 ### Cluster Architecture
+
 - Multi-AZ cluster design
 - Node group strategies (managed/self-managed)
 - Fargate serverless compute
@@ -79,6 +81,7 @@ When designing EKS solutions, you return structured findings:
 - Cluster upgrade strategies
 
 ### Security and Compliance
+
 - RBAC implementation
 - Pod security policies
 - Network policies and segmentation
@@ -87,6 +90,7 @@ When designing EKS solutions, you return structured findings:
 - Container image security scanning
 
 ### Scaling and Performance
+
 - Horizontal Pod Autoscaling (HPA)
 - Vertical Pod Autoscaling (VPA)
 - Cluster Autoscaler configuration
@@ -97,6 +101,7 @@ When designing EKS solutions, you return structured findings:
 ## EKS Configuration Patterns
 
 ### Production-Ready EKS Cluster
+
 ```yaml
 # EKS Cluster with security hardening
 resource "aws_eks_cluster" "main" {
@@ -201,6 +206,7 @@ resource "aws_security_group" "cluster_additional" {
 ```
 
 ### Managed Node Groups
+
 ```yaml
 # Managed node group for general workloads
 resource "aws_eks_node_group" "general" {
@@ -389,6 +395,7 @@ resource "aws_security_group" "node_group" {
 ```
 
 ### Fargate Profiles for Serverless Workloads
+
 ```yaml
 # Fargate profile for specific namespaces
 resource "aws_eks_fargate_profile" "main" {
@@ -438,6 +445,7 @@ resource "aws_iam_role_policy_attachment" "fargate_AmazonEKSFargatePodExecutionR
 ```
 
 ### EKS Add-ons Configuration
+
 ```yaml
 # AWS Load Balancer Controller add-on
 resource "aws_eks_addon" "aws_load_balancer_controller" {
@@ -497,6 +505,7 @@ resource "aws_eks_addon" "kube_proxy" {
 ```
 
 ### IRSA (IAM Roles for Service Accounts)
+
 ```yaml
 # OIDC identity provider
 data "tls_certificate" "cluster" {
@@ -569,6 +578,7 @@ resource "aws_iam_role_policy_attachment" "ebs_csi_driver" {
 ## Kubernetes Manifests
 
 ### Application Deployment with Best Practices
+
 ```yaml
 # Namespace
 apiVersion: v1
@@ -739,6 +749,7 @@ spec:
 ```
 
 ### Ingress with AWS Load Balancer Controller
+
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -774,6 +785,7 @@ spec:
 ## Monitoring and Logging
 
 ### Container Insights and Prometheus
+
 ```yaml
 # CloudWatch Container Insights (enabled via cluster setting)
 # Prometheus configuration
@@ -864,6 +876,7 @@ spec:
 ```
 
 ### Cost Optimization Strategies
+
 ```yaml
 # Cluster Autoscaler configuration
 apiVersion: apps/v1
