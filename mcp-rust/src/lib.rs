@@ -42,7 +42,7 @@ mod tests {
             user_id: "test-user".to_string(),
             context_type: ContextType::Organization {
                 org_id: "test-org".to_string(),
-                org_name: "Test Organization".to_string()
+                org_name: "Test Organization".to_string(),
             },
             organization_id: "test-org".to_string(),
             role: UserRole::User,

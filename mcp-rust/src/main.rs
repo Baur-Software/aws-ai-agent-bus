@@ -16,7 +16,7 @@ async fn main() -> anyhow::Result<()> {
     // Initialize tracing to stderr (stdout must be reserved for JSON-RPC)
     tracing_subscriber::fmt()
         .with_writer(std::io::stderr)
-        .with_ansi(false)  // Disable ANSI color codes
+        .with_ansi(false) // Disable ANSI color codes
         .init();
 
     info!("Starting Multi-Tenant MCP Rust Server");

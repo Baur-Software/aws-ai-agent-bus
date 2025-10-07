@@ -1,14 +1,15 @@
+use mcp_rust::aws::AwsService;
+use mcp_rust::handlers::{EventsQueryHandler, Handler};
+use mcp_rust::tenant::{
+    ContextType, Permission, ResourceLimits, TenantContext, TenantSession, UserRole,
+};
+use serde_json::json;
 /// Integration tests for Events handlers
 /// These tests require either:
 /// 1. LocalStack running on localhost:4566 (set LOCALSTACK_ENDPOINT)
 /// 2. Real AWS environment with deployed infrastructure
 /// 3. Will be skipped if neither is available
-
 use std::sync::Arc;
-use serde_json::json;
-use mcp_rust::handlers::{EventsQueryHandler, Handler};
-use mcp_rust::tenant::{TenantSession, TenantContext, ContextType, UserRole, Permission, ResourceLimits};
-use mcp_rust::aws::AwsService;
 
 // Helper function to create test tenant session
 fn create_test_session() -> TenantSession {
@@ -38,7 +39,8 @@ async fn can_run_integration_tests() -> bool {
     }
 
     // Check if AWS credentials are available
-    if std::env::var("AWS_ACCESS_KEY_ID").is_ok() && std::env::var("AWS_SECRET_ACCESS_KEY").is_ok() {
+    if std::env::var("AWS_ACCESS_KEY_ID").is_ok() && std::env::var("AWS_SECRET_ACCESS_KEY").is_ok()
+    {
         return true;
     }
 
@@ -51,7 +53,10 @@ async fn can_run_integration_tests() -> bool {
 }
 
 // Helper to setup test data in DynamoDB
-async fn setup_test_events(aws_service: &AwsService, session: &TenantSession) -> Result<(), Box<dyn std::error::Error>> {
+async fn setup_test_events(
+    aws_service: &AwsService,
+    session: &TenantSession,
+) -> Result<(), Box<dyn std::error::Error>> {
     // Send some test events
     for i in 0..10 {
         let detail = json!({
@@ -60,11 +65,13 @@ async fn setup_test_events(aws_service: &AwsService, session: &TenantSession) ->
             "timestamp": chrono::Utc::now().to_rfc3339(),
         });
 
-        aws_service.send_event(
-            session,
-            &format!("test.event.{}", i % 3), // Vary the event types
-            detail,
-        ).await?;
+        aws_service
+            .send_event(
+                session,
+                &format!("test.event.{}", i % 3), // Vary the event types
+                detail,
+            )
+            .await?;
     }
 
     // Give EventBridge + DynamoDB time to process
@@ -115,7 +122,11 @@ async fn test_events_query_integration_with_user_filter() {
 
     // Should have events (we just created 10)
     assert!(count > 0, "Should have at least some events");
-    assert_eq!(events.len() as u64, count, "Events array should match count");
+    assert_eq!(
+        events.len() as u64,
+        count,
+        "Events array should match count"
+    );
 
     // Verify all events belong to the test user
     for event in events {
@@ -124,7 +135,10 @@ async fn test_events_query_integration_with_user_filter() {
         }
     }
 
-    println!("✅ Integration test passed: Query with user filter returned {} events", count);
+    println!(
+        "✅ Integration test passed: Query with user filter returned {} events",
+        count
+    );
 }
 
 #[tokio::test]
@@ -268,10 +282,16 @@ async fn test_events_query_integration_pagination() {
     // Check for pagination cursor
     let last_evaluated_key = response.get("lastEvaluatedKey");
     if count == 3 {
-        assert!(last_evaluated_key.is_some(), "Should have pagination cursor when limit reached");
+        assert!(
+            last_evaluated_key.is_some(),
+            "Should have pagination cursor when limit reached"
+        );
     }
 
-    println!("✅ Integration test passed: Pagination with limit={}", count);
+    println!(
+        "✅ Integration test passed: Pagination with limit={}",
+        count
+    );
 }
 
 #[tokio::test]

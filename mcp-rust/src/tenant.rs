@@ -58,7 +58,9 @@ impl TenantContext {
     pub fn get_namespace_prefix(&self) -> String {
         match &self.context_type {
             ContextType::Personal => format!("user:{}", self.user_id),
-            ContextType::Organization { org_id, .. } => format!("org:{}:user:{}", org_id, self.user_id),
+            ContextType::Organization { org_id, .. } => {
+                format!("org:{}:user:{}", org_id, self.user_id)
+            }
         }
     }
 
@@ -306,7 +308,10 @@ impl TenantManager {
 
         // Tenant doesn't exist - auto-register in dev mode (when DEFAULT_TENANT_ID is set)
         if std::env::var("DEFAULT_TENANT_ID").is_ok() {
-            info!("Auto-registering tenant '{}' for user '{}' (dev mode)", tenant_id, user_id);
+            info!(
+                "Auto-registering tenant '{}' for user '{}' (dev mode)",
+                tenant_id, user_id
+            );
             let context = TenantContext {
                 tenant_id: tenant_id.to_string(),
                 user_id: user_id.to_string(),
@@ -330,4 +335,3 @@ impl TenantManager {
         }
     }
 }
-

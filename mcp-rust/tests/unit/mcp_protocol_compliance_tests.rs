@@ -15,10 +15,14 @@ async fn test_notification_handling_no_response() {
     let notification_json = json!({
         "jsonrpc": "2.0",
         "method": "notifications/initialized"
-    }).to_string();
+    })
+    .to_string();
 
     let response = server.handle_request(&notification_json).await;
-    assert!(response.is_none(), "Notifications should not generate responses");
+    assert!(
+        response.is_none(),
+        "Notifications should not generate responses"
+    );
 }
 
 #[tokio::test]
@@ -36,7 +40,8 @@ async fn test_request_handling_with_response() {
             "capabilities": {},
             "clientInfo": {"name": "test", "version": "1.0.0"}
         }
-    }).to_string();
+    })
+    .to_string();
 
     let response = server.handle_request(&request_json).await;
     assert!(response.is_some(), "Requests should generate responses");
@@ -62,7 +67,8 @@ async fn test_protocol_version_2025_06_18() {
             "capabilities": {},
             "clientInfo": {"name": "test", "version": "1.0.0"}
         }
-    }).to_string();
+    })
+    .to_string();
 
     let response = server.handle_request(&request_json).await.unwrap();
     let result = response.result.unwrap();
@@ -89,7 +95,8 @@ async fn test_mcp_sdk_client_handshake_sequence() {
         },
         "jsonrpc": "2.0",
         "id": 0
-    }).to_string();
+    })
+    .to_string();
 
     let init_response = server.handle_request(&init_request).await;
     assert!(init_response.is_some());
@@ -101,10 +108,14 @@ async fn test_mcp_sdk_client_handshake_sequence() {
     let notification = json!({
         "method": "notifications/initialized",
         "jsonrpc": "2.0"
-    }).to_string();
+    })
+    .to_string();
 
     let notification_response = server.handle_request(&notification).await;
-    assert!(notification_response.is_none(), "Notifications should not get responses");
+    assert!(
+        notification_response.is_none(),
+        "Notifications should not get responses"
+    );
 }
 
 #[tokio::test]
@@ -132,14 +143,15 @@ async fn test_notification_with_different_methods() {
         "notifications/initialized",
         "notifications/progress",
         "notifications/cancelled",
-        "notifications/custom"
+        "notifications/custom",
     ];
 
     for method in notifications {
         let notification_json = json!({
             "jsonrpc": "2.0",
             "method": method
-        }).to_string();
+        })
+        .to_string();
 
         let response = server.handle_request(&notification_json).await;
         assert!(
@@ -160,7 +172,8 @@ async fn test_request_id_types_string_and_number() {
         "jsonrpc": "2.0",
         "id": "test-string-id",
         "method": "initialize"
-    }).to_string();
+    })
+    .to_string();
 
     let response = server.handle_request(&string_id_request).await.unwrap();
     assert_eq!(response.id, Some(json!("test-string-id")));
@@ -170,7 +183,8 @@ async fn test_request_id_types_string_and_number() {
         "jsonrpc": "2.0",
         "id": 12345,
         "method": "initialize"
-    }).to_string();
+    })
+    .to_string();
 
     let response = server.handle_request(&number_id_request).await.unwrap();
     assert_eq!(response.id, Some(json!(12345)));
@@ -180,10 +194,14 @@ async fn test_request_id_types_string_and_number() {
         "jsonrpc": "2.0",
         "id": null,
         "method": "initialize"
-    }).to_string();
+    })
+    .to_string();
 
     let response = server.handle_request(&null_id_request).await;
-    assert!(response.is_none(), "null ID should be treated as notification");
+    assert!(
+        response.is_none(),
+        "null ID should be treated as notification"
+    );
 }
 
 #[tokio::test]
@@ -195,7 +213,8 @@ async fn test_json_rpc_response_schema_compliance() {
         "jsonrpc": "2.0",
         "id": "schema-test",
         "method": "initialize"
-    }).to_string();
+    })
+    .to_string();
 
     let response = server.handle_request(&request).await.unwrap();
 
@@ -229,14 +248,16 @@ async fn test_concurrent_request_and_notification_handling() {
                     "jsonrpc": "2.0",
                     "id": i,
                     "method": "initialize"
-                }).to_string();
+                })
+                .to_string();
                 (i, server_clone.handle_request(&request).await)
             } else {
                 // Notification
                 let notification = json!({
                     "jsonrpc": "2.0",
                     "method": "notifications/initialized"
-                }).to_string();
+                })
+                .to_string();
                 (i, server_clone.handle_request(&notification).await)
             }
         });
@@ -252,7 +273,11 @@ async fn test_concurrent_request_and_notification_handling() {
             assert!(response.is_some(), "Request {} should have response", i);
         } else {
             // Notification should not have response
-            assert!(response.is_none(), "Notification {} should not have response", i);
+            assert!(
+                response.is_none(),
+                "Notification {} should not have response",
+                i
+            );
         }
     }
 }
@@ -266,9 +291,13 @@ async fn test_error_response_preserves_request_id() {
         "jsonrpc": "2.0",
         "id": "preserve-id-test",
         "method": "non_existent_method"
-    }).to_string();
+    })
+    .to_string();
 
-    let response = server.handle_request(&invalid_method_request).await.unwrap();
+    let response = server
+        .handle_request(&invalid_method_request)
+        .await
+        .unwrap();
 
     assert_eq!(response.id, Some(json!("preserve-id-test")));
     assert!(response.error.is_some());

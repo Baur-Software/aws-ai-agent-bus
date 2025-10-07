@@ -176,7 +176,6 @@ impl MCPServer {
         }
     }
 
-
     async fn process_request(&self, request: MCPRequest) -> Result<Value, MCPError> {
         debug!("Processing request: {}", request.method);
 
@@ -232,14 +231,21 @@ impl MCPServer {
         // Use environment defaults if not provided in request (for local dev)
         let tenant_id = match &request.tenant_id {
             Some(id) => id.clone(),
-            None => std::env::var("DEFAULT_TENANT_ID")
-                .map_err(|_| MCPError::InvalidRequest("tenant_id is required (set DEFAULT_TENANT_ID env var for local dev)".to_string()))?,
+            None => std::env::var("DEFAULT_TENANT_ID").map_err(|_| {
+                MCPError::InvalidRequest(
+                    "tenant_id is required (set DEFAULT_TENANT_ID env var for local dev)"
+                        .to_string(),
+                )
+            })?,
         };
 
         let user_id = match &request.user_id {
             Some(id) => id.clone(),
-            None => std::env::var("DEFAULT_USER_ID")
-                .map_err(|_| MCPError::InvalidRequest("user_id is required (set DEFAULT_USER_ID env var for local dev)".to_string()))?,
+            None => std::env::var("DEFAULT_USER_ID").map_err(|_| {
+                MCPError::InvalidRequest(
+                    "user_id is required (set DEFAULT_USER_ID env var for local dev)".to_string(),
+                )
+            })?,
         };
 
         // Validate tenant access
