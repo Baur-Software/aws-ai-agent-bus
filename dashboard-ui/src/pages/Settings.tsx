@@ -2,19 +2,11 @@ import { Settings as SettingsIcon, Plug, User, Shield, Bell, Palette, Database, 
 import { useNavigate } from '@solidjs/router';
 import { createSignal, Show } from 'solid-js';
 import { usePageHeader } from '../contexts/HeaderContext';
-import IntegrationsSettings from '../components/IntegrationsSettings';
 import SidebarSettings from '../components/SidebarSettings';
 import NotificationSettings from '../components/NotificationSettings';
 import NodeManagementSettings from '../components/organization/settings/NodeManagementSettings';
 
 const SETTINGS_SECTIONS = [
-  {
-    title: 'Connected Apps',
-    description: 'Connect external services and APIs',
-    icon: Plug,
-    href: '/settings/integrations',
-    available: true
-  },
   {
     title: 'Workflow Nodes',
     description: 'Manage available workflow nodes and create custom ones',
@@ -131,8 +123,6 @@ function Settings({ isOverlay = false }: SettingsProps) {
 
   const getPageInfo = (view: string) => {
     switch (view) {
-      case '/settings/integrations':
-        return { title: 'Connected Apps', description: 'Connect external services and APIs' };
       case '/settings/nodes':
         return { title: 'Workflow Nodes', description: 'Manage available workflow nodes and create custom ones' };
       case '/settings/sidebar':
@@ -146,8 +136,6 @@ function Settings({ isOverlay = false }: SettingsProps) {
 
   const renderContent = () => {
     switch (currentView()) {
-      case '/settings/integrations':
-        return <IntegrationsSettings isOverlay={isOverlay} />;
       case '/settings/nodes':
         return <NodeManagementSettings />;
       case '/settings/sidebar':

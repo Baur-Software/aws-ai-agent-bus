@@ -17,10 +17,9 @@ import { useDashboardServer } from '../../../contexts/DashboardServerContext';
 import { useDragDrop, useDragSource } from '../../../contexts/DragDropContext';
 import { useIntegrations } from '../../../contexts/IntegrationsContext';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useNotification } from '../../../contexts/NotificationContext';
+import { useNotifications } from '../../../contexts/NotificationContext';
 import { useArtifactService } from '../../../services/ArtifactService';
 import { useAgentDefinitionService } from '../../../services/AgentDefinitionService';
-import { listAgents } from '../../../api/agents'; // new API import
 import IntegrationsGrid from '../../IntegrationsGrid';
 import { mcpRegistry } from '../../../services/MCPCapabilityRegistry';
 import { agentRegistryInitializer } from '../../../services/AgentRegistryInitializer';
@@ -67,6 +66,18 @@ interface NodeCategory {
   }[];
 }
 
+interface GroupCustomization {
+  displayName?: string; // Custom display name for the group
+  icon?: string; // Custom emoji icon for the group
+}
+
+interface PanelSettings {
+  agentGroupOrder: string[]; // Array of group names in desired order
+  collapsedGroups: string[]; // Array of collapsed group names
+  hiddenGroups: string[]; // Array of hidden group names
+  groupCustomizations: Record<string, GroupCustomization>; // Custom names and icons per group
+}
+
 export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   // Calculate initial position that avoids toolbar collision
   const getSafeInitialPosition = () => {
@@ -98,6 +109,13 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   const [agentSpecialty, setAgentSpecialty] = createSignal('');
   const [showConnectedApps, setShowConnectedApps] = createSignal(false);
   const [currentView, setCurrentView] = createSignal<'nodes' | 'details'>('nodes');
+  const [showPanelSettings, setShowPanelSettings] = createSignal(false);
+  const [panelSettings, setPanelSettings] = createSignal<PanelSettings>({
+    agentGroupOrder: [],
+    collapsedGroups: [],
+    hiddenGroups: [],
+    groupCustomizations: {}
+  });
 
   // Show details if there's a selected node OR user manually navigated to details
   const showingDetails = () => (props.selectedNode !== null && props.selectedNode !== undefined) || currentView() === 'details';
@@ -112,34 +130,18 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   const dashboardServer = useDashboardServer();
   const { callMCPTool } = dashboardServer;
   const integrations = useIntegrations();
-  const notifications = useNotification();
+  const notifications = useNotifications();
   const artifactService = useArtifactService();
   const agentService = useAgentDefinitionService(artifactService, { callMCPTool });
-
-  // Fetch agents for current org/user
-  createEffect(async () => {
-    const currentUser = user();
-    if (!currentUser) return;
-
-    const ownerType = 'user'; // Start with user agents
-    const ownerId = currentUser.userId;
-    const agentList = await listAgents(ownerType, ownerId);
-    setAgents(agentList);
-  });
 
   // Generate dynamic app nodes based on connected integrations and MCP tools
   const generateDynamicAppNodes = () => {
     const connectedApps = integrations.getAllConnections();
     const dynamicNodes = [];
 
-    // TODO: Load integration configs dynamically from KV store (integration-{serviceId})
-    // For now, no dynamic nodes from integrations until we have real connections
-    // Object.entries(connectedApps).forEach(([appId, connections]) => {
-    //   if (connections.length > 0) {
-    //     // Would need to: await callMCPTool('kv_get', { key: `integration-${appId}` })
-    //     // to get workflow_capabilities, name, icon, color
-    //   }
-    // });
+    // Note: Integration configs are loaded by IntegrationsContext on startup
+    // Workflow capabilities from integrations are registered via mcpRegistry
+    // when connections are established, so we use the registry as source of truth
 
     // Add MCP app nodes from the registry
     const mcpNodes = mcpRegistry.getNodes();
@@ -369,8 +371,15 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     }
   };
 
-  // Helper to get a friendly app name from groupName
+  // Helper to get a friendly app name from groupName (with custom name support)
   const getAppDisplayName = (groupName: string) => {
+    // Check if there's a custom display name
+    const customization = panelSettings().groupCustomizations[groupName];
+    if (customization?.displayName) {
+      return customization.displayName;
+    }
+
+    // Default name logic
     if (groupName.startsWith('mcp-app-')) {
       const serverId = groupName.replace('mcp-app-', '');
       // Try to get the actual app name from the MCP registry
@@ -388,6 +397,26 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
         .join(' ');
     }
     return groupName.replace(/-/g, ' ').replace('specialized ', 'Specialized: ');
+  };
+
+  // Helper to get group icon (with custom icon support)
+  const getGroupIcon = (groupName: string) => {
+    // Check if there's a custom icon
+    const customization = panelSettings().groupCustomizations[groupName];
+    if (customization?.icon) {
+      return customization.icon;
+    }
+
+    // Default icons based on group type
+    if (groupName.startsWith('mcp-app-')) return '🔌';
+    if (groupName.includes('orchestrators')) return '🎯';
+    if (groupName.includes('core')) return '⚙️';
+    if (groupName.includes('aws')) return '☁️';
+    if (groupName.includes('frameworks')) return '🏗️';
+    if (groupName.includes('devops')) return '🚀';
+    if (groupName.includes('integrations')) return '🔗';
+    if (groupName.includes('universal')) return '🌐';
+    return '🤖';
   };
 
   const determineAgentGroup = (agent: string) => {
@@ -539,9 +568,9 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
 
   // Default models for fallback when KV store is unavailable
   // Using same models as Agents.tsx for consistency
-  const DEFAULT_MODELS = [
-    'bedrock:anthropic.claude-3-5-sonnet-20241022-v2:0',
-    'bedrock:anthropic.claude-3-haiku-20240307-v1:0'
+  const DEFAULT_MODELS: Array<{ id: string; name: string }> = [
+    { id: 'bedrock:anthropic.claude-3-5-sonnet-20241022-v2:0', name: 'Claude 3.5 Sonnet' },
+    { id: 'bedrock:anthropic.claude-3-haiku-20240307-v1:0', name: 'Claude 3 Haiku' }
   ];
 
   // Load available models from system configuration
@@ -550,7 +579,12 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
       const result = await callMCPTool('kv_get', { key: 'system-available-models' });
       if (result?.value) {
         const models = JSON.parse(result.value);
-        setAvailableModels(models);
+        // If models is an array of strings, convert to objects
+        if (Array.isArray(models) && models.length > 0 && typeof models[0] === 'string') {
+          setAvailableModels(models.map((m: string) => ({ id: m, name: m.split(':').pop() || m })));
+        } else {
+          setAvailableModels(models);
+        }
       } else {
         // No models in KV store, use defaults
         setAvailableModels(DEFAULT_MODELS);
@@ -564,6 +598,53 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
       notifications?.warning('Using default AI models - AWS credentials may be expired', {
         title: 'Models Loading Failed',
         duration: 6000
+      });
+    }
+  };
+
+  // Load panel settings from KV store
+  const loadPanelSettings = async () => {
+    const currentUser = user();
+    if (!currentUser?.userId) return;
+
+    try {
+      const result = await callMCPTool('kv_get', {
+        key: `user-${currentUser.userId}-workflow-panel-settings`
+      });
+
+      if (result?.value) {
+        const settings = JSON.parse(result.value) as PanelSettings;
+        setPanelSettings(settings);
+
+        // Apply collapsed groups from settings
+        setCollapsedGroups(new Set(settings.collapsedGroups || []));
+      }
+    } catch (error) {
+      console.log('No saved panel settings found, using defaults');
+    }
+  };
+
+  // Save panel settings to KV store
+  const savePanelSettings = async (settings: PanelSettings) => {
+    const currentUser = user();
+    if (!currentUser?.userId) return;
+
+    try {
+      await callMCPTool('kv_set', {
+        key: `user-${currentUser.userId}-workflow-panel-settings`,
+        value: JSON.stringify(settings),
+        ttl_hours: 8760 // 1 year
+      });
+
+      setPanelSettings(settings);
+
+      notifications?.success('Panel settings saved', {
+        duration: 2000
+      });
+    } catch (error) {
+      console.error('Failed to save panel settings:', error);
+      notifications?.error('Failed to save panel settings', {
+        duration: 3000
       });
     }
   };
@@ -587,6 +668,8 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     await loadMcpTools();
     // Load available Bedrock models
     await loadAvailableModels();
+    // Load panel settings
+    await loadPanelSettings();
   });
 
   // Panel drag handling
@@ -1089,6 +1172,264 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     );
   };
 
+  // Get ordered agent groups based on user settings
+  const getOrderedAgentGroups = () => {
+    const groups = Object.entries(agentNodes());
+    const settings = panelSettings();
+
+    if (settings.agentGroupOrder.length === 0) {
+      return groups;
+    }
+
+    // Create a map for quick lookup
+    const groupMap = new Map(groups);
+    const ordered: [string, any[]][] = [];
+
+    // Add groups in the saved order
+    settings.agentGroupOrder.forEach(groupName => {
+      const groupAgents = groupMap.get(groupName);
+      if (groupAgents !== undefined && Array.isArray(groupAgents)) {
+        ordered.push([groupName, groupAgents]);
+        groupMap.delete(groupName);
+      }
+    });
+
+    // Add any remaining groups that weren't in the saved order
+    groupMap.forEach((agents, groupName) => {
+      ordered.push([groupName, agents]);
+    });
+
+    return ordered;
+  };
+
+  // Panel Settings Modal Component
+  const PanelSettingsModal = () => {
+    const [localGroupOrder, setLocalGroupOrder] = createSignal<string[]>([...panelSettings().agentGroupOrder]);
+    const [localCustomizations, setLocalCustomizations] = createSignal<Record<string, GroupCustomization>>({ ...panelSettings().groupCustomizations });
+    const [draggedIndex, setDraggedIndex] = createSignal<number | null>(null);
+    const [editingGroup, setEditingGroup] = createSignal<string | null>(null);
+    const [showEmojiPicker, setShowEmojiPicker] = createSignal<string | null>(null);
+
+    // Initialize with current groups if no saved order
+    const allGroups = Object.keys(agentNodes());
+    if (localGroupOrder().length === 0) {
+      setLocalGroupOrder(allGroups);
+    }
+
+    // Common emojis for quick selection
+    const commonEmojis = ['🤖', '🎯', '⚙️', '☁️', '🏗️', '🚀', '🔗', '🌐', '🔌', '💼', '📊', '🎨', '🔧', '📱', '💻', '🌟', '⚡', '🔥', '💡', '🎭'];
+
+    const getCustomization = (groupName: string) => localCustomizations()[groupName] || {};
+
+    const handleDragStart = (index: number) => {
+      setDraggedIndex(index);
+    };
+
+    const handleDragOver = (e: DragEvent, index: number) => {
+      e.preventDefault();
+      const dragIdx = draggedIndex();
+      if (dragIdx === null || dragIdx === index) return;
+
+      const order = [...localGroupOrder()];
+      const [removed] = order.splice(dragIdx, 1);
+      order.splice(index, 0, removed);
+      setLocalGroupOrder(order);
+      setDraggedIndex(index);
+    };
+
+    const handleDragEnd = () => {
+      setDraggedIndex(null);
+    };
+
+    const handleSave = () => {
+      const settings = panelSettings();
+      const newSettings: PanelSettings = {
+        ...settings,
+        agentGroupOrder: localGroupOrder(),
+        collapsedGroups: Array.from(collapsedGroups()),
+        groupCustomizations: localCustomizations()
+      };
+      savePanelSettings(newSettings);
+      setShowPanelSettings(false);
+    };
+
+    const handleReset = () => {
+      setLocalGroupOrder(allGroups);
+      setLocalCustomizations({});
+    };
+
+    const updateGroupName = (groupName: string, newName: string) => {
+      setLocalCustomizations({
+        ...localCustomizations(),
+        [groupName]: {
+          ...getCustomization(groupName),
+          displayName: newName || undefined
+        }
+      });
+    };
+
+    const updateGroupIcon = (groupName: string, newIcon: string) => {
+      setLocalCustomizations({
+        ...localCustomizations(),
+        [groupName]: {
+          ...getCustomization(groupName),
+          icon: newIcon || undefined
+        }
+      });
+      setShowEmojiPicker(null);
+    };
+
+    return (
+      <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+          {/* Header */}
+          <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Panel Settings</h2>
+            <button
+              type="button"
+              onClick={() => setShowPanelSettings(false)}
+              class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-500 dark:text-gray-400"
+            >
+              <X class="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div class="flex-1 overflow-y-auto p-4">
+            <div class="space-y-4">
+              <div>
+                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Agent Group Order
+                </h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  Drag and drop to reorder how agent groups appear in the panel
+                </p>
+                <div class="space-y-2">
+                  <For each={localGroupOrder()}>
+                    {(groupName, index) => {
+                      const agents = agentNodes()[groupName] || [];
+                      const customization = getCustomization(groupName);
+                      const currentIcon = customization.icon || getGroupIcon(groupName);
+                      const defaultName = groupName.startsWith('mcp-app-')
+                        ? groupName.replace('mcp-app-', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+                        : groupName.replace(/-/g, ' ').replace('specialized ', 'Specialized: ');
+
+                      return (
+                        <div
+                          class={`bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 transition-all ${
+                            draggedIndex() === index() ? 'opacity-50 scale-95' : ''
+                          }`}
+                        >
+                          <div
+                            draggable={true}
+                            onDragStart={() => handleDragStart(index())}
+                            onDragOver={(e) => handleDragOver(e, index())}
+                            onDragEnd={handleDragEnd}
+                            class="flex items-center gap-3 p-3 cursor-move hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg"
+                          >
+                            <GripVertical class="w-5 h-5 text-gray-400 flex-shrink-0" />
+
+                            {/* Icon Selector */}
+                            <div class="relative flex-shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShowEmojiPicker(showEmojiPicker() === groupName ? null : groupName);
+                                }}
+                                class="text-2xl hover:scale-110 transition-transform"
+                                title="Change icon"
+                              >
+                                {currentIcon}
+                              </button>
+
+                              {/* Emoji Picker Popup */}
+                              <Show when={showEmojiPicker() === groupName}>
+                                <div class="absolute top-full left-0 mt-1 z-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl p-2 w-64">
+                                  <div class="grid grid-cols-8 gap-1">
+                                    <For each={commonEmojis}>
+                                      {(emoji) => (
+                                        <button
+                                          type="button"
+                                          onClick={() => updateGroupIcon(groupName, emoji)}
+                                          class="text-xl hover:bg-gray-100 dark:hover:bg-gray-700 rounded p-1 transition-colors"
+                                        >
+                                          {emoji}
+                                        </button>
+                                      )}
+                                    </For>
+                                  </div>
+                                  <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                                    <input
+                                      type="text"
+                                      placeholder="Or paste any emoji..."
+                                      maxLength={2}
+                                      class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                      onInput={(e) => {
+                                        const val = e.currentTarget.value;
+                                        if (val) updateGroupIcon(groupName, val);
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </Show>
+                            </div>
+
+                            {/* Name Editor */}
+                            <div class="flex-1 min-w-0">
+                              <input
+                                type="text"
+                                value={customization.displayName || ''}
+                                placeholder={defaultName}
+                                onInput={(e) => updateGroupName(groupName, e.currentTarget.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                class="w-full font-medium text-sm bg-transparent border-b border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 text-gray-900 dark:text-white outline-none transition-colors px-1 -mx-1"
+                              />
+                              <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                {agents.length} agent{agents.length !== 1 ? 's' : ''}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  </For>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div class="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              type="button"
+              onClick={handleReset}
+              class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            >
+              Reset to Default
+            </button>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowPanelSettings(false)}
+                class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+              >
+                Save Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Show when={isVisible()}>
       <div
@@ -1119,6 +1460,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
             </Show>
             <Show when={showConnectedApps()}>
               <button
+                type="button"
                 onClick={() => setShowConnectedApps(false)}
                 class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-500 dark:text-gray-400 mr-2"
               >
@@ -1127,6 +1469,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
             </Show>
             <Show when={showingDetails()}>
               <button
+                type="button"
                 onClick={() => setCurrentView('nodes')}
                 class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-500 dark:text-gray-400 mr-2"
               >
@@ -1143,6 +1486,16 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
             </span>
           </div>
           <div class="flex items-center gap-1">
+            <Show when={!showingDetails() && !showConnectedApps()}>
+              <button
+                type="button"
+                onClick={() => setShowPanelSettings(true)}
+                class="p-2 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 rounded-lg text-gray-600 dark:text-gray-400 transition-all duration-200 hover:scale-105"
+                title="Panel Settings"
+              >
+                <Settings class="w-4 h-4" />
+              </button>
+            </Show>
             <button
               onClick={handlePin}
               class="p-2 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 rounded-lg text-gray-600 dark:text-gray-400 transition-all duration-200 hover:scale-105"
@@ -1260,7 +1613,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                               </Show>
 
                               <Show
-                                when={category.id === 'ai-agents'}
+                                when={category.id === 'ai' || category.id === 'ai-agents'}
                                 fallback={
                                   <For each={category.nodes}>
                                     {(node) => {
@@ -1304,9 +1657,11 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                                 }
                               >
                                 {/* Collapsible groups for AI Agents */}
-                                <For each={Object.entries(agentNodes())}>
-                                  {([groupName, groupAgents]) => (
-                                    <Show when={groupAgents.length > 0}>
+                                <For each={getOrderedAgentGroups()}>
+                                  {([groupName, groupAgents]) => {
+                                    const agents = Array.isArray(groupAgents) ? groupAgents : [];
+                                    return (
+                                    <Show when={agents.length > 0}>
                                       <div class="mb-3">
                                         <button
                                           onClick={() => {
@@ -1331,16 +1686,14 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                                           }`}
                                         >
                                           <div class="flex items-center gap-2">
-                                            <Show when={groupName.startsWith('mcp-app-')}>
-                                              <div class="w-5 h-5 bg-gradient-to-br from-cyan-500 to-blue-600 rounded flex items-center justify-center text-white text-xs">
-                                                🔌
-                                              </div>
-                                            </Show>
+                                            <div class="text-base">
+                                              {getGroupIcon(groupName)}
+                                            </div>
                                             <span class="text-sm font-medium text-gray-900 dark:text-white capitalize">
                                               {getAppDisplayName(groupName)}
                                             </span>
                                             <span class="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded-full">
-                                              {groupAgents.length}
+                                              {agents.length}
                                             </span>
                                           </div>
                                           <div class={`transform transition-transform ${collapsedGroups().has(groupName) ? 'rotate-180' : ''}`}>
@@ -1350,7 +1703,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
 
                                         <Show when={!collapsedGroups().has(groupName)}>
                                           <div class="ml-2 space-y-1">
-                                            <For each={groupAgents}>
+                                            <For each={agents}>
                                               {(node) => (
                                                 <div
                                                   draggable={true}
@@ -1376,7 +1729,8 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                                         </Show>
                                       </div>
                                     </Show>
-                                  )}
+                                    );
+                                  }}
                                 </For>
                               </Show>
                             </Show>
@@ -1446,8 +1800,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
             console.log('Agent created:', agent);
             // Reload agent list
             try {
-              const organizedAgents = await agentRegistryInitializer.initialize();
-              // TODO: Update local agent list state if needed
+              await loadAgents();
             } catch (err) {
               console.error('Failed to reload agents:', err);
             }
@@ -1455,10 +1808,15 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
           }}
           agentService={agentService}
           mcpClient={{ callMCPTool }}
-          existingAgents={[]} // TODO: Pass actual agent list for icon extraction
-          connectedApps={integrations?.connectedApps || []}
+          existingAgents={[]}
+          connectedApps={Object.keys(integrations?.getAllConnections() || {})}
           availableModels={availableModels()}
         />
+      </Show>
+
+      {/* Panel Settings Modal */}
+      <Show when={showPanelSettings()}>
+        <PanelSettingsModal />
       </Show>
     </Show>
   );
