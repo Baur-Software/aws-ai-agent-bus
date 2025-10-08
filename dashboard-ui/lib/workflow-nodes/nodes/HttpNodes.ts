@@ -10,7 +10,7 @@ export const HTTP_NODES: NodeDefinition[] = [
   {
     type: 'http-request',
     name: 'HTTP Request',
-    description: 'Make HTTP API calls',
+    description: 'Make HTTP/REST/GraphQL API calls with full control',
     category: 'actions',
     subcategory: 'http',
     icon: '🌐',
@@ -24,7 +24,7 @@ export const HTTP_NODES: NodeDefinition[] = [
         type: 'text',
         required: true,
         placeholder: 'https://api.example.com/endpoint',
-        help: 'The full URL to make the request to'
+        help: 'The full URL to make the request to (supports REST APIs, GraphQL endpoints, etc.)'
       },
       {
         key: 'method',
@@ -46,15 +46,15 @@ export const HTTP_NODES: NodeDefinition[] = [
         key: 'headers',
         label: 'Headers',
         type: 'json',
-        placeholder: '{"Content-Type": "application/json"}',
+        placeholder: '{"Content-Type": "application/json", "Authorization": "Bearer token"}',
         help: 'HTTP headers as JSON object'
       },
       {
         key: 'body',
         label: 'Request Body',
         type: 'textarea',
-        placeholder: '{"key": "value"}',
-        help: 'Request body for POST/PUT/PATCH requests'
+        placeholder: '{"key": "value"} or GraphQL query { users { id name } }',
+        help: 'Request body for POST/PUT/PATCH requests (JSON, GraphQL query, etc.)'
       },
       {
         key: 'timeout',
@@ -90,133 +90,6 @@ export const HTTP_NODES: NodeDefinition[] = [
         }
       },
       duration: 145
-    }
-  },
-  {
-    type: 'graphql-query',
-    name: 'GraphQL Query',
-    description: 'Execute GraphQL query',
-    category: 'actions',
-    subcategory: 'http',
-    icon: '◈',
-    color: 'bg-pink-500',
-    fields: [
-      {
-        key: 'endpoint',
-        label: 'GraphQL Endpoint',
-        type: 'text',
-        required: true,
-        placeholder: 'https://api.example.com/graphql'
-      },
-      {
-        key: 'query',
-        label: 'GraphQL Query',
-        type: 'textarea',
-        required: true,
-        placeholder: 'query { users { id name email } }',
-        help: 'GraphQL query or mutation'
-      },
-      {
-        key: 'variables',
-        label: 'Variables',
-        type: 'json',
-        placeholder: '{"userId": "123"}',
-        help: 'Query variables as JSON'
-      },
-      {
-        key: 'headers',
-        label: 'Headers',
-        type: 'json',
-        placeholder: '{"Authorization": "Bearer token"}',
-        help: 'Additional HTTP headers'
-      }
-    ],
-    defaultConfig: {
-      headers: {},
-      variables: {}
-    },
-    sampleOutput: {
-      data: {
-        users: [
-          { id: '1', name: 'Alice', email: 'alice@example.com' },
-          { id: '2', name: 'Bob', email: 'bob@example.com' }
-        ]
-      }
-    }
-  },
-  {
-    type: 'rest-api',
-    name: 'REST API',
-    description: 'RESTful API operations',
-    category: 'actions',
-    subcategory: 'http',
-    icon: '🔌',
-    color: 'bg-indigo-500',
-    fields: [
-      {
-        key: 'baseUrl',
-        label: 'Base URL',
-        type: 'text',
-        required: true,
-        placeholder: 'https://api.example.com/v1',
-        help: 'API base URL'
-      },
-      {
-        key: 'resource',
-        label: 'Resource Path',
-        type: 'text',
-        required: true,
-        placeholder: '/users/{id}',
-        help: 'Resource path (supports {param} placeholders)'
-      },
-      {
-        key: 'operation',
-        label: 'Operation',
-        type: 'select',
-        required: true,
-        defaultValue: 'get',
-        options: [
-          { label: 'List (GET collection)', value: 'list' },
-          { label: 'Get (GET single)', value: 'get' },
-          { label: 'Create (POST)', value: 'create' },
-          { label: 'Update (PUT)', value: 'update' },
-          { label: 'Patch (PATCH)', value: 'patch' },
-          { label: 'Delete (DELETE)', value: 'delete' }
-        ]
-      },
-      {
-        key: 'pathParams',
-        label: 'Path Parameters',
-        type: 'json',
-        placeholder: '{"id": "123"}',
-        help: 'Values for path placeholders'
-      },
-      {
-        key: 'queryParams',
-        label: 'Query Parameters',
-        type: 'json',
-        placeholder: '{"limit": 10, "offset": 0}',
-        help: 'URL query parameters'
-      },
-      {
-        key: 'body',
-        label: 'Request Body',
-        type: 'json',
-        help: 'Request payload for create/update operations'
-      }
-    ],
-    defaultConfig: {
-      operation: 'get',
-      pathParams: {},
-      queryParams: {}
-    },
-    sampleOutput: {
-      status: 200,
-      data: {
-        id: '123',
-        name: 'Example Resource',
-        createdAt: '2025-10-07T10:00:00Z'
-      }
     }
   }
 ];

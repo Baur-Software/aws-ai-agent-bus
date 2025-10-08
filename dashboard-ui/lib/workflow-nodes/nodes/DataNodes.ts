@@ -88,131 +88,14 @@ export const DATA_NODES: NodeDefinition[] = [
       expiresAt: '2025-10-08T10:00:00Z'
     }
   },
-  {
-    type: 'kv-delete',
-    name: 'Delete Key-Value',
-    description: 'Remove data from KV store',
-    category: 'data',
-    subcategory: 'kv',
-    icon: '🗑️',
-    color: 'bg-red-500',
-    fields: [
-      {
-        key: 'key',
-        label: 'Key',
-        type: 'text',
-        required: true,
-        placeholder: 'my-key',
-        help: 'The key to delete from the KV store'
-      }
-    ],
-    defaultConfig: {
-      key: ''
-    },
-    sampleOutput: {
-      key: 'user-settings',
-      deleted: true
-    }
-  },
+  // NOTE: kv-delete removed - no MCP tool backing
+  // Use kv-set with empty/null value or TTL expiration instead
 
-  // S3 / Artifacts Nodes
-  {
-    type: 's3-get',
-    name: 'Get S3 Object',
-    description: 'Download file from S3',
-    category: 'data',
-    subcategory: 's3',
-    icon: '☁️',
-    color: 'bg-orange-500',
-    fields: [
-      {
-        key: 'bucket',
-        label: 'Bucket',
-        type: 'text',
-        required: true,
-        placeholder: 'my-bucket'
-      },
-      {
-        key: 'key',
-        label: 'Object Key',
-        type: 'text',
-        required: true,
-        placeholder: 'path/to/file.json'
-      },
-      {
-        key: 'encoding',
-        label: 'Encoding',
-        type: 'select',
-        defaultValue: 'utf-8',
-        options: [
-          { label: 'UTF-8 (Text)', value: 'utf-8' },
-          { label: 'Base64 (Binary)', value: 'base64' },
-          { label: 'Buffer (Raw)', value: 'buffer' }
-        ]
-      }
-    ],
-    defaultConfig: {
-      encoding: 'utf-8'
-    },
-    sampleOutput: {
-      bucket: 'my-bucket',
-      key: 'data/users.json',
-      content: '{"users": [...]}',
-      size: 1024,
-      contentType: 'application/json'
-    }
-  },
-  {
-    type: 's3-put',
-    name: 'Put S3 Object',
-    description: 'Upload file to S3',
-    category: 'data',
-    subcategory: 's3',
-    icon: '☁️',
-    color: 'bg-orange-600',
-    fields: [
-      {
-        key: 'bucket',
-        label: 'Bucket',
-        type: 'text',
-        required: true,
-        placeholder: 'my-bucket'
-      },
-      {
-        key: 'key',
-        label: 'Object Key',
-        type: 'text',
-        required: true,
-        placeholder: 'path/to/file.json'
-      },
-      {
-        key: 'content',
-        label: 'Content',
-        type: 'textarea',
-        required: true,
-        help: 'The content to upload'
-      },
-      {
-        key: 'contentType',
-        label: 'Content Type',
-        type: 'text',
-        defaultValue: 'application/json',
-        placeholder: 'application/json'
-      }
-    ],
-    defaultConfig: {
-      contentType: 'application/json'
-    },
-    sampleOutput: {
-      bucket: 'my-bucket',
-      key: 'data/output.json',
-      uploaded: true,
-      etag: '"abc123"',
-      url: 'https://s3.amazonaws.com/my-bucket/data/output.json'
-    }
-  },
+  // NOTE: s3-get and s3-put removed - use artifact nodes instead
+  // See StorageNodes.ts for artifacts-get, artifacts-put, artifacts-list
+  // Artifact nodes work with the configured S3 artifacts bucket
 
-  // Transform Nodes
+  // Transform Nodes (client-side operations)
   {
     type: 'json-parse',
     name: 'Parse JSON',

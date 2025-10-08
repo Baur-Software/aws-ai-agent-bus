@@ -1,5 +1,15 @@
 /**
  * AI Agent Node Definitions
+ *
+ * NOTE: These AI/Agent nodes require an agent execution framework to be implemented.
+ * Current MCP server does not provide agent execution tools - only infrastructure tools.
+ *
+ * To enable these nodes, you'll need:
+ * 1. Agent execution framework (e.g., LangChain, Claude API integration)
+ * 2. Workflow executor that handles agent orchestration
+ * 3. Token/credit management for LLM API calls
+ *
+ * For now, these serve as node templates for future implementation.
  */
 
 import type { NodeDefinition } from '../NodeRegistry';
