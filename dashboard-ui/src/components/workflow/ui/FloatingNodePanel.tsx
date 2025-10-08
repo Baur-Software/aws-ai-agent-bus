@@ -83,7 +83,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   const [isResizing, setIsResizing] = createSignal(false);
   const [panelWidth, setPanelWidth] = createSignal(320);
   const [panelHeight, setPanelHeight] = createSignal(400);
-  const [activeCategory, setActiveCategory] = createSignal('ai-agents');
+  const [activeCategory, setActiveCategory] = createSignal('all');
   const [searchQuery, setSearchQuery] = createSignal('');
   const [isVisible, setIsVisible] = createSignal(true);
   const [isPinned, setIsPinned] = createSignal(props.initialPinned ?? true);
@@ -744,6 +744,12 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
 
     const baseCategories: NodeCategory[] = [
       {
+        id: 'all',
+        name: 'All Nodes',
+        icon: '📦',
+        nodes: [] // Will be populated by filteredNodes logic
+      },
+      {
         id: 'triggers',
         name: 'Triggers',
         icon: '⚡',
@@ -816,6 +822,15 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   const filteredNodes = () => {
     const query = searchQuery().toLowerCase();
     const categories = nodeCategories();
+
+    // Populate "All Nodes" category with all nodes from other categories
+    const allCategory = categories.find(cat => cat.id === 'all');
+    if (allCategory) {
+      allCategory.nodes = categories
+        .filter(cat => cat.id !== 'all')
+        .flatMap(cat => cat.nodes);
+    }
+
     if (!query) return categories;
 
     return categories.map(category => ({
@@ -1154,20 +1169,20 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                     </div>
                   </div>
 
-                  {/* Category Tabs */}
-                  <div class="flex justify-between border-b border-gray-200 dark:border-gray-700">
+                  {/* Category Tabs - HubSpot style: wrapping pills with icon + text */}
+                  <div class="flex flex-wrap gap-1 p-2 border-b border-gray-200 dark:border-gray-700">
                     <For each={nodeCategories()}>
                       {(category) => (
                         <button
                           onClick={() => setActiveCategory(category.id)}
-                          class={`flex-1 px-2 py-2 text-xs font-medium border-b-2 transition-colors text-center ${
+                          class={`flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
                             activeCategory() === category.id
-                              ? 'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                           }`}
                         >
-                          <span class="mr-1">{category.icon}</span>
-                          {category.name}
+                          <span class="text-sm">{category.icon}</span>
+                          <span class="whitespace-nowrap">{category.name}</span>
                         </button>
                       )}
                     </For>

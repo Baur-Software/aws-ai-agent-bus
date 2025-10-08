@@ -76,6 +76,12 @@ interface FloatingToolbarProps {
   useMockData?: boolean;
   onToggleMockData?: () => void;
 
+  // Auto-save
+  autoSaveEnabled?: boolean;
+  onToggleAutoSave?: () => void;
+  isSaving?: boolean;
+  lastSaved?: Date | null;
+
   // Position
   onPositionChange?: (x: number, y: number) => void;
   onPinnedChange?: (isPinned: boolean) => void;
@@ -195,8 +201,8 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
 
   const getGridLabel = () => {
     const isOn = props.gridMode !== 'off';
-    const gridType = props.gridMode === 'dots' ? 'Dots' : 'Lines';
-    return isOn ? `${gridType} (On)` : 'Grid (Off)';
+    const gridType = props.gridMode === 'dots' ? 'Dots' : 'Grid';
+    return isOn ? gridType : 'Grid';
   };
 
   const handleGridClick = () => {
@@ -251,11 +257,18 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
     },
     {
       icon: Save,
-      label: 'Save',
+      label: props.autoSaveEnabled ? 'Auto-Save (On)' : 'Auto-Save (Off)',
       onClick: props.onSave,
+      onContextMenu: (e: MouseEvent) => {
+        e.preventDefault();
+        props.onToggleAutoSave?.();
+      },
       show: true,
-      variant: props.hasUnsavedChanges ? 'warning' : 'secondary',
-      badge: props.hasUnsavedChanges
+      variant: props.autoSaveEnabled ? 'primary' : 'secondary',
+      loading: props.isSaving,
+      title: props.autoSaveEnabled
+        ? `Auto-save enabled${props.lastSaved ? ` • Last saved: ${props.lastSaved.toLocaleTimeString()}` : ''} • Right-click to disable`
+        : 'Auto-save disabled • Click to save manually • Right-click to enable'
     },
     {
       icon: Upload,
@@ -302,13 +315,6 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
       variant: 'secondary' as const
     },
     {
-      icon: Hand,
-      label: props.isPanMode ? 'Exit Pan Mode' : 'Pan Mode',
-      onClick: props.onTogglePanMode,
-      show: !!props.onTogglePanMode,
-      variant: props.isPanMode ? 'primary' : 'secondary' as const
-    },
-    {
       icon: getGridIcon(),
       label: getGridLabel(),
       onClick: handleGridClick,
@@ -319,10 +325,11 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
     },
     {
       icon: Blocks,
-      label: props.isNodesPanelVisible ? 'Hide Nodes Panel' : 'Show Nodes Panel',
+      label: 'Nodes',
       onClick: props.onToggleNodesPanel,
       show: !!props.onToggleNodesPanel,
-      variant: 'secondary' as const
+      variant: props.isNodesPanelVisible ? 'primary' : 'secondary' as const,
+      title: props.isNodesPanelVisible ? 'Hide Nodes Panel' : 'Show Nodes Panel'
     },
     {
       icon: MessageCircle,

@@ -2,6 +2,7 @@ import { createSignal, createEffect, Show, onMount, onCleanup, JSX } from 'solid
 import { DragDropProvider, useDragDrop, useDropZone } from '../../../contexts/DragDropContext';
 import { useWorkflow } from '../../../contexts/WorkflowContext';
 import { WorkflowUIProvider, useWorkflowUI } from '../../../contexts/WorkflowUIContext';
+import { useAutoSave } from '../../../hooks/useAutoSave';
 import WorkflowCanvas from './WorkflowCanvas';
 import FloatingToolbar from '../ui/FloatingToolbar';
 import FloatingNodePanel from '../ui/FloatingNodePanel';
@@ -30,11 +31,24 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
   const setShowWorkflowBrowser = (show: boolean) => props.onSetShowWorkflowBrowser?.(show);
   const [connectedIntegrations, setConnectedIntegrations] = createSignal<string[]>([]);
   const [isPanMode, setIsPanMode] = createSignal(false);
+  const [autoSaveEnabled, setAutoSaveEnabled] = createSignal(true); // TODO: Load from user preferences
 
   // Context hooks
   const workflow = useWorkflow();
   const dragDrop = useDragDrop();
   const workflowUI = useWorkflowUI();
+
+  // Auto-save hook - watches for changes and saves automatically
+  const autoSave = useAutoSave(
+    () => ({ nodes: workflow.currentNodes(), connections: workflow.currentConnections() }),
+    {
+      enabled: autoSaveEnabled(),
+      debounceMs: 2000, // 2 second debounce
+      onSave: async () => {
+        await workflow.saveWorkflow();
+      }
+    }
+  );
 
   // Update canvas transform in drag context when canvas moves
   createEffect(() => {
@@ -271,8 +285,12 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
         {/* Floating Toolbar */}
         <div class="pointer-events-auto">
             <FloatingToolbar
-              onSave={workflow.saveWorkflow}
+              onSave={autoSave.forceSave}
               onLoad={workflow.importWorkflow}
+              autoSaveEnabled={autoSaveEnabled()}
+              onToggleAutoSave={() => setAutoSaveEnabled(!autoSaveEnabled())}
+              isSaving={autoSave.isSaving()}
+              lastSaved={autoSave.lastSaved()}
               onRun={() => {
                 // TODO: Implement workflow execution
                 console.log('Running workflow...');

@@ -155,31 +155,15 @@ export default function NodeManagementSettings() {
   };
 
   return (
-    <div class="space-y-6">
-      {/* Header */}
-      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
-        <div class="flex items-start gap-4">
-          <div class="p-3 bg-blue-500 rounded-lg text-white">
-            <Box class="w-6 h-6" />
-          </div>
-          <div class="flex-1">
-            <h2 class="text-xl font-semibold text-slate-900 dark:text-white mb-2">
-              Workflow Node Management
-            </h2>
-            <p class="text-sm text-slate-600 dark:text-slate-400">
-              Control which workflow nodes are available in your organization. Enable/disable nodes,
-              set default configurations, and manage usage policies.
-            </p>
-          </div>
-        </div>
-
+    <div class="space-y-4">
+      {/* Compact Header with Category Filter and Stats */}
+      <div class="flex items-center justify-between gap-4 flex-wrap">
         {/* Category Filter */}
-        <div class="mt-6 flex items-center gap-2 flex-wrap">
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Category:</span>
+        <div class="flex items-center gap-2 flex-wrap">
           <For each={categories()}>
             {(cat) => (
               <button
-                class={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                class={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                   selectedCategory() === cat
                     ? 'bg-blue-600 text-white'
                     : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
@@ -192,25 +176,23 @@ export default function NodeManagementSettings() {
           </For>
         </div>
 
-        {/* Stats */}
-        <div class="mt-4 grid grid-cols-3 gap-4">
-          <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-            <div class="text-2xl font-bold text-slate-900 dark:text-white">
-              {registryNodes().length}
-            </div>
-            <div class="text-xs text-slate-600 dark:text-slate-400">Total Nodes</div>
+        {/* Compact Stats */}
+        <div class="flex items-center gap-3 text-sm">
+          <div class="flex items-center gap-1.5">
+            <span class="text-slate-600 dark:text-slate-400">Total:</span>
+            <span class="font-semibold text-slate-900 dark:text-white">{registryNodes().length}</span>
           </div>
-          <div class="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-            <div class="text-2xl font-bold text-green-700 dark:text-green-400">
+          <div class="w-px h-4 bg-slate-300 dark:bg-slate-600" />
+          <div class="flex items-center gap-1.5">
+            <span class="text-slate-600 dark:text-slate-400">Enabled:</span>
+            <span class="font-semibold text-green-600 dark:text-green-400">
               {registryNodes().filter(n => isNodeEnabled(n.type)).length}
-            </div>
-            <div class="text-xs text-green-600 dark:text-green-400">Enabled</div>
+            </span>
           </div>
-          <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-            <div class="text-2xl font-bold text-slate-900 dark:text-white">
-              {tenantConfigs().size}
-            </div>
-            <div class="text-xs text-slate-600 dark:text-slate-400">Customized</div>
+          <div class="w-px h-4 bg-slate-300 dark:bg-slate-600" />
+          <div class="flex items-center gap-1.5">
+            <span class="text-slate-600 dark:text-slate-400">Customized:</span>
+            <span class="font-semibold text-slate-900 dark:text-white">{tenantConfigs().size}</span>
           </div>
         </div>
       </div>
