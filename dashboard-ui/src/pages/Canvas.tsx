@@ -17,6 +17,7 @@ const Events = lazy(() => import('./Events'));
 const Settings = lazy(() => import('./Settings'));
 const AppsTab = lazy(() => import('../components/apps/AppsTab'));
 const NodeDesigner = lazy(() => import('./NodeDesigner'));
+const Agents = lazy(() => import('./Agents'));
 
 export default function Canvas() {
   const params = useParams();
@@ -92,6 +93,12 @@ export default function Canvas() {
         />
       ),
       title: 'Workflow Browser',
+      size: 'large' as const
+    },
+    '/agents': {
+      id: 'agents',
+      component: () => <Agents isOverlay={true} />,
+      title: 'AI Agents',
       size: 'fullscreen' as const
     },
     '/apps': {

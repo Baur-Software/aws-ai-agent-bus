@@ -1,13 +1,16 @@
 {
   "mcpServers": {
     "agent-mesh": {
-      "command": "./mcp-rust/target/release/mcp-multi-tenant.exe",
+      "command": "mcp-rust/target/release/mcp-multi-tenant.exe",
       "env": {
         "AWS_REGION": "us-west-2",
-        "AWS_PROFILE": "default",
-        "AGENT_MESH_KV_TABLE": "agent-mesh-kv",
-        "AGENT_MESH_ARTIFACTS_BUCKET": "agent-mesh-artifacts",
-        "AGENT_MESH_EVENT_BUS": "agent-mesh-events"
+        "AWS_PROFILE": "baursoftware",
+        "AGENT_MESH_KV_TABLE": "agent-mesh-dev-kv",
+        "AGENT_MESH_ARTIFACTS_BUCKET": "agent-mesh-dev-artifacts-545027c4",
+        "AGENT_MESH_EVENT_BUS": "agent-mesh-dev-events",
+        "DEFAULT_TENANT_ID": "acme",
+        "DEFAULT_USER_ID": "user-demo-123",
+        "RUST_LOG": "error"
       }
     }
   }

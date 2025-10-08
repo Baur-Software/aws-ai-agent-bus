@@ -17,6 +17,7 @@ import { useDashboardServer } from '../../../contexts/DashboardServerContext';
 import { useDragDrop, useDragSource } from '../../../contexts/DragDropContext';
 import { useIntegrations } from '../../../contexts/IntegrationsContext';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useNotification } from '../../../contexts/NotificationContext';
 import { useArtifactService } from '../../../services/ArtifactService';
 import { useAgentDefinitionService } from '../../../services/AgentDefinitionService';
 import { listAgents } from '../../../api/agents'; // new API import
@@ -111,6 +112,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   const dashboardServer = useDashboardServer();
   const { callMCPTool } = dashboardServer;
   const integrations = useIntegrations();
+  const notifications = useNotification();
   const artifactService = useArtifactService();
   const agentService = useAgentDefinitionService(artifactService, { callMCPTool });
 
@@ -535,6 +537,13 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     }
   };
 
+  // Default models for fallback when KV store is unavailable
+  // Using same models as Agents.tsx for consistency
+  const DEFAULT_MODELS = [
+    'bedrock:anthropic.claude-3-5-sonnet-20241022-v2:0',
+    'bedrock:anthropic.claude-3-haiku-20240307-v1:0'
+  ];
+
   // Load available models from system configuration
   const loadAvailableModels = async () => {
     try {
@@ -542,11 +551,20 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
       if (result?.value) {
         const models = JSON.parse(result.value);
         setAvailableModels(models);
+      } else {
+        // No models in KV store, use defaults
+        setAvailableModels(DEFAULT_MODELS);
       }
     } catch (error) {
       console.error('Failed to load available models from KV store:', error);
-      // Leave models empty - UI should handle empty state
-      setAvailableModels([]);
+      // Use default models when KV store is unavailable (e.g., AWS credentials expired)
+      setAvailableModels(DEFAULT_MODELS);
+
+      // Show warning notification to user
+      notifications?.warning('Using default AI models - AWS credentials may be expired', {
+        title: 'Models Loading Failed',
+        duration: 6000
+      });
     }
   };
 
@@ -952,8 +970,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     // Save changes
     const saveChanges = () => {
       props.onUpdate(localNode());
-      // Stay in details view after saving - user can manually go back if needed
-      // setCurrentView('nodes'); // Removed - keep showing details
+      setCurrentView('nodes'); // Go back to nodes list after saving
     };
 
     const nodeDefinition = getNodeDefinition(props.node.type);

@@ -73,7 +73,26 @@ export function CreateAgentWizard(props: CreateAgentWizardProps) {
       if (app.icon) icons.add(app.icon);
     });
 
-    ['🤖', '🎯', '💻', '⚡', '🔧', '🎨', '📊', '🔍'].forEach(icon => icons.add(icon));
+    // Common AI & Agent icons
+    const baseIcons = [
+      '🤖', '🎯', '💻', '⚡', '🔧', '🎨', '📊', '🔍',
+      // More AI/Tech icons
+      '🧠', '💡', '🔮', '✨', '⭐', '🚀', '🛠️', '⚙️',
+      // Workflow icons
+      '📋', '📝', '📌', '🎭', '🔬', '🧪', '🔭', '🎪',
+      // Communication icons
+      '💬', '📢', '📡', '📮', '📬', '💌', '📨', '📩',
+      // Data icons
+      '💾', '💿', '📀', '🗂️', '📁', '📂', '🗃️', '🗄️',
+      // Cloud/Network icons
+      '☁️', '🌐', '🔗', '🔌', '📶', '📡', '🛰️',
+      // Security icons
+      '🔒', '🔓', '🔐', '🛡️', '🔑', '🗝️',
+      // Other useful icons
+      '🎓', '📚', '🏆', '🎖️', '👤', '👥', '🏢', '🏭'
+    ];
+
+    baseIcons.forEach(icon => icons.add(icon));
 
     return Array.from(icons);
   });

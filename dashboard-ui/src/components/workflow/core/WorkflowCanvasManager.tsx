@@ -349,8 +349,8 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
                 console.log('Node drag started:', nodeType);
                 // The actual drag is handled by the DragDropContext
               }}
-              connectedIntegrations={connectedIntegrations()}
-              onConnectIntegration={(integration) => {
+              connectedApps={connectedIntegrations()}
+              onConnectApp={(integration) => {
                 window.location.href = `/settings?connect=${integration}`;
               }}
               onPositionChange={(x, y) => workflowUI.setNodePanelPosition({ x, y })}
@@ -359,9 +359,9 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
               onNodeUpdate={(updatedNode) => {
                 const currentNodes = workflow.currentNodes();
                 workflow.setNodes(
-                  currentNodes.map(n => n.id === updatedNode.id ? updatedNode : n)
+                  currentNodes.map(n => n.id === updatedNode.id ? { ...n, ...updatedNode } : n)
                 );
-                workflowUI.setSelectedNode(updatedNode);
+                workflowUI.setSelectedNode(null); // Clear selection after save
                 workflow.setHasUnsavedChanges(true);
               }}
               availableModels={['claude-3-sonnet', 'claude-3-haiku', 'gpt-4', 'gpt-3.5-turbo']}

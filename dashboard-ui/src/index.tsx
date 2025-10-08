@@ -44,6 +44,7 @@ render(
                                 <Route path="/workflows" component={Canvas} />
                                 <Route path="/workflows/:id" component={Canvas} />
                                 <Route path="/dashboard" component={Canvas} />
+                                <Route path="/agents" component={Canvas} />
                                 <Route path="/apps" component={Canvas} />
                                 <Route path="/kv-store" component={Canvas} />
                                 <Route path="/artifacts" component={Canvas} />

@@ -20,7 +20,8 @@ import {
   MessageCircle,
   ChevronDown,
   Building,
-  Grid3X3
+  Grid3X3,
+  Cpu
 } from 'lucide-solid';
 import { useFloatingPanelResize } from '../../../hooks/useFloatingPanelResize';
 
@@ -136,6 +137,7 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
 
   const navItems: NavItem[] = [
     { id: 'workflows', label: 'Workflows', icon: Workflow, path: '/workflows' },
+    { id: 'agents', label: 'Agents', icon: Cpu, path: '/agents' },
     { id: 'apps', label: 'Apps', icon: Grid3X3, path: '/apps' },
     // Dashboard will be rebuilt as configurable canvas with datavis nodes
     { id: 'kv-store', label: 'KV Store', icon: Database, path: '/kv-store' },
