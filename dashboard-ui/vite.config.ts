@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv, ConfigEnv, UserConfig } from 'vite';
 import solid from 'vite-plugin-solid';
 import tailwindcss from 'tailwindcss';
+import path from 'path';
 
 export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
   // Load env file based on `mode` in the current working directory.
@@ -11,6 +12,14 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
     plugins: [solid()],
     root: '.',
     publicDir: false,
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+        '@ai-agent-bus/workflow-nodes': path.resolve(__dirname, './lib/workflow-nodes'),
+        '@ai-agent-bus/datavis-nodes': path.resolve(__dirname, './lib/datavis-nodes'),
+        '@ai-agent-bus/shapes': path.resolve(__dirname, './lib/shapes')
+      }
+    },
     build: {
       outDir: './dist',
       emptyOutDir: true,

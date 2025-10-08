@@ -2,13 +2,13 @@
  * Node Config Renderer
  *
  * Generic, composable component that renders configuration forms
- * based on node schemas from nodeDefinitions.ts or AgentDefinition.
+ * based on node schemas from NodeRegistry.
  *
  * This replaces hardcoded config forms in FloatingNodePanel.
  */
 
 import { For } from 'solid-js';
-import type { NodeDefinition } from '../../../config/nodeDefinitions';
+import type { NodeDefinition, NodeField } from '@ai-agent-bus/workflow-nodes';
 
 interface NodeConfigRendererProps {
   nodeDefinition: NodeDefinition;
@@ -17,7 +17,7 @@ interface NodeConfigRendererProps {
 }
 
 export default function NodeConfigRenderer(props: NodeConfigRendererProps) {
-  const configFields = props.nodeDefinition.configFields || [];
+  const configFields = props.nodeDefinition.fields || [];
 
   /**
    * Get nested value from config (supports "delegation.maxAgents" keys)
@@ -42,7 +42,7 @@ export default function NodeConfigRenderer(props: NodeConfigRendererProps) {
   /**
    * Render individual field based on type
    */
-  const renderField = (field: NonNullable<NodeDefinition['configFields']>[number]) => {
+  const renderField = (field: NodeField) => {
     const value = getValue(field.key);
 
     switch (field.type) {

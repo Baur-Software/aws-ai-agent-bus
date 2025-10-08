@@ -187,6 +187,73 @@ const AGENT_NODE_TYPES: NodeType[] = [
   }
 ];
 
+// Data Visualization nodes - always available
+const VISUALIZATION_NODE_TYPES: NodeType[] = [
+  {
+    type: 'chart-bar',
+    label: 'Bar Chart',
+    icon: BarChart3,
+    color: 'bg-blue-500',
+    description: 'Display data as vertical or horizontal bars',
+    category: 'Visualization',
+    isAvailable: true
+  },
+  {
+    type: 'chart-line',
+    label: 'Line Chart',
+    icon: TrendingUp,
+    color: 'bg-green-500',
+    description: 'Display trends and time series data',
+    category: 'Visualization',
+    isAvailable: true
+  },
+  {
+    type: 'chart-pie',
+    label: 'Pie Chart',
+    icon: PieChart,
+    color: 'bg-purple-500',
+    description: 'Show proportional data distribution',
+    category: 'Visualization',
+    isAvailable: true
+  },
+  {
+    type: 'chart-area',
+    label: 'Area Chart',
+    icon: Activity,
+    color: 'bg-cyan-500',
+    description: 'Display cumulative data with filled areas',
+    category: 'Visualization',
+    isAvailable: true
+  },
+  {
+    type: 'chart-scatter',
+    label: 'Scatter Chart',
+    icon: Target,
+    color: 'bg-orange-500',
+    description: 'Visualize correlations and distributions',
+    category: 'Visualization',
+    isAvailable: true
+  },
+  {
+    type: 'table',
+    label: 'Data Table',
+    icon: List,
+    color: 'bg-indigo-500',
+    description: 'Display data in sortable, filterable table',
+    category: 'Visualization',
+    isAvailable: true
+  },
+  {
+    type: 'metrics',
+    label: 'Metrics Dashboard',
+    icon: Gauge,
+    color: 'bg-emerald-500',
+    description: 'Display KPIs with trends and comparisons',
+    category: 'Visualization',
+    isAvailable: true
+  }
+];
+
 // Connected app-specific nodes
 const INTEGRATION_NODE_TYPES: { [key: string]: NodeType[] } = {
   'google-analytics': [
@@ -291,7 +358,7 @@ const INTEGRATION_NODE_TYPES: { [key: string]: NodeType[] } = {
 };
 
 export default function NodeSidebar(props: NodeSidebarProps) {
-  const [expandedCategories, setExpandedCategories] = createSignal<Set<string>>(new Set(['Input/Output', 'AI Agents']));
+  const [expandedCategories, setExpandedCategories] = createSignal<Set<string>>(new Set(['Input/Output', 'AI Agents', 'Visualization']));
   const [searchQuery, setSearchQuery] = createSignal('');
   const [showMCPDiscovery, setShowMCPDiscovery] = createSignal(false);
   const [discoveredMCPTools, setDiscoveredMCPTools] = createSignal<NodeType[]>([]);
@@ -435,7 +502,7 @@ export default function NodeSidebar(props: NodeSidebarProps) {
 
   // Combine all node types and mark availability based on connected integrations
   const getAllNodeTypes = (): NodeType[] => {
-    const allNodes = [...BASE_NODE_TYPES, ...MCP_NODE_TYPES, ...AGENT_NODE_TYPES];
+    const allNodes = [...BASE_NODE_TYPES, ...MCP_NODE_TYPES, ...AGENT_NODE_TYPES, ...VISUALIZATION_NODE_TYPES];
 
     // Add discovered MCP tools
     allNodes.push(...discoveredMCPTools());

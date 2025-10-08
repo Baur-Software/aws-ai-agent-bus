@@ -14,6 +14,7 @@
 
 // Chart Nodes
 export { ChartNodeConfig, DEFAULT_CHART_CONFIG } from './ChartNodeConfig';
+export { ChartRenderer } from './ChartRenderer';
 export type { ChartConfig, ChartType, ChartDataset, ChartAxis } from './ChartNodeConfig';
 
 // Table Nodes

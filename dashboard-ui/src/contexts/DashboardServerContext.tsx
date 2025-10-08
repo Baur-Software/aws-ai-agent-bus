@@ -40,6 +40,9 @@ interface DashboardServerContextValue {
     send: (detailType: string, detail: Record<string, any>, source?: string) => Promise<any>;
   };
 
+  // AI Data Reshaping
+  reshapeData: (data: any, prompt: string, chartType?: string) => Promise<any>;
+
   // Event handlers
   onOrganizationSwitched: (callback: (data: any) => void) => () => void;
   onMetricsUpdate: (callback: (data: any) => void) => () => void;
@@ -561,6 +564,22 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
     send: (detailType: string, detail: Record<string, any>, source: string = 'dashboard') => executeToolSafely('events_send', { detailType, detail, source }),
   };
 
+  // AI Data Reshaping
+  const reshapeData = async (data: any, prompt: string, chartType?: string): Promise<any> => {
+    return sendMessageWithResponse({
+      type: 'reshape_data',
+      data: {
+        data,
+        prompt,
+        chartType
+      }
+    }).then(response => {
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    });
+  };
 
   // Event subscription methods
   const onOrganizationSwitched = (callback: (data: any) => void) => {
@@ -646,6 +665,9 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
     kvStore,
     artifacts,
     events,
+
+    // AI Data Reshaping
+    reshapeData,
 
     // Event handlers
     onOrganizationSwitched,

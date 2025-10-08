@@ -8,7 +8,8 @@ import {
   Archive,
   PlayCircle,
   Radio,
-  Settings
+  Settings,
+  Wand2
 } from 'lucide-solid';
 
 export interface SidebarItem {
@@ -63,7 +64,8 @@ const defaultSections: SidebarSection[] = [
       { id: 'kv-store', icon: Database, label: 'KV Store', href: '/kv-store', requiresInfrastructure: 'kv' },
       { id: 'artifacts', icon: Archive, label: 'Artifacts & S3', href: '/artifacts', requiresInfrastructure: 's3' },
       { id: 'workflows', icon: PlayCircle, label: 'Workflows', href: '/workflows', requiresInfrastructure: 'workflows' },
-      { id: 'events', icon: Radio, label: 'Events', href: '/events', requiresInfrastructure: 'events' }
+      { id: 'events', icon: Radio, label: 'Events', href: '/events', requiresInfrastructure: 'events' },
+      { id: 'node-designer', icon: Wand2, label: 'Node Designer', href: '/node-designer', alwaysVisible: true }
     ]
   },
   {

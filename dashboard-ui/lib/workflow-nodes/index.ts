@@ -1,15 +1,103 @@
 /**
  * Workflow Nodes Module
  *
- * This module provides dedicated components for workflow node configuration.
- * Each node type has its own component instead of using generic array-based rendering.
+ * Centralized node registry with:
+ * - Standardized node definitions (NodeRegistry)
+ * - Dedicated configuration components
+ * - Tenant-scoped customization (TenantNodeConfig)
+ * - Type-safe interfaces
  *
  * Benefits:
- * - Better performance (no large array iterations)
- * - Type-safe configuration interfaces
+ * - Single source of truth for all nodes
+ * - Organization-level node customization
+ * - Better performance (cached, indexed)
  * - Rich, dedicated UIs for complex node types
  * - Easier to maintain and extend
  */
+
+// ============================================================================
+// Node Registry System
+// ============================================================================
+export {
+  NODE_REGISTRY,
+  NODE_CATEGORIES,
+  registerNode,
+  registerNodes,
+  getNodeDefinition,
+  getAllNodes,
+  getNodesByCategory,
+  getNodesBySubcategory,
+  hasDedicatedComponent as isNodeRegistered,
+  getDefaultConfig as getRegistryDefaultConfig
+} from './NodeRegistry';
+
+export type {
+  NodeDefinition,
+  NodeField,
+  NodeCategory
+} from './NodeRegistry';
+
+// ============================================================================
+// Tenant-Scoped Configuration
+// ============================================================================
+export {
+  TenantNodeConfigService,
+  EXAMPLE_TENANT_CONFIG
+} from './TenantNodeConfig';
+
+export type {
+  TenantNodeConfig
+} from './TenantNodeConfig';
+
+// ============================================================================
+// Node Definitions by Category
+// ============================================================================
+export { TRIGGER_NODES } from './nodes/TriggerNodes';
+export { HTTP_NODES } from './nodes/HttpNodes';
+export { LOGIC_NODES } from './nodes/LogicNodes';
+export { DATA_NODES } from './nodes/DataNodes';
+export { AI_NODES } from './nodes/AINodes';
+export { INTEGRATION_NODES } from './nodes/IntegrationNodes';
+export { VISUALIZATION_NODES } from './nodes/VisualizationNodes';
+export { STORAGE_NODES } from './nodes/StorageNodes';
+export { EVENT_NODES } from './nodes/EventNodes';
+export { DOCKER_NODES } from './nodes/DockerNodes';
+export { TRANSFORM_NODES } from './nodes/TransformNodes';
+export { OUTPUT_NODES } from './nodes/OutputNodes';
+
+// Auto-register all nodes on module load
+import { registerNodes } from './NodeRegistry';
+import { TRIGGER_NODES } from './nodes/TriggerNodes';
+import { HTTP_NODES } from './nodes/HttpNodes';
+import { LOGIC_NODES } from './nodes/LogicNodes';
+import { DATA_NODES } from './nodes/DataNodes';
+import { AI_NODES } from './nodes/AINodes';
+import { INTEGRATION_NODES } from './nodes/IntegrationNodes';
+import { VISUALIZATION_NODES } from './nodes/VisualizationNodes';
+import { STORAGE_NODES } from './nodes/StorageNodes';
+import { EVENT_NODES } from './nodes/EventNodes';
+import { DOCKER_NODES } from './nodes/DockerNodes';
+import { TRANSFORM_NODES } from './nodes/TransformNodes';
+import { OUTPUT_NODES } from './nodes/OutputNodes';
+
+registerNodes([
+  ...TRIGGER_NODES,
+  ...HTTP_NODES,
+  ...LOGIC_NODES,
+  ...DATA_NODES,
+  ...AI_NODES,
+  ...INTEGRATION_NODES,
+  ...VISUALIZATION_NODES,
+  ...STORAGE_NODES,
+  ...EVENT_NODES,
+  ...DOCKER_NODES,
+  ...TRANSFORM_NODES,
+  ...OUTPUT_NODES
+]);
+
+// ============================================================================
+// Dedicated Config Components (Legacy - still used by some nodes)
+// ============================================================================
 
 // Logic Nodes
 export { ConditionalNodeConfig, DEFAULT_CONDITIONAL_CONFIG } from './ConditionalNodeConfig';

@@ -25,8 +25,26 @@ import {
   type HttpConfig,
   type KVStoreConfig,
   type TriggerConfig,
-  type DockerConfig
-} from '../../../lib/workflow-nodes';
+  type DockerConfig,
+  // NEW: Import from centralized registry
+  getNodeDefinition,
+  getRegistryDefaultConfig,
+  TenantNodeConfigService
+} from '@ai-agent-bus/workflow-nodes';
+// Data visualization nodes library
+import {
+  ChartNodeConfig,
+  ChartRenderer,
+  DEFAULT_CHART_CONFIG,
+  TableNodeConfig,
+  DEFAULT_TABLE_CONFIG,
+  MetricsNodeConfig,
+  DEFAULT_METRICS_CONFIG,
+  isDataVisNode,
+  type ChartConfig,
+  type TableConfig,
+  type MetricsConfig
+} from '@ai-agent-bus/datavis-nodes';
 import { mcpRegistry } from '../../../services/MCPCapabilityRegistry';
 import { CredentialSelector } from './CredentialSelector';
 import { UpgradePrompt } from './UpgradePrompt';
@@ -91,9 +109,12 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
   const [showPassword, setShowPassword] = createSignal(false);
   const [validationErrors, setValidationErrors] = createSignal<string[]>([]);
   const [showModelDetails, setShowModelDetails] = createSignal(false);
+  const [nodeConfig, setNodeConfig] = createSignal<any>(null);
 
-  const { executeTool } = useDashboardServer();
+  const { executeTool, kvStore } = useDashboardServer();
   const { currentOrganization } = useOrganization();
+  const tenantConfigService = new TenantNodeConfigService(kvStore);
+  const currentTenantId = currentOrganization()?.id || 'demo-tenant';
 
   // Check if node is available based on feature flags
   const isNodeAvailable = createMemo(() => {
@@ -242,179 +263,69 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
   };
 
   // Initialize local node when prop changes
-  createEffect(() => {
+  createEffect(async () => {
     if (props.node) {
       setLocalNode({ ...props.node });
+
+      // Load node configuration asynchronously
+      const config = await loadNodeConfig(props.node.type);
+      setNodeConfig(config);
     }
   });
 
-  // Node type configurations
-  const getNodeConfig = (nodeType: string) => {
-    const configs = {
-      // Agent System Nodes
-      'agent-conductor': {
-        title: 'Conductor Agent',
-        description: 'Goal-driven planning and task delegation',
-        icon: Bot,
-        color: 'bg-indigo-500',
-        fields: [
-          { key: 'goal', label: 'Goal Description', type: 'textarea', required: true },
-          { key: 'context', label: 'Context', type: 'textarea' },
-          { key: 'maxSubtasks', label: 'Max Subtasks', type: 'number', default: 5 },
-          { key: 'timeout', label: 'Timeout (seconds)', type: 'number', default: 300 }
-        ],
-        agentConfig: true
-      },
-      'agent-critic': {
-        title: 'Critic Agent',
-        description: 'Safety validation and risk assessment',
-        icon: Shield,
-        color: 'bg-red-500',
-        fields: [
-          { key: 'validationRules', label: 'Validation Rules', type: 'textarea' },
-          { key: 'riskThreshold', label: 'Risk Threshold', type: 'select', options: ['low', 'medium', 'high'] },
-          { key: 'requireApproval', label: 'Require Approval', type: 'boolean' }
-        ],
-        agentConfig: true
-      },
-      'agent-terraform': {
-        title: 'Terraform Expert',
-        description: 'Infrastructure as code specialist',
-        icon: Cloud,
-        color: 'bg-purple-500',
-        fields: [
-          { key: 'workspace', label: 'Terraform Workspace', type: 'text' },
-          { key: 'variables', label: 'Variables', type: 'json' },
-          { key: 'autoApply', label: 'Auto Apply', type: 'boolean' }
-        ],
-        agentConfig: true
-      },
+  // Node type configurations - NEW: Uses registry + tenant overrides
+  const loadNodeConfig = async (nodeType: string) => {
+    // 1. Try to get from centralized registry
+    let definition = getNodeDefinition(nodeType);
 
-      // MCP Tools
-      'kv-get': {
-        title: 'Get Key-Value',
-        description: 'Retrieve data from KV store',
-        icon: Database,
-        color: 'bg-purple-500',
-        fields: [
-          { key: 'key', label: 'Key', type: 'text', required: true },
-          { key: 'defaultValue', label: 'Default Value', type: 'text' }
-        ]
-      },
-      'kv-set': {
-        title: 'Set Key-Value',
-        description: 'Store data in KV store',
-        icon: Database,
-        color: 'bg-purple-600',
-        fields: [
-          { key: 'key', label: 'Key', type: 'text', required: true },
-          { key: 'value', label: 'Value', type: 'textarea', required: true },
-          { key: 'ttlHours', label: 'TTL (hours)', type: 'number', default: 24 }
-        ]
-      },
+    if (definition) {
+      // Apply tenant-specific overrides
+      const tenantCustomized = await tenantConfigService.applyTenantConfig(
+        currentTenantId,
+        definition
+      );
 
-      // Integrations
-      'slack-message': {
-        title: 'Send Slack Message',
-        description: 'Send message to Slack channel',
-        icon: MessageSquare,
-        color: 'bg-green-500',
-        fields: [
-          { key: 'channel', label: 'Channel', type: 'text', required: true },
-          { key: 'message', label: 'Message', type: 'textarea', required: true },
-          { key: 'username', label: 'Username', type: 'text' },
-          { key: 'iconEmoji', label: 'Icon Emoji', type: 'text' }
-        ]
-      },
-
-      // Logic & Control
-      'conditional': {
-        title: 'Conditional Branch',
-        description: 'Route workflow based on conditions (if/else if/else)',
-        icon: Code,
-        color: 'bg-cyan-500',
-        fields: [
-          {
-            key: 'conditions',
-            label: 'Conditions (evaluated in order)',
-            type: 'json',
-            required: true,
-            help: 'Array of {condition, label, output} objects. Use JavaScript expressions like "data.value > 100"'
-          },
-          {
-            key: 'mode',
-            label: 'Evaluation Mode',
-            type: 'select',
-            options: ['first-match', 'all-matches'],
-            default: 'first-match',
-            help: 'First match stops at first true condition, all matches evaluates all'
-          }
-        ]
-      },
-      'switch': {
-        title: 'Switch',
-        description: 'Route based on value matching (switch/case)',
-        icon: Code,
-        color: 'bg-blue-500',
-        fields: [
-          {
-            key: 'value',
-            label: 'Value to Match',
-            type: 'text',
-            required: true,
-            help: 'Expression to evaluate (e.g., "data.status")'
-          },
-          {
-            key: 'cases',
-            label: 'Cases',
-            type: 'json',
-            required: true,
-            help: 'Array of {match, output} objects. Use "default" as catch-all'
-          }
-        ]
-      },
-
-      // HTTP/API
-      'http-get': {
-        title: 'HTTP GET Request',
-        description: 'Fetch data from API endpoint',
-        icon: ArrowRight,
-        color: 'bg-green-500',
-        fields: [
-          { key: 'url', label: 'URL', type: 'url', required: true },
-          { key: 'headers', label: 'Headers', type: 'json' },
-          { key: 'timeout', label: 'Timeout (ms)', type: 'number', default: 30000 }
-        ]
-      }
-    };
-
-    // Check if config exists in hardcoded list
-    if (configs[nodeType]) {
-      return configs[nodeType];
+      // Convert to old config format for UI compatibility
+      return {
+        title: tenantCustomized.name,
+        description: tenantCustomized.description,
+        icon: getIconComponent(tenantCustomized.icon || '🔧'),
+        color: tenantCustomized.color || 'bg-blue-500',
+        fields: tenantCustomized.fields?.map(field => ({
+          key: field.key,
+          label: field.label,
+          type: field.type,
+          required: field.required,
+          default: field.defaultValue,
+          options: field.options?.map(opt => opt.value),
+          help: field.help
+        })) || [],
+        agentConfig: tenantCustomized.hasAgentConfig || false,
+        isAvailable: tenantCustomized.isAvailable
+      };
     }
 
-    // Check if this is an MCP-generated agent node
+    // 2. Check if this is an MCP-generated agent node
     const mcpAgents = mcpRegistry.getAgents();
     const mcpAgent = mcpAgents.find(agent => agent.id === nodeType);
 
     if (mcpAgent) {
-      // Return config for MCP agent nodes
       return {
         title: mcpAgent.name,
         description: mcpAgent.description,
-        icon: Bot, // Use Bot icon for agents
+        icon: Bot,
         color: mcpAgent.color,
-        fields: [], // MCP agents use the agent config tab
-        agentConfig: true // Enable AI Model configuration tab
+        fields: [],
+        agentConfig: true,
+        isAvailable: true
       };
     }
 
-    // Check if this is an MCP-generated workflow node
+    // 3. Check if this is an MCP-generated workflow node
     const mcpNodes = mcpRegistry.getNodes();
     const mcpNode = mcpNodes.find(node => node.type === nodeType);
 
     if (mcpNode) {
-      // Return config for MCP workflow nodes
       return {
         title: mcpNode.name,
         description: mcpNode.description,
@@ -426,19 +337,37 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
           type: input.type as any,
           required: input.required
         })) || [],
-        agentConfig: false
+        agentConfig: false,
+        isAvailable: true
       };
     }
 
-    // Fallback for unknown node types
+    // 4. Fallback for unknown node types
     return {
       title: nodeType,
       description: 'Custom node configuration',
       icon: Settings,
       color: 'bg-gray-500',
       fields: [],
-      agentConfig: false
+      agentConfig: false,
+      isAvailable: true
     };
+  };
+
+  // Helper to convert emoji/icon string to component
+  const getIconComponent = (icon: string) => {
+    // Map emoji to Lucide components
+    const iconMap: Record<string, any> = {
+      '🤖': Bot,
+      '🛡️': Shield,
+      '☁️': Cloud,
+      '💾': Database,
+      '💬': MessageSquare,
+      '🔀': Code,
+      '➡️': ArrowRight,
+      '⚙️': Settings
+    };
+    return iconMap[icon] || Settings;
   };
 
   // Update local config
@@ -472,13 +401,13 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
   // Validate node configuration
   const validateNode = () => {
     const node = localNode();
-    if (!node) return false;
+    const config = nodeConfig();
+    if (!node || !config) return false;
 
-    const nodeConfig = getNodeConfig(node.type);
     const errors: string[] = [];
 
     // Check required fields
-    nodeConfig.fields?.forEach(field => {
+    config.fields?.forEach(field => {
       if (field.required && !node.config[field.key]) {
         errors.push(`${field.label} is required`);
       }
@@ -648,19 +577,21 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
       <div class="fixed right-0 top-0 h-full w-96 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 shadow-lg z-50 flex flex-col">
         {/* Header */}
         <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-          <div class="flex items-center gap-3">
-            <div class={`p-2 rounded-lg ${getNodeConfig(localNode()!.type).color} text-white`}>
-              {getNodeConfig(localNode()!.type).icon({ class: "w-4 h-4" })}
+          <Show when={nodeConfig()}>
+            <div class="flex items-center gap-3">
+              <div class={`p-2 rounded-lg ${nodeConfig()!.color} text-white`}>
+                {nodeConfig()!.icon({ class: "w-4 h-4" })}
+              </div>
+              <div>
+                <h3 class="font-semibold text-slate-900 dark:text-white">
+                  {nodeConfig()!.title}
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                  {nodeConfig()!.description}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 class="font-semibold text-slate-900 dark:text-white">
-                {getNodeConfig(localNode()!.type).title}
-              </h3>
-              <p class="text-xs text-slate-500 dark:text-slate-400">
-                {getNodeConfig(localNode()!.type).description}
-              </p>
-            </div>
-          </div>
+          </Show>
           <button
             class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
             onClick={props.onClose}
@@ -681,7 +612,19 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
           >
             Configuration
           </button>
-          <Show when={getNodeConfig(localNode()!.type).agentConfig}>
+          <Show when={isDataVisNode(localNode()!.type)}>
+            <button
+              class={`px-4 py-2 text-sm font-medium ${
+                activeTab() === 'preview'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+              onClick={() => setActiveTab('preview')}
+            >
+              Preview
+            </button>
+          </Show>
+          <Show when={nodeConfig()?.agentConfig}>
             <button
               class={`px-4 py-2 text-sm font-medium ${
                 activeTab() === 'agent'
@@ -708,11 +651,11 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
         {/* Content */}
         <div class="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Show upgrade prompt if node is locked */}
-          <Show when={!isNodeAvailable()}>
+          <Show when={!isNodeAvailable() && nodeConfig()}>
             <UpgradePrompt
               nodeType={localNode()!.type}
-              nodeDisplayName={getNodeConfig(localNode()!.type).title}
-              nodeDescription={getNodeConfig(localNode()!.type).description}
+              nodeDisplayName={nodeConfig()!.title}
+              nodeDescription={nodeConfig()!.description}
             />
           </Show>
 
@@ -803,8 +746,48 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
               />
             </Show>
 
+            {/* Data Visualization Nodes - Charts */}
+            <Show when={['chart-bar', 'chart-line', 'chart-pie', 'chart-area', 'chart-scatter'].includes(localNode()!.type)}>
+              <ChartNodeConfig
+                value={{
+                  ...DEFAULT_CHART_CONFIG,
+                  type: localNode()!.type.replace('chart-', '') as any,
+                  ...(localNode()!.config || {})
+                }}
+                onChange={(config) => {
+                  setLocalNode({ ...localNode()!, config: config });
+                }}
+              />
+            </Show>
+
+            {/* Data Visualization Nodes - Table */}
+            <Show when={localNode()!.type === 'table'}>
+              <TableNodeConfig
+                value={{
+                  ...DEFAULT_TABLE_CONFIG,
+                  ...(localNode()!.config || {})
+                }}
+                onChange={(config) => {
+                  setLocalNode({ ...localNode()!, config: config });
+                }}
+              />
+            </Show>
+
+            {/* Data Visualization Nodes - Metrics */}
+            <Show when={localNode()!.type === 'metrics'}>
+              <MetricsNodeConfig
+                value={{
+                  ...DEFAULT_METRICS_CONFIG,
+                  ...(localNode()!.config || {})
+                }}
+                onChange={(config) => {
+                  setLocalNode({ ...localNode()!, config: config });
+                }}
+              />
+            </Show>
+
             {/* Generic Config Form for Other Node Types */}
-            <Show when={!hasDedicatedComponent(localNode()!.type)}>
+            <Show when={!hasDedicatedComponent(localNode()!.type) && !isDataVisNode(localNode()!.type)}>
             <div class="space-y-4">
               {/* Basic Settings */}
               <div class="space-y-3">
@@ -834,30 +817,32 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
               </div>
 
               {/* Type-specific Fields */}
-              <For each={getNodeConfig(localNode()!.type).fields}>
-                {(field) => (
-                  <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      {field.label}
-                      {field.required && <span class="text-red-500 ml-1">*</span>}
-                    </label>
-                    {renderField(field)}
-                    <Show when={field.help}>
-                      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        {field.help}
-                      </p>
-                    </Show>
-                  </div>
-                )}
-              </For>
+              <Show when={nodeConfig()}>
+                <For each={nodeConfig()!.fields}>
+                  {(field) => (
+                    <div>
+                      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        {field.label}
+                        {field.required && <span class="text-red-500 ml-1">*</span>}
+                      </label>
+                      {renderField(field)}
+                      <Show when={field.help}>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          {field.help}
+                        </p>
+                      </Show>
+                    </div>
+                  )}
+                </For>
+              </Show>
             </div>
           </Show>
 
           {/* Agent Configuration Tab - Using Shared AgentConfigForm */}
-          <Show when={activeTab() === 'agent' && getNodeConfig(localNode()!.type).agentConfig}>
+          <Show when={activeTab() === 'agent' && nodeConfig()?.agentConfig}>
             <AgentConfigForm
               value={{
-                name: localNode()!.title || getNodeConfig(localNode()!.type).title,
+                name: localNode()!.title || nodeConfig()!.title,
                 description: localNode()!.description,
                 category: 'agents',
                 icon: '🤖',
@@ -888,7 +873,7 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
           </Show>
 
           {/* Old Agent Configuration Tab - Removed, replaced with shared form above */}
-          <Show when={false && activeTab() === 'agent' && getNodeConfig(localNode()!.type).agentConfig}>
+          <Show when={false && activeTab() === 'agent' && nodeConfig()?.agentConfig}>
             <div class="space-y-4">
               <div>
                 <div class="flex items-center justify-between mb-2">
@@ -1056,6 +1041,34 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
                     Requires Privacy (use local models)
                   </span>
                 </label>
+              </div>
+            </div>
+          </Show>
+
+          {/* Preview Tab - For Data Visualization Nodes */}
+          <Show when={activeTab() === 'preview' && isDataVisNode(localNode()!.type)}>
+            <div class="space-y-4">
+              <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <h3 class="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2">Chart Preview</h3>
+                <p class="text-xs text-blue-700 dark:text-blue-300">
+                  Configure your data source in the Configuration tab, then the chart will render here with live data.
+                </p>
+              </div>
+
+              <Show when={['chart-bar', 'chart-line', 'chart-pie', 'chart-area', 'chart-scatter'].includes(localNode()!.type)}>
+                <ChartRenderer
+                  config={localNode()!.config as ChartConfig}
+                  data={localNode()!.config?.manualData ? JSON.parse(localNode()!.config.manualData) : null}
+                />
+              </Show>
+
+              <div class="p-3 bg-slate-100 dark:bg-slate-800 rounded text-xs">
+                <p class="font-medium text-slate-700 dark:text-slate-300 mb-1">Preview Data Source:</p>
+                <p class="text-slate-600 dark:text-slate-400">
+                  {(localNode()!.config as ChartConfig)?.dataSourceType === 'manual'
+                    ? 'Using manual JSON data from configuration'
+                    : `Will fetch from ${(localNode()!.config as ChartConfig)?.dataSourceType} when workflow runs`}
+                </p>
               </div>
             </div>
           </Show>

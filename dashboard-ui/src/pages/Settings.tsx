@@ -1,10 +1,11 @@
-import { Settings as SettingsIcon, Plug, User, Shield, Bell, Palette, Database, Menu, ArrowLeft } from 'lucide-solid';
+import { Settings as SettingsIcon, Plug, User, Shield, Bell, Palette, Database, Menu, ArrowLeft, Box } from 'lucide-solid';
 import { useNavigate } from '@solidjs/router';
 import { createSignal, Show } from 'solid-js';
 import { usePageHeader } from '../contexts/HeaderContext';
 import IntegrationsSettings from '../components/IntegrationsSettings';
 import SidebarSettings from '../components/SidebarSettings';
 import NotificationSettings from '../components/NotificationSettings';
+import NodeManagementSettings from '../components/organization/settings/NodeManagementSettings';
 
 const SETTINGS_SECTIONS = [
   {
@@ -12,6 +13,13 @@ const SETTINGS_SECTIONS = [
     description: 'Connect external services and APIs',
     icon: Plug,
     href: '/settings/integrations',
+    available: true
+  },
+  {
+    title: 'Workflow Nodes',
+    description: 'Manage available workflow nodes and create custom ones',
+    icon: Box,
+    href: '/settings/nodes',
     available: true
   },
   {
@@ -125,6 +133,8 @@ function Settings({ isOverlay = false }: SettingsProps) {
     switch (view) {
       case '/settings/integrations':
         return { title: 'Connected Apps', description: 'Connect external services and APIs' };
+      case '/settings/nodes':
+        return { title: 'Workflow Nodes', description: 'Manage available workflow nodes and create custom ones' };
       case '/settings/sidebar':
         return { title: 'Sidebar Settings', description: 'Customize navigation menu visibility' };
       case '/settings/notifications':
@@ -138,6 +148,8 @@ function Settings({ isOverlay = false }: SettingsProps) {
     switch (currentView()) {
       case '/settings/integrations':
         return <IntegrationsSettings isOverlay={isOverlay} />;
+      case '/settings/nodes':
+        return <NodeManagementSettings />;
       case '/settings/sidebar':
         return <SidebarSettings isOverlay={isOverlay} />;
       case '/settings/notifications':

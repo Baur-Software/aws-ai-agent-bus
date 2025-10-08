@@ -1,5 +1,18 @@
 import { createSignal, createEffect, Show, For, onMount } from 'solid-js';
 import { Search, GripVertical, X, Pin, PinOff, Plus, Sparkles, ArrowLeft, ChartColumn, Globe, CreditCard, Shield, Users, Building, Square, Circle, Triangle, ArrowRight, Diamond, Hexagon, Star, Heart, Settings, RefreshCw } from 'lucide-solid';
+// Data visualization nodes
+import {
+  ChartNodeConfig,
+  DEFAULT_CHART_CONFIG,
+  TableNodeConfig,
+  DEFAULT_TABLE_CONFIG,
+  MetricsNodeConfig,
+  DEFAULT_METRICS_CONFIG,
+  isDataVisNode,
+  type ChartConfig,
+  type TableConfig,
+  type MetricsConfig
+} from '@ai-agent-bus/datavis-nodes';
 import { useDashboardServer } from '../../../contexts/DashboardServerContext';
 import { useDragDrop, useDragSource } from '../../../contexts/DragDropContext';
 import { useIntegrations } from '../../../contexts/IntegrationsContext';
@@ -15,9 +28,14 @@ import { CreateAgentWizard } from '../../CreateAgentWizard';
 import { Agent } from 'http';
 import { WorkflowNode } from './WorkflowNodeDetails';
 import { useNavigate } from '@solidjs/router';
-import { NODE_DEFINITIONS } from '../../../config/nodeDefinitions';
 import NodeConfigRenderer from './NodeConfigRenderer';
 import { useFloatingPanelResize } from '../../../hooks/useFloatingPanelResize';
+import {
+  getAllNodes,
+  getNodesByCategory,
+  getNodeDefinition as getRegistryNodeDefinition,
+  type NodeDefinition as RegistryNodeDefinition
+} from '@ai-agent-bus/workflow-nodes';
 
 interface FloatingNodePanelProps {
   onDragStart: (nodeType: string, e: DragEvent) => void;
@@ -79,18 +97,14 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   const [agentSpecialty, setAgentSpecialty] = createSignal('');
   const [showConnectedApps, setShowConnectedApps] = createSignal(false);
   const [currentView, setCurrentView] = createSignal<'nodes' | 'details'>('nodes');
+
+  // Show details if there's a selected node OR user manually navigated to details
+  const showingDetails = () => (props.selectedNode !== null && props.selectedNode !== undefined) || currentView() === 'details';
   const [agents, setAgents] = createSignal<Agent[]>([]);
   const [mcpServerTools, setMcpServerTools] = createSignal<MCPServerTools[]>([]);
   const [loadingMcpTools, setLoadingMcpTools] = createSignal(false);
   const [availableModels, setAvailableModels] = createSignal<Array<{ id: string; name: string }>>([]);
   const navigate = useNavigate();
-
-  // Auto-switch to details view when a node is selected
-  createEffect(() => {
-    if (props.selectedNode) {
-      setCurrentView('details');
-    }
-  });
 
   // Get contexts
   const { user } = useAuth();
@@ -504,31 +518,9 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     }
   };
 
-  // Handle scroll events to prevent canvas scroll when over panel
-  const handlePanelWheel = (e: WheelEvent) => {
-    // Stop the scroll event from propagating to the canvas
-    e.stopPropagation();
-
-    // Find the scrollable content area
-    const target = e.currentTarget as HTMLElement;
-    const scrollableContent = target.querySelector('.overflow-y-auto');
-
-    if (scrollableContent) {
-      const { scrollTop, scrollHeight, clientHeight } = scrollableContent;
-      const isScrollingUp = e.deltaY < 0;
-      const isScrollingDown = e.deltaY > 0;
-
-      // Check if we can scroll in the intended direction
-      const canScrollUp = scrollTop > 0;
-      const canScrollDown = scrollTop < scrollHeight - clientHeight;
-
-      // Only prevent default if we can actually scroll in that direction
-      if ((isScrollingUp && canScrollUp) || (isScrollingDown && canScrollDown)) {
-        e.preventDefault();
-        scrollableContent.scrollTop += e.deltaY;
-      }
-    }
-  };
+  // Note: No custom wheel handler needed!
+  // The WorkflowCanvas already checks for .floating-panel and .overflow-y-auto in its wheel handler
+  // and returns early without zooming. This allows native browser scrolling to work correctly.
 
   // Load MCP tools from connected servers
   const loadMcpTools = async () => {
@@ -727,27 +719,84 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     document.addEventListener('mouseup', handleResizeUp);
   };
 
-  // Dynamic node categories that include loaded agents
+  // Dynamic node categories that include loaded agents + registry nodes
   const nodeCategories = () => {
+    const allRegistryNodes = getAllNodes();
+
+    // Convert registry nodes to FloatingPanel node format
+    const convertRegistryNode = (node: RegistryNodeDefinition) => ({
+      type: node.type,
+      name: node.name,
+      description: node.description,
+      icon: node.icon || '⚙️',
+      color: node.color || 'bg-gray-500',
+      requiresConnectedApp: node.requiresIntegration
+    });
+
+    // Group registry nodes by category
+    const triggerNodes = getNodesByCategory('triggers').map(convertRegistryNode);
+    const actionNodes = getNodesByCategory('actions').map(convertRegistryNode);
+    const logicNodes = getNodesByCategory('logic').map(convertRegistryNode);
+    const dataNodes = getNodesByCategory('data').map(convertRegistryNode);
+    const integrationNodes = getNodesByCategory('integrations').map(convertRegistryNode);
+    const aiNodes = getNodesByCategory('ai').map(convertRegistryNode);
+    const datavisNodes = getNodesByCategory('datavis').map(convertRegistryNode);
+
     const baseCategories: NodeCategory[] = [
       {
-        id: 'input-output',
-        name: 'Input/Output',
+        id: 'triggers',
+        name: 'Triggers',
         icon: '⚡',
+        nodes: triggerNodes
+      },
+      {
+        id: 'actions',
+        name: 'Actions',
+        icon: '🎯',
+        nodes: actionNodes
+      },
+      {
+        id: 'logic',
+        name: 'Logic & Control',
+        icon: '🔀',
+        nodes: logicNodes
+      },
+      {
+        id: 'data',
+        name: 'Data & Storage',
+        icon: '💾',
+        nodes: dataNodes
+      },
+      {
+        id: 'integrations',
+        name: 'Integrations',
+        icon: '🔌',
         nodes: [
-          { type: 'webhook', name: 'Webhook', description: 'HTTP webhook trigger', icon: '🔗', color: 'bg-blue-500' },
-          { type: 'schedule', name: 'Schedule', description: 'Time-based trigger', icon: '⏰', color: 'bg-yellow-500' },
-          { type: 'send-email', name: 'Send Email', description: 'Send email notification', icon: '📧', color: 'bg-red-500' },
-          { type: 'notification', name: 'Notification', description: 'Push notification', icon: '🔔', color: 'bg-orange-500' }
+          ...integrationNodes,
+          ...generateDynamicAppNodes() // Keep dynamic app nodes
         ]
       },
       {
+        id: 'ai',
+        name: 'AI & Agents',
+        icon: '🤖',
+        nodes: [
+          ...aiNodes,
+          ...Object.values(agentNodes()).flat() // Keep dynamic agent nodes
+        ]
+      },
+      {
+        id: 'datavis',
+        name: 'Data Visualization',
+        icon: '📊',
+        nodes: datavisNodes
+      },
+      {
         id: 'shapes',
-        name: 'Shapes',
+        name: 'Visual Elements',
         icon: '🔷',
         nodes: [
-          { type: 'trigger', name: 'Trigger', description: 'Visually represent the start of a workflow execution', icon: '▶️', color: 'bg-green-500' },
-          { type: 'output', name: 'Output', description: 'Visually represent the final workflow result', icon: '📤', color: 'bg-purple-500' },
+          // Keep shape nodes (not in registry)
           { type: 'rectangle', name: 'Rectangle', description: 'Basic rectangle shape', icon: <Square class="w-4 h-4" />, color: 'bg-gray-500' },
           { type: 'circle', name: 'Circle', description: 'Basic circle shape', icon: <Circle class="w-4 h-4" />, color: 'bg-blue-500' },
           { type: 'triangle', name: 'Triangle', description: 'Basic triangle shape', icon: <Triangle class="w-4 h-4" />, color: 'bg-yellow-500' },
@@ -757,20 +806,6 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
           { type: 'star', name: 'Star', description: 'Star shape for highlights', icon: <Star class="w-4 h-4" />, color: 'bg-orange-500' },
           { type: 'heart', name: 'Heart', description: 'Heart shape for favorites', icon: <Heart class="w-4 h-4" />, color: 'bg-red-500' },
           { type: 'sticky-note', name: 'Sticky Note', description: 'Note with custom text and colors', icon: '📝', color: 'bg-yellow-300' }
-        ]
-      },
-      {
-        id: 'ai-agents',
-        name: 'AI Agents',
-        icon: '🤖',
-        nodes: Object.values(agentNodes()).flat() // Flatten grouped agents for category
-      },
-      {
-        id: 'apps',
-        name: 'Apps',
-        icon: '🔌',
-        nodes: [
-          ...generateDynamicAppNodes()
         ]
       }
     ];
@@ -832,9 +867,34 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     const [showPassword, setShowPassword] = createSignal(false);
     const [validationErrors, setValidationErrors] = createSignal<string[]>([]);
 
-    // Get node configuration from NODE_DEFINITIONS
+    // Get node configuration from NodeRegistry
     const getNodeDefinition = (nodeType: string) => {
-      return NODE_DEFINITIONS.find(def => def.type === nodeType) || {
+      const registryNode = getRegistryNodeDefinition(nodeType);
+
+      if (registryNode) {
+        // Convert registry format to old format for compatibility
+        return {
+          type: registryNode.type,
+          name: registryNode.name,
+          description: registryNode.description,
+          category: registryNode.category,
+          icon: registryNode.icon || '⚙️',
+          color: registryNode.color || 'bg-gray-500',
+          configFields: registryNode.fields?.map(f => ({
+            key: f.key,
+            label: f.label,
+            type: f.type,
+            required: f.required,
+            defaultValue: f.defaultValue,
+            placeholder: f.placeholder,
+            help: f.help,
+            options: f.options?.map(opt => ({ label: opt.label, value: opt.value }))
+          })) || []
+        };
+      }
+
+      // Fallback for unknown nodes
+      return {
         type: nodeType,
         name: nodeType,
         description: 'Custom node',
@@ -877,62 +937,116 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     // Save changes
     const saveChanges = () => {
       props.onUpdate(localNode());
-      setCurrentView('nodes'); // Go back to nodes view
+      // Stay in details view after saving - user can manually go back if needed
+      // setCurrentView('nodes'); // Removed - keep showing details
     };
 
     const nodeDefinition = getNodeDefinition(props.node.type);
 
     return (
-      <div class="flex-1 overflow-y-auto">
-        {/* Configuration Content */}
-        <div class="p-4 space-y-4">
-          {/* Basic Settings */}
-          <div class="space-y-3">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Node Title
-              </label>
-              <input
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md text-sm focus:ring-2 focus:ring-blue-500 pointer-events-auto"
-                value={localNode().title || ''}
-                onInput={(e) => setLocalNode({ ...localNode(), title: e.currentTarget.value })}
-              />
+      <div class="flex flex-col h-full">
+        {/* Scrollable Configuration Content */}
+        <div class="flex-1 overflow-y-auto">
+          <div class="p-4 space-y-4">
+            {/* Basic Settings */}
+            <div class="space-y-3">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Node Title
+                </label>
+                <input
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md text-sm focus:ring-2 focus:ring-blue-500 pointer-events-auto"
+                  value={localNode().title || ''}
+                  onInput={(e) => setLocalNode({ ...localNode(), title: e.currentTarget.value })}
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Description
+                </label>
+                <textarea
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md text-sm focus:ring-2 focus:ring-blue-500 pointer-events-auto"
+                  rows="2"
+                  value={localNode().description || ''}
+                  onInput={(e) => setLocalNode({ ...localNode(), description: e.currentTarget.value })}
+                />
+              </div>
             </div>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Description
-              </label>
-              <textarea
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md text-sm focus:ring-2 focus:ring-blue-500 pointer-events-auto"
-                rows="2"
-                value={localNode().description || ''}
-                onInput={(e) => setLocalNode({ ...localNode(), description: e.currentTarget.value })}
-              />
-            </div>
+            {/* Type-specific Fields */}
+            <Show
+              when={isDataVisNode(localNode().type)}
+              fallback={
+                <NodeConfigRenderer
+                  nodeDefinition={nodeDefinition}
+                  config={localNode().config}
+                  onConfigChange={updateConfig}
+                />
+              }
+            >
+              {/* Data Visualization Nodes - Charts */}
+              <Show when={['chart-bar', 'chart-line', 'chart-pie', 'chart-area', 'chart-scatter'].includes(localNode().type)}>
+                <ChartNodeConfig
+                  value={{
+                    ...DEFAULT_CHART_CONFIG,
+                    type: localNode().type.replace('chart-', '') as any,
+                    ...(localNode().config || {})
+                  }}
+                  onChange={(config) => {
+                    setLocalNode({ ...localNode(), config: config });
+                  }}
+                />
+              </Show>
+
+              {/* Data Visualization Nodes - Table */}
+              <Show when={localNode().type === 'table'}>
+                <TableNodeConfig
+                  value={{
+                    ...DEFAULT_TABLE_CONFIG,
+                    ...(localNode().config || {})
+                  }}
+                  onChange={(config) => {
+                    setLocalNode({ ...localNode(), config: config });
+                  }}
+                />
+              </Show>
+
+              {/* Data Visualization Nodes - Metrics */}
+              <Show when={localNode().type === 'metrics'}>
+                <MetricsNodeConfig
+                  value={{
+                    ...DEFAULT_METRICS_CONFIG,
+                    ...(localNode().config || {})
+                  }}
+                  onChange={(config) => {
+                    setLocalNode({ ...localNode(), config: config });
+                  }}
+                />
+              </Show>
+            </Show>
           </div>
-
-          {/* Type-specific Fields - Now using NodeConfigRenderer */}
-          <NodeConfigRenderer
-            nodeDefinition={nodeDefinition}
-            config={localNode().config}
-            onConfigChange={updateConfig}
-          />
         </div>
 
-        {/* Footer Actions */}
-        <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+        {/* Fixed Footer Actions */}
+        <div class="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 pointer-events-auto">
           <div class="flex justify-end gap-2">
             <button
-              onClick={() => setCurrentView('nodes')}
-              class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentView('nodes');
+              }}
+              class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors pointer-events-auto"
             >
               Cancel
             </button>
             <button
-              onClick={saveChanges}
-              class="px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors flex items-center gap-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                saveChanges();
+              }}
+              class="px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors flex items-center gap-2 pointer-events-auto"
             >
               <Settings class="w-4 h-4" />
               Save
@@ -947,7 +1061,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     <Show when={isVisible()}>
       <div
         ref={panelRef}
-        class={`fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl transition-all duration-200 relative flex flex-col ${
+        class={`floating-panel fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl transition-all duration-200 relative flex flex-col pointer-events-auto ${
           isDragging() || isResizing() ? 'shadow-2xl scale-105 select-none' : ''
         } ${
           isPinned()
@@ -964,7 +1078,6 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
           transform: 'translate3d(0, 0, 0)' // Force GPU acceleration
         }}
         onMouseDown={handleMouseDown}
-        onWheel={handlePanelWheel}
       >
         {/* Panel Header */}
         <div class={`flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700 ${!isPinned() ? 'cursor-move select-none' : ''}`} data-drag-handle={!isPinned() ? '' : undefined}>
@@ -980,7 +1093,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                 <ArrowLeft class="w-4 h-4" />
               </button>
             </Show>
-            <Show when={currentView() === 'details' && props.selectedNode}>
+            <Show when={showingDetails()}>
               <button
                 onClick={() => setCurrentView('nodes')}
                 class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-500 dark:text-gray-400 mr-2"
@@ -991,8 +1104,8 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
             <span class="font-medium text-gray-900 dark:text-white text-sm">
               {showConnectedApps()
                 ? 'Connect Apps'
-                : currentView() === 'details' && props.selectedNode
-                  ? `Configure: ${props.selectedNode.title || props.selectedNode.type}`
+                : showingDetails()
+                  ? `Configure: ${props.selectedNode!.title || props.selectedNode!.type}`
                   : 'Workflow Nodes'
               }
             </span>
@@ -1023,7 +1136,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
             when={showConnectedApps()}
             fallback={
               <Show
-                when={currentView() === 'details' && props.selectedNode}
+                when={showingDetails()}
                 fallback={
                   /* Nodes Library View */
                   <div class="h-full flex flex-col">
@@ -1245,11 +1358,13 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                 }
             >
               {/* Node Details View */}
-              <NodeDetailsView
-                node={props.selectedNode!}
-                onUpdate={props.onNodeUpdate!}
-                availableModels={props.availableModels || ['claude-3-sonnet', 'claude-3-haiku', 'gpt-4', 'gpt-3.5-turbo']}
-              />
+              <div class="h-full flex flex-col">
+                <NodeDetailsView
+                  node={props.selectedNode!}
+                  onUpdate={props.onNodeUpdate!}
+                  availableModels={props.availableModels || ['claude-3-sonnet', 'claude-3-haiku', 'gpt-4', 'gpt-3.5-turbo']}
+                />
+              </div>
             </Show>
           }
         >

@@ -26,8 +26,10 @@ export interface TableFilterConfig {
 }
 
 export interface TableConfig {
-  // Data
+  // Data source configuration
+  dataSourceType: 'input' | 's3' | 'kv' | 'manual';
   dataSource: string;
+  manualData?: string;
   columns: TableColumn[];
 
   // AI reshaping
@@ -67,6 +69,7 @@ export interface TableConfig {
 }
 
 export const DEFAULT_TABLE_CONFIG: TableConfig = {
+  dataSourceType: 'input',
   dataSource: '${input.data}',
   columns: [
     {

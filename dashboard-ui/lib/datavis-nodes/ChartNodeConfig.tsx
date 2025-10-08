@@ -1,5 +1,6 @@
 import { createSignal, For, Show } from 'solid-js';
 import { Plus, Trash2, BarChart3, LineChart, PieChart, TrendingUp, ScatterChart, Sparkles } from 'lucide-solid';
+import { useDashboardServer } from '@/contexts/DashboardServerContext';
 
 export type ChartType = 'bar' | 'line' | 'pie' | 'area' | 'scatter';
 
@@ -23,8 +24,10 @@ export interface ChartConfig {
   title?: string;
   description?: string;
 
-  // Data mapping
-  dataSource: string; // JSONPath or variable reference
+  // Data source configuration
+  dataSourceType: 'input' | 's3' | 'kv' | 'manual'; // Source type
+  dataSource: string; // JSONPath, variable reference, S3 key, or KV key
+  manualData?: string; // JSON string for manual input
   xAxis: ChartAxis;
   yAxis?: ChartAxis; // Not used for pie charts
   datasets: ChartDataset[];
@@ -57,6 +60,7 @@ export const DEFAULT_CHART_CONFIG: ChartConfig = {
   type: 'bar',
   title: '',
   description: '',
+  dataSourceType: 'input',
   dataSource: '${input.data}',
   xAxis: {
     field: '',
@@ -99,9 +103,74 @@ interface ChartNodeConfigProps {
 export function ChartNodeConfig(props: ChartNodeConfigProps) {
   const [activeTab, setActiveTab] = createSignal<'data' | 'appearance' | 'advanced'>('data');
   const [showAIPanel, setShowAIPanel] = createSignal(false);
+  const [isReshaping, setIsReshaping] = createSignal(false);
+  const [reshapeError, setReshapeError] = createSignal<string | null>(null);
+  const dashboardServer = useDashboardServer();
 
   const updateConfig = (key: keyof ChartConfig, value: any) => {
     props.onChange({ ...props.value, [key]: value });
+  };
+
+  const fetchDataFromSource = async (): Promise<any> => {
+    const { dataSourceType, dataSource, manualData } = props.value;
+
+    switch (dataSourceType) {
+      case 'input':
+        // Data comes from connected node - for now, use sample data
+        return { items: [{ name: 'A', value: 10 }, { name: 'B', value: 20 }] };
+
+      case 'kv':
+        // Fetch from KV store
+        if (!dataSource) throw new Error('KV key is required');
+        const kvResult = await dashboardServer.kvStore.get(dataSource);
+        return JSON.parse(kvResult.value || '{}');
+
+      case 's3':
+        // Fetch from S3 artifacts
+        if (!dataSource) throw new Error('S3 artifact key is required');
+        const s3Result = await dashboardServer.artifacts.get(dataSource);
+        return JSON.parse(s3Result.content || '{}');
+
+      case 'manual':
+        // Parse manual JSON input
+        if (!manualData) throw new Error('Manual data is required');
+        return JSON.parse(manualData);
+
+      default:
+        throw new Error(`Unsupported data source type: ${dataSourceType}`);
+    }
+  };
+
+  const handleAIReshape = async () => {
+    if (!props.value.reshapingPrompt) {
+      setReshapeError('Please provide reshaping instructions');
+      return;
+    }
+
+    setIsReshaping(true);
+    setReshapeError(null);
+
+    try {
+      // Fetch data from the configured source
+      const sourceData = await fetchDataFromSource();
+
+      const result = await dashboardServer.reshapeData(
+        sourceData,
+        props.value.reshapingPrompt,
+        props.value.type
+      );
+
+      // Update the config with the reshaped data structure
+      if (result.reshapedData) {
+        console.log('AI reshaped data:', result.reshapedData);
+        // TODO: Update chart config based on reshaped data
+        // This could automatically populate xAxis, yAxis, and datasets
+      }
+    } catch (error) {
+      setReshapeError(error instanceof Error ? error.message : 'Failed to reshape data');
+    } finally {
+      setIsReshaping(false);
+    }
   };
 
   const chartTypeIcons = {
@@ -232,17 +301,35 @@ export function ChartNodeConfig(props: ChartNodeConfigProps) {
         </div>
 
         <Show when={showAIPanel()}>
-          <div class="mt-3">
-            <label class="block text-sm font-medium text-purple-900 dark:text-purple-200 mb-2">
-              Reshaping Instructions
-            </label>
-            <textarea
-              class="w-full px-3 py-2 border border-purple-300 dark:border-purple-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-              rows="3"
-              placeholder="Describe how to transform the data... e.g., 'Group by month and sum the revenue field'"
-              value={props.value.reshapingPrompt || ''}
-              onInput={(e) => updateConfig('reshapingPrompt', e.currentTarget.value)}
-            />
+          <div class="mt-3 space-y-3">
+            <div>
+              <label class="block text-sm font-medium text-purple-900 dark:text-purple-200 mb-2">
+                Reshaping Instructions
+              </label>
+              <textarea
+                class="w-full px-3 py-2 border border-purple-300 dark:border-purple-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                rows="3"
+                placeholder="Describe how to transform the data... e.g., 'Group by month and sum the revenue field'"
+                value={props.value.reshapingPrompt || ''}
+                onInput={(e) => updateConfig('reshapingPrompt', e.currentTarget.value)}
+              />
+            </div>
+
+            <button
+              type="button"
+              class="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              onClick={handleAIReshape}
+              disabled={isReshaping() || !props.value.reshapingPrompt}
+            >
+              <Sparkles class="w-4 h-4" />
+              {isReshaping() ? 'Reshaping Data...' : 'Apply AI Reshaping'}
+            </button>
+
+            <Show when={reshapeError()}>
+              <div class="p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-300">
+                {reshapeError()}
+              </div>
+            </Show>
           </div>
         </Show>
       </div>
@@ -275,22 +362,95 @@ export function ChartNodeConfig(props: ChartNodeConfigProps) {
       {/* Data Mapping Tab */}
       <Show when={activeTab() === 'data'}>
         <div class="space-y-4">
-          {/* Data Source */}
+          {/* Data Source Type */}
           <div>
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Data Source <span class="text-red-500">*</span>
+              Data Source Type <span class="text-red-500">*</span>
             </label>
-            <input
-              type="text"
-              class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-              placeholder="${input.data} or ${nodes.nodeId.output.items}"
-              value={props.value.dataSource}
-              onInput={(e) => updateConfig('dataSource', e.currentTarget.value)}
-            />
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              JSONPath or variable reference to your data array
-            </p>
+            <select
+              class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={props.value.dataSourceType}
+              onChange={(e) => updateConfig('dataSourceType', e.currentTarget.value)}
+            >
+              <option value="input">Node Input (from connected node)</option>
+              <option value="kv">KV Store</option>
+              <option value="s3">S3 Artifacts</option>
+              <option value="manual">Manual JSON Input</option>
+            </select>
           </div>
+
+          {/* Data Source Configuration */}
+          <Show when={props.value.dataSourceType === 'input'}>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Data Path
+              </label>
+              <input
+                type="text"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                placeholder="${input.data} or ${nodes.nodeId.output.items}"
+                value={props.value.dataSource}
+                onInput={(e) => updateConfig('dataSource', e.currentTarget.value)}
+              />
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                JSONPath or variable reference to your data array
+              </p>
+            </div>
+          </Show>
+
+          <Show when={props.value.dataSourceType === 'kv'}>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                KV Store Key <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                placeholder="my-data-key"
+                value={props.value.dataSource}
+                onInput={(e) => updateConfig('dataSource', e.currentTarget.value)}
+              />
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Key to fetch data from the KV store
+              </p>
+            </div>
+          </Show>
+
+          <Show when={props.value.dataSourceType === 's3'}>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                S3 Artifact Key <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                placeholder="data/my-dataset.json"
+                value={props.value.dataSource}
+                onInput={(e) => updateConfig('dataSource', e.currentTarget.value)}
+              />
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                S3 artifact key to fetch data from
+              </p>
+            </div>
+          </Show>
+
+          <Show when={props.value.dataSourceType === 'manual'}>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Manual JSON Data <span class="text-red-500">*</span>
+              </label>
+              <textarea
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                rows="6"
+                placeholder={'[\n  {"name": "A", "value": 10},\n  {"name": "B", "value": 20}\n]'}
+                value={props.value.manualData || ''}
+                onInput={(e) => updateConfig('manualData', e.currentTarget.value)}
+              />
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Paste your JSON data directly
+              </p>
+            </div>
+          </Show>
 
           {/* X Axis Configuration (not for pie charts) */}
           <Show when={props.value.type !== 'pie'}>

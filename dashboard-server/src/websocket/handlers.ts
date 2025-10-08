@@ -889,6 +889,96 @@ async function handleWebSocketMessage(ws: WebSocket, message: any, { metricsAggr
         }
         break;
 
+      case 'reshape_data': {
+        try {
+          const userContext = (ws as any).userContext as UserContext;
+          const { data, prompt, chartType } = message.data || message;
+
+          if (!data || !prompt) {
+            ws.send(JSON.stringify({
+              id: message.id,
+              type: 'reshape_data_response',
+              error: 'Data and prompt are required'
+            }));
+            break;
+          }
+
+          const chatService = getChatService();
+
+          // Create a temporary session for data reshaping
+          const session = await chatService.createSession(
+            userContext.userId,
+            `Data Reshaping for ${chartType || 'visualization'}`,
+            'bedrock',
+            userContext.organizationId
+          );
+
+          // Build the reshaping prompt with context
+          const systemPrompt = `You are a data transformation specialist. Your task is to reshape the provided data according to the user's requirements for visualization.
+
+Input data:
+${JSON.stringify(data, null, 2)}
+
+Chart type: ${chartType || 'unknown'}
+
+User requirements:
+${prompt}
+
+Please transform the data and respond with ONLY a JSON object in the following format:
+{
+  "labels": [...],  // Array of x-axis labels
+  "datasets": [     // Array of datasets
+    {
+      "label": "Dataset Name",
+      "data": [...]  // Array of values corresponding to labels
+    }
+  ]
+}
+
+Do not include any explanatory text, only the JSON object.`;
+
+          // Send the reshaping request to the AI
+          const response = await chatService.sendMessage({
+            sessionId: session.sessionId,
+            message: systemPrompt,
+            userId: userContext.userId,
+            organizationId: userContext.organizationId
+          });
+
+          // Parse the AI response
+          let reshapedData;
+          try {
+            // Try to extract JSON from the response
+            const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              reshapedData = JSON.parse(jsonMatch[0]);
+            } else {
+              throw new Error('No JSON found in response');
+            }
+          } catch (parseError) {
+            throw new Error(`Failed to parse AI response: ${response.content}`);
+          }
+
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'reshape_data_response',
+            data: {
+              reshapedData,
+              originalPrompt: prompt,
+              timestamp: new Date().toISOString()
+            }
+          }));
+        } catch (error) {
+          const reshapeError = await ErrorHandler.handleError(error, 'reshape_data');
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'reshape_data_response',
+            error: reshapeError.userMessage
+          }));
+        }
+        break;
+      }
+
       default:
         ws.send(JSON.stringify({
           id: message.id,

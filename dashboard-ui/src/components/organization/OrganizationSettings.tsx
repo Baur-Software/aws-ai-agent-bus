@@ -6,9 +6,10 @@ import GeneralSettings from './settings/GeneralSettings';
 import MemberManagement from './settings/MemberManagement';
 import SecuritySettings from './settings/SecuritySettings';
 import BillingSettings from './settings/BillingSettings';
-import { Settings, Users, Shield, CreditCard, AlertTriangle } from 'lucide-solid';
+import NodeManagementSettings from './settings/NodeManagementSettings';
+import { Settings, Users, Shield, CreditCard, AlertTriangle, Box } from 'lucide-solid';
 
-type SettingsTab = 'general' | 'members' | 'security' | 'billing';
+type SettingsTab = 'general' | 'members' | 'security' | 'billing' | 'nodes';
 
 interface TabConfig {
   id: SettingsTab;
@@ -38,6 +39,13 @@ export default function OrganizationSettings() {
       icon: Users,
       description: 'Manage organization members and permissions',
       requiresPermission: 'members'
+    },
+    {
+      id: 'nodes',
+      label: 'Workflow Nodes',
+      icon: Box,
+      description: 'Manage workflow nodes and create custom integrations',
+      requiresPermission: 'admin'
     },
     {
       id: 'security',
@@ -80,6 +88,8 @@ export default function OrganizationSettings() {
         return <GeneralSettings />;
       case 'members':
         return canManageMembers() ? <MemberManagement /> : <AccessDenied />;
+      case 'nodes':
+        return canManageOrganization() ? <NodeManagementSettings /> : <AccessDenied />;
       case 'security':
         return canManageOrganization() ? <SecuritySettings /> : <AccessDenied />;
       case 'billing':

@@ -155,11 +155,15 @@ export class WorkflowEngine {
 
   // Get node schema from registry
   getNodeSchema(nodeType) {
-    // First check static node definitions
-    const { getNodeOutputSchema } = require('../config/nodeDefinitions');
-    const staticSchema = getNodeOutputSchema(nodeType);
-    if (staticSchema) {
-      return { outputSchema: staticSchema };
+    // First check centralized NodeRegistry
+    const { getNodeDefinition } = require('../../lib/workflow-nodes');
+    const registryNode = getNodeDefinition(nodeType);
+
+    if (registryNode) {
+      return {
+        outputSchema: registryNode.outputSchema,
+        sampleOutput: registryNode.sampleOutput
+      };
     }
 
     // If nodeRegistry provided (contains MCP tool definitions, custom nodes, etc)
@@ -170,10 +174,6 @@ export class WorkflowEngine {
         return nodeDef;
       }
     }
-
-    // TODO: Also check centralized node definitions
-    // const NODE_DEFINITIONS = await import('./config/nodeDefinitions.ts');
-    // return NODE_DEFINITIONS.getNodeDefinition(nodeType);
 
     return null;
   }

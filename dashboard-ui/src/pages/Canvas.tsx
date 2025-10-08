@@ -16,6 +16,7 @@ const Artifacts = lazy(() => import('./Artifacts'));
 const Events = lazy(() => import('./Events'));
 const Settings = lazy(() => import('./Settings'));
 const AppsTab = lazy(() => import('../components/apps/AppsTab'));
+const NodeDesigner = lazy(() => import('./NodeDesigner'));
 
 export default function Canvas() {
   const params = useParams();
@@ -122,6 +123,12 @@ export default function Canvas() {
       component: () => <Settings isOverlay={true} />,
       title: 'Settings',
       size: 'medium' as const
+    },
+    '/node-designer': {
+      id: 'node-designer',
+      component: NodeDesigner,
+      title: 'Node Designer',
+      size: 'fullscreen' as const
     }
   };
 

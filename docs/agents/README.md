@@ -4,7 +4,7 @@ title: Agent System
 permalink: /agents/
 ---
 
-# AWS AI Agent Bus - Agent System
+## AWS AI Agent Bus - Agent System
 
 The AWS AI Agent Bus includes a sophisticated agent orchestration system designed to provide specialized AI capabilities across different domains. The system uses a distributed architecture with multiple specialized agents working together.
 

@@ -16,8 +16,14 @@
     "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@ai-agent-bus/workflow-nodes": ["./lib/workflow-nodes"],
+      "@ai-agent-bus/datavis-nodes": ["./lib/datavis-nodes"],
+      "@ai-agent-bus/shapes": ["./lib/shapes"]
+    }
   },
-  "include": ["src", "test/components/IntegrationsSettings.test.tsx"],
+  "include": ["src", "lib", "test/components/IntegrationsSettings.test.tsx"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

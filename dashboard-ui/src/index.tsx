@@ -50,6 +50,7 @@ render(
                                 <Route path="/events" component={Canvas} />
                                 <Route path="/settings" component={Canvas} />
                                 <Route path="/chat" component={Canvas} />
+                                <Route path="/node-designer" component={Canvas} />
                                 {/* Catch-all route for any other paths */}
                                 <Route path="*" component={Canvas} />
                               </Router>
