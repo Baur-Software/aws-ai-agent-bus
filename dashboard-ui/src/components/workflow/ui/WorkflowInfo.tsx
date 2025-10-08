@@ -1,4 +1,4 @@
-import { createSignal, Show } from 'solid-js';
+import { createSignal, Show, onMount } from 'solid-js';
 import {
   Edit3,
   Check,
@@ -36,6 +36,7 @@ interface WorkflowInfoProps {
     };
   };
   onRename?: (newName: string) => void;
+  onEditRef?: (editFn: () => void) => void; // Callback to expose edit function to parent
   class?: string;
 }
 
@@ -47,6 +48,11 @@ export default function WorkflowInfo(props: WorkflowInfoProps) {
     setEditName(props.currentWorkflow?.name || '');
     setIsEditing(true);
   };
+
+  // Expose edit function to parent on mount
+  onMount(() => {
+    props.onEditRef?.(handleStartEdit);
+  });
 
   const handleSaveEdit = () => {
     const newName = editName().trim();

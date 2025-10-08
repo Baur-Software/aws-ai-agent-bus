@@ -103,6 +103,9 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
   // Compact mode state
   const [isCompact, setIsCompact] = createSignal(true);
 
+  // Workflow edit function ref
+  let triggerWorkflowEdit: (() => void) | null = null;
+
   // Load toolbar preferences from KV store
   const loadToolbarPreferences = async () => {
     try {
@@ -258,7 +261,15 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
     {
       icon: Save,
       label: props.autoSaveEnabled ? 'Auto-Save (On)' : 'Auto-Save (Off)',
-      onClick: props.onSave,
+      onClick: () => {
+        if (props.autoSaveEnabled && triggerWorkflowEdit) {
+          // Auto-save is on: click to rename workflow
+          triggerWorkflowEdit();
+        } else {
+          // Auto-save is off: click to force save
+          props.onSave();
+        }
+      },
       onContextMenu: (e: MouseEvent) => {
         e.preventDefault();
         props.onToggleAutoSave?.();
@@ -267,7 +278,7 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
       variant: props.autoSaveEnabled ? 'primary' : 'secondary',
       loading: props.isSaving,
       title: props.autoSaveEnabled
-        ? `Auto-save enabled${props.lastSaved ? ` • Last saved: ${props.lastSaved.toLocaleTimeString()}` : ''} • Right-click to disable`
+        ? `Auto-save enabled${props.lastSaved ? ` • Last saved: ${props.lastSaved.toLocaleTimeString()}` : ''} • Click to rename • Right-click to disable`
         : 'Auto-save disabled • Click to save manually • Right-click to enable'
     },
     {
@@ -382,6 +393,7 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
             <WorkflowInfo
               currentWorkflow={props.currentWorkflow}
               onRename={props.onWorkflowRename}
+              onEditRef={(editFn) => { triggerWorkflowEdit = editFn; }}
               class="mr-3"
             />
           </Show>
