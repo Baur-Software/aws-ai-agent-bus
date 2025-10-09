@@ -269,6 +269,11 @@ impl TenantManager {
         sessions.get(session_key).cloned()
     }
 
+    pub async fn get_all_sessions(&self) -> Vec<Arc<TenantSession>> {
+        let sessions = self.sessions.read().await;
+        sessions.values().cloned().collect()
+    }
+
     pub async fn cleanup_expired_sessions(&self) {
         let mut sessions = self.sessions.write().await;
         let now = chrono::Utc::now();

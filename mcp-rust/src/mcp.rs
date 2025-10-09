@@ -3,7 +3,8 @@ use serde_json::Value;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tracing::{debug, error, info};
+use tokio::sync::RwLock;
+use tracing::{debug, error};
 
 use crate::handlers::HandlerRegistry;
 use crate::rate_limiting::AwsOperation;
@@ -83,6 +84,7 @@ impl From<MCPError> for MCPErrorResponse {
 pub struct MCPServer {
     tenant_manager: Arc<TenantManager>,
     handler_registry: HandlerRegistry,
+    shutdown_flag: Arc<RwLock<bool>>,
 }
 
 impl MCPServer {
@@ -95,6 +97,7 @@ impl MCPServer {
         Ok(Self {
             tenant_manager,
             handler_registry,
+            shutdown_flag: Arc::new(RwLock::new(false)),
         })
     }
 
@@ -112,10 +115,18 @@ impl MCPServer {
             line.clear();
             match reader.read_line(&mut line).await {
                 Ok(0) => {
-                    // EOF reached, shutting down quietly
+                    // EOF reached - initiate graceful shutdown
+                    eprintln!("[MCP Server] EOF detected on stdin, initiating shutdown");
+                    self.initiate_shutdown().await;
                     break;
                 }
                 Ok(_) => {
+                    // Check if shutdown was initiated
+                    if *self.shutdown_flag.read().await {
+                        eprintln!("[MCP Server] Shutdown in progress, ignoring new requests");
+                        break;
+                    }
+
                     if let Some(response) = self.handle_request(line.trim()).await {
                         let response_json = serde_json::to_string(&response)?;
 
@@ -128,12 +139,57 @@ impl MCPServer {
                 Err(e) => {
                     // Log errors to stderr, not stdout
                     eprintln!("[MCP Server] Error reading from stdin: {}", e);
+                    self.initiate_shutdown().await;
                     break;
                 }
             }
         }
 
+        // Wait for active requests to complete
+        self.wait_for_active_requests().await;
+
+        eprintln!("[MCP Server] All requests completed, exiting");
         Ok(())
+    }
+
+    async fn initiate_shutdown(&self) {
+        let mut shutdown = self.shutdown_flag.write().await;
+        *shutdown = true;
+    }
+
+    async fn wait_for_active_requests(&self) {
+        // Wait up to 5 seconds for active requests to complete
+        let max_wait = std::time::Duration::from_secs(5);
+        let start = std::time::Instant::now();
+        let check_interval = std::time::Duration::from_millis(50);
+
+        eprintln!("[MCP Server] Waiting for active requests to complete...");
+
+        while start.elapsed() < max_wait {
+            let active_count = self.get_total_active_requests().await;
+
+            if active_count == 0 {
+                eprintln!("[MCP Server] No active requests remaining");
+                return;
+            }
+
+            eprintln!("[MCP Server] {} active request(s) remaining", active_count);
+            tokio::time::sleep(check_interval).await;
+        }
+
+        eprintln!("[MCP Server] Timeout waiting for active requests, forcing shutdown");
+    }
+
+    async fn get_total_active_requests(&self) -> u32 {
+        // Count active requests across all sessions
+        let sessions = self.tenant_manager.get_all_sessions().await;
+        let mut total = 0;
+
+        for session in sessions {
+            total += *session.active_requests.read().await;
+        }
+
+        total
     }
 
     pub async fn handle_request(&self, request_line: &str) -> Option<MCPResponse> {
@@ -336,9 +392,22 @@ impl RequestGuard {
 
 impl Drop for RequestGuard {
     fn drop(&mut self) {
+        // Use blocking decrement to avoid spawning new tasks during shutdown
+        // This is safe because the RwLock operation is quick
         let session = self.session.clone();
-        tokio::spawn(async move {
-            session.decrement_active_requests().await;
-        });
+        let rt_handle = tokio::runtime::Handle::try_current();
+
+        if let Ok(handle) = rt_handle {
+            // We're in a tokio runtime context
+            // Spawn only if not shutting down
+            handle.spawn(async move {
+                session.decrement_active_requests().await;
+            });
+        } else {
+            // Fallback: use futures executor for immediate decrement
+            futures::executor::block_on(async {
+                session.decrement_active_requests().await;
+            });
+        }
     }
 }
