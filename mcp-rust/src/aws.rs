@@ -15,8 +15,10 @@ pub enum AwsError {
     #[error("S3 error: {0}")]
     S3(String),
     #[error("EventBridge error: {0}")]
+    #[allow(dead_code)]
     EventBridge(String),
     #[error("SecretsManager error: {0}")]
+    #[allow(dead_code)]
     SecretsManager(String),
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
@@ -28,7 +30,7 @@ pub struct AwsClients {
     pub dynamodb: DynamoDbClient,
     pub s3: S3Client,
     pub eventbridge: EventBridgeClient,
-    pub secrets_manager: SecretsManagerClient,
+    pub _secrets_manager: SecretsManagerClient,
 }
 
 impl AwsClients {
@@ -39,7 +41,7 @@ impl AwsClients {
             dynamodb: DynamoDbClient::new(&config),
             s3: S3Client::new(&config),
             eventbridge: EventBridgeClient::new(&config),
-            secrets_manager: SecretsManagerClient::new(&config),
+            _secrets_manager: SecretsManagerClient::new(&config),
         })
     }
 }
@@ -289,7 +291,6 @@ impl AwsService {
     #[allow(clippy::too_many_arguments)]
     pub async fn query_events(
         &self,
-        session: &TenantSession,
         user_id: Option<String>,
         organization_id: Option<String>,
         source: Option<String>,
@@ -405,8 +406,8 @@ impl AwsService {
         query_builder = query_builder.scan_index_forward(ascending);
 
         // Add pagination cursor if provided
-        if let Some(start_key) = exclusive_start_key {
-            // Parse start key (simplified - in production would be proper DynamoDB key)
+        if let Some(_start_key) = exclusive_start_key {
+            // TODO: Parse start key (simplified - in production would be proper DynamoDB key)
             // For now, we'll skip this since it requires proper key deserialization
         }
 

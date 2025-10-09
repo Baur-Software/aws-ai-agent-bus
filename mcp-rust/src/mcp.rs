@@ -21,6 +21,7 @@ pub enum MCPError {
     #[error("Handler error: {0}")]
     HandlerError(String),
     #[error("Permission denied: {0}")]
+    #[allow(dead_code)]
     PermissionDenied(String),
     #[error("Rate limit exceeded")]
     RateLimitExceeded,

@@ -41,7 +41,7 @@ pub trait Handler: Send + Sync {
 
 pub struct HandlerRegistry {
     handlers: HashMap<String, Arc<dyn Handler>>,
-    registry: Arc<MCPServerRegistry>,
+    _registry: Arc<MCPServerRegistry>,
 }
 
 impl HandlerRegistry {
@@ -144,7 +144,7 @@ impl HandlerRegistry {
             Arc::new(mcp_proxy::MCPListToolsHandler::new(registry.clone())),
         );
 
-        Ok(Self { handlers, registry })
+        Ok(Self { handlers, _registry: registry })
     }
 
     pub async fn list_tools(&self, session: &TenantSession) -> Result<Vec<Value>, HandlerError> {
@@ -565,7 +565,7 @@ impl EventsQueryHandler {
 impl Handler for EventsQueryHandler {
     async fn handle(
         &self,
-        session: &TenantSession,
+        _session: &TenantSession,
         arguments: Value,
     ) -> Result<Value, HandlerError> {
         // Extract query parameters
@@ -623,7 +623,6 @@ impl Handler for EventsQueryHandler {
         let result = self
             .aws_service
             .query_events(
-                session,
                 user_id,
                 organization_id,
                 source,

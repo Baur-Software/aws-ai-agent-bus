@@ -14,6 +14,7 @@ pub enum TenantError {
     #[error("Unauthorized access for tenant: {0}")]
     Unauthorized(String),
     #[error("Tenant configuration error: {0}")]
+    #[allow(dead_code)]
     ConfigError(String),
 }
 
@@ -37,11 +38,13 @@ pub struct TenantContext {
 
 impl TenantContext {
     /// Returns true if this is a personal context
+    #[allow(dead_code)]
     pub fn is_personal(&self) -> bool {
         matches!(self.context_type, ContextType::Personal)
     }
 
     /// Returns true if this is an organizational context
+    #[allow(dead_code)]
     pub fn is_organizational(&self) -> bool {
         matches!(self.context_type, ContextType::Organization { .. })
     }
@@ -65,6 +68,7 @@ impl TenantContext {
     }
 
     /// Get the organization ID if in organizational context
+    #[allow(dead_code)]
     pub fn get_org_id(&self) -> Option<String> {
         match &self.context_type {
             ContextType::Organization { org_id, .. } => Some(org_id.clone()),
@@ -122,6 +126,7 @@ impl Default for ResourceLimits {
 pub struct TenantSession {
     pub context: TenantContext,
     pub session_id: Uuid,
+    #[allow(dead_code)]
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub last_activity: Arc<RwLock<chrono::DateTime<chrono::Utc>>>,
     pub request_count: Arc<RwLock<u32>>,
@@ -264,6 +269,7 @@ impl TenantManager {
         Ok(session)
     }
 
+    #[allow(dead_code)]
     pub async fn get_session(&self, session_key: &str) -> Option<Arc<TenantSession>> {
         let sessions = self.sessions.read().await;
         sessions.get(session_key).cloned()
@@ -274,6 +280,7 @@ impl TenantManager {
         sessions.values().cloned().collect()
     }
 
+    #[allow(dead_code)]
     pub async fn cleanup_expired_sessions(&self) {
         let mut sessions = self.sessions.write().await;
         let now = chrono::Utc::now();

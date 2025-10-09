@@ -56,11 +56,19 @@ This directory contains a sophisticated agent system designed for complex softwa
 - **react-component-architect**: Modern React patterns and component design
 - **vue-component-architect**: Vue.js applications and component systems
 
-#### Backend Technologies  
+#### Backend Technologies
 
 - **django-backend-expert**: Django web applications and APIs
 - **laravel-backend-expert**: Laravel applications and Eloquent patterns
 - **rails-backend-expert**: Ruby on Rails applications and ActiveRecord
+
+#### Rust Development
+
+- **rust-mcp-architect**: Model Context Protocol server design and implementation
+- **rust-performance-optimizer**: Performance profiling, optimization, and benchmarking
+- **rust-testing-specialist**: Testing strategies, mocking, and test-driven development
+- **rust-async-expert**: Async/await patterns, tokio runtime, and concurrency
+- **rust-error-handling-expert**: Error handling patterns and user-friendly messages
 
 #### Infrastructure & Cloud
 
@@ -173,10 +181,18 @@ Tech Lead: Coordinates final integration and deployment
 - **Framework Integration**: Enhanced SolidJS and React patterns
 - **Accessibility**: Comprehensive WCAG compliance patterns
 
+### Rust Agent Ecosystem
+
+- **MCP Server Architecture**: Complete Rust MCP architect with protocol compliance
+- **Performance Engineering**: Dedicated optimization and profiling expertise
+- **Testing Infrastructure**: Comprehensive testing with AWS SDK mocking
+- **Async Coordination**: Complex tokio patterns and shutdown coordination
+- **Error Engineering**: Rich error hierarchies with JSON-RPC mapping
+
 ### System-Wide Improvements
 
 - **Standardized Templates**: Consistent structure across all agents
-- **Enhanced Delegation**: Clear trigger patterns and handoff protocols  
+- **Enhanced Delegation**: Clear trigger patterns and handoff protocols
 - **Quality Standards**: Performance, security, and accessibility requirements
 - **Documentation Integration**: Latest framework documentation fetching
 

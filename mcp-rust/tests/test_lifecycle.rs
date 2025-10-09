@@ -1,5 +1,5 @@
-use std::process::{Command, Stdio};
 use std::io::Write;
+use std::process::{Command, Stdio};
 use std::time::Duration;
 
 /// Test that the MCP server exits properly when stdin is closed
@@ -19,7 +19,10 @@ fn test_server_exits_on_stdin_close() {
         .expect("Failed to build binary");
 
     if !build_output.status.success() {
-        eprintln!("Build stderr: {}", String::from_utf8_lossy(&build_output.stderr));
+        eprintln!(
+            "Build stderr: {}",
+            String::from_utf8_lossy(&build_output.stderr)
+        );
         panic!("Build failed");
     }
 
@@ -64,7 +67,10 @@ fn test_server_exits_on_stdin_close() {
                 // Read any remaining stderr
                 if let Ok(stderr) = child.wait_with_output() {
                     if !stderr.stderr.is_empty() {
-                        println!("Server stderr:\n{}", String::from_utf8_lossy(&stderr.stderr));
+                        println!(
+                            "Server stderr:\n{}",
+                            String::from_utf8_lossy(&stderr.stderr)
+                        );
                     }
                 }
                 // Exit code 0 means success
@@ -75,7 +81,10 @@ fn test_server_exits_on_stdin_close() {
                 if start.elapsed() > timeout {
                     // Server didn't exit - this is the bug!
                     let _ = child.kill();
-                    panic!("Server did not exit within {:?} after stdin closed", timeout);
+                    panic!(
+                        "Server did not exit within {:?} after stdin closed",
+                        timeout
+                    );
                 }
                 std::thread::sleep(Duration::from_millis(100));
             }
@@ -114,7 +123,10 @@ fn test_server_exits_on_immediate_eof() {
             Ok(None) => {
                 if start.elapsed() > timeout {
                     child.kill().unwrap();
-                    panic!("Server did not exit within {:?} after immediate EOF", timeout);
+                    panic!(
+                        "Server did not exit within {:?} after immediate EOF",
+                        timeout
+                    );
                 }
                 std::thread::sleep(Duration::from_millis(100));
             }

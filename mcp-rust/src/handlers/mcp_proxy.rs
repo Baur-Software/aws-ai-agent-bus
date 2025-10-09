@@ -2,10 +2,10 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::sync::Arc;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use crate::handlers::{Handler, HandlerError};
-use crate::registry::{MCPServerRegistry, MCPTool};
+use crate::registry::MCPServerRegistry;
 use crate::tenant::{Permission, TenantSession};
 
 pub struct MCPProxyHandler {

@@ -172,6 +172,7 @@ impl AwsRateLimiter {
     }
 
     /// Clean up old buckets to prevent memory leaks
+    #[allow(dead_code)]
     pub async fn cleanup_expired_buckets(&self) {
         let mut buckets = self.buckets.write().await;
         let now = Instant::now();
@@ -189,8 +190,10 @@ pub enum AwsOperation {
     DynamoDbWrite { write_units: u32 },
     S3Get,
     S3Put,
+    #[allow(dead_code)]
     S3List,
     EventBridgePutEvents { event_count: u32 },
+    #[allow(dead_code)]
     SecretsManagerGet,
     GenericAwsApi,
 }
