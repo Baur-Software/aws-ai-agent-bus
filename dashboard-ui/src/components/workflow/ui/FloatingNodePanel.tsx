@@ -17,7 +17,7 @@ import { useDashboardServer } from '../../../contexts/DashboardServerContext';
 import { useDragDrop, useDragSource } from '../../../contexts/DragDropContext';
 import { useIntegrations } from '../../../contexts/IntegrationsContext';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useNotification } from '../../../contexts/NotificationContext';
+import { useNotifications } from '../../../contexts/NotificationContext';
 import { useArtifactService } from '../../../services/ArtifactService';
 import { useAgentDefinitionService } from '../../../services/AgentDefinitionService';
 import { listAgents } from '../../../api/agents'; // new API import
@@ -112,7 +112,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   const dashboardServer = useDashboardServer();
   const { callMCPTool } = dashboardServer;
   const integrations = useIntegrations();
-  const notifications = useNotification();
+  const notifications = useNotifications();
   const artifactService = useArtifactService();
   const agentService = useAgentDefinitionService(artifactService, { callMCPTool });
 
