@@ -55,7 +55,7 @@ export interface TaskConfigSchema {
 }
 
 export interface SchemaProperty {
-  type: string;  // Accept any JSON Schema type string
+  type?: string;  // Accept any JSON Schema type string (optional for oneOf/anyOf)
   title?: string;
   description?: string;
   placeholder?: string;
@@ -67,11 +67,16 @@ export interface SchemaProperty {
   maximum?: number;
   minLength?: number;
   maxLength?: number;
+  minItems?: number;
+  maxItems?: number;
   items?: SchemaProperty | { type: string };
   properties?: Record<string, SchemaProperty>;
   required?: string[];
   additionalProperties?: SchemaProperty | { type: string } | any;
   examples?: any[];
+  oneOf?: SchemaProperty[];  // JSON Schema oneOf support
+  anyOf?: SchemaProperty[];  // JSON Schema anyOf support
+  allOf?: SchemaProperty[];  // JSON Schema allOf support
 }
 
 export interface TaskDisplayInfo {

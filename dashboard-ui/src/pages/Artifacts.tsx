@@ -30,7 +30,7 @@ function Artifacts() {
     () => isConnected() ? searchPrefix() : null,
     async (prefix) => {
       try {
-        const result = await artifacts.list(prefix || undefined);
+        const result = await executeTool('artifacts_list', { prefix: prefix || undefined });
         return result.items || [];
       } catch (error) {
         console.error('Failed to load artifacts:', error);
@@ -43,7 +43,11 @@ function Artifacts() {
     if (!uploadKey() || !uploadContent()) return;
 
     try {
-      await artifacts.put(uploadKey(), uploadContent(), uploadContentType());
+      await executeTool('artifacts_put', {
+        key: uploadKey(),
+        content: uploadContent(),
+        content_type: uploadContentType()
+      });
       setUploadKey('');
       setUploadContent('');
       setUploadContentType('text/plain');
@@ -56,7 +60,7 @@ function Artifacts() {
 
   const handleDownload = async (item: ArtifactItem) => {
     try {
-      const result = await artifacts.get(item.key);
+      const result = await executeTool('artifacts_get', { key: item.key });
       setFileContent(result.content);
       setSelectedFile(item);
       setShowContentModal(true);

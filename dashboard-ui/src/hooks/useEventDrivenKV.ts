@@ -155,6 +155,15 @@ export function useEventDrivenAppConfigs() {
   const { success, error } = useNotifications();
   const kv = useEventDrivenKV();
 
+  // Placeholder for event system - to be implemented when event bus is ready
+  const events = {
+    async send(eventType: string, payload: any) {
+      console.log(`[Event] ${eventType}:`, payload);
+      // TODO: Implement actual event emission when event bus is ready
+      return Promise.resolve();
+    }
+  };
+
   const appConfigOps = {
     /**
      * Load app configs via events

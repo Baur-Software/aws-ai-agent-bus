@@ -2,12 +2,12 @@
 // Pre-built workflows for common use cases
 
 import { WorkflowDefinition } from '../types';
-import { hubspotDemoSequenceWorkflow } from './hubspot-demo-sequence';
+// import { hubspotDemoSequenceWorkflow } from './hubspot-demo-sequence';
 
 // Basic workflow templates
 export const WORKFLOW_TEMPLATES: WorkflowDefinition[] = [
   // Add HubSpot demo sequence workflow
-  hubspotDemoSequenceWorkflow,
+  // hubspotDemoSequenceWorkflow,
 
   {
     version: '1.0',
