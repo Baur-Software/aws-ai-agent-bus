@@ -144,7 +144,10 @@ impl HandlerRegistry {
             Arc::new(mcp_proxy::MCPListToolsHandler::new(registry.clone())),
         );
 
-        Ok(Self { handlers, _registry: registry })
+        Ok(Self {
+            handlers,
+            _registry: registry,
+        })
     }
 
     pub async fn list_tools(&self, session: &TenantSession) -> Result<Vec<Value>, HandlerError> {

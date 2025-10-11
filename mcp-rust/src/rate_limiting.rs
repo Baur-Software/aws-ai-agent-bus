@@ -186,13 +186,19 @@ impl AwsRateLimiter {
 #[derive(Debug, Clone)]
 pub enum AwsOperation {
     DynamoDbQuery,
-    DynamoDbRead { read_units: u32 },
-    DynamoDbWrite { write_units: u32 },
+    DynamoDbRead {
+        read_units: u32,
+    },
+    DynamoDbWrite {
+        write_units: u32,
+    },
     S3Get,
     S3Put,
     #[allow(dead_code)]
     S3List,
-    EventBridgePutEvents { event_count: u32 },
+    EventBridgePutEvents {
+        event_count: u32,
+    },
     #[allow(dead_code)]
     SecretsManagerGet,
     GenericAwsApi,

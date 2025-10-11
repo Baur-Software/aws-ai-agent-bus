@@ -1,8 +1,8 @@
 use crate::rate_limiting::{AwsOperation, AwsRateLimiter, AwsServiceLimits};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::RwLock;
 use tracing::{info, warn};
@@ -130,8 +130,8 @@ pub struct TenantSession {
     #[allow(dead_code)]
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub last_activity: Arc<RwLock<chrono::DateTime<chrono::Utc>>>,
-    pub request_count: Arc<AtomicU32>,  // Changed to atomic for lock-free increment
-    pub active_requests: Arc<AtomicU32>,  // Changed to atomic for lock-free increment
+    pub request_count: Arc<AtomicU32>, // Changed to atomic for lock-free increment
+    pub active_requests: Arc<AtomicU32>, // Changed to atomic for lock-free increment
 }
 
 impl TenantSession {
@@ -142,8 +142,8 @@ impl TenantSession {
             session_id: Uuid::new_v4(),
             created_at: now,
             last_activity: Arc::new(RwLock::new(now)),
-            request_count: Arc::new(AtomicU32::new(0)),  // Atomic initialization
-            active_requests: Arc::new(AtomicU32::new(0)),  // Atomic initialization
+            request_count: Arc::new(AtomicU32::new(0)), // Atomic initialization
+            active_requests: Arc::new(AtomicU32::new(0)), // Atomic initialization
         }
     }
 
@@ -164,13 +164,15 @@ impl TenantSession {
 
     pub fn decrement_active_requests(&self) {
         // Lock-free atomic decrement with saturation (never go below 0)
-        self.active_requests.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
-            if current > 0 {
-                Some(current - 1)
-            } else {
-                None  // Don't update if already 0
-            }
-        }).ok();  // Ignore result
+        self.active_requests
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
+                if current > 0 {
+                    Some(current - 1)
+                } else {
+                    None // Don't update if already 0
+                }
+            })
+            .ok(); // Ignore result
     }
 
     pub fn check_rate_limit(&self) -> bool {

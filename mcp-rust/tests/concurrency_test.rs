@@ -11,8 +11,16 @@ async fn test_concurrent_tool_list_requests() {
     std::env::set_var("DEV_MODE", "true");
     std::env::set_var("AWS_REGION", "us-west-2");
 
-    let tenant_manager = Arc::new(TenantManager::new().await.expect("Failed to create tenant manager"));
-    let server = Arc::new(MCPServer::new(tenant_manager.clone()).await.expect("Failed to create server"));
+    let tenant_manager = Arc::new(
+        TenantManager::new()
+            .await
+            .expect("Failed to create tenant manager"),
+    );
+    let server = Arc::new(
+        MCPServer::new(tenant_manager.clone())
+            .await
+            .expect("Failed to create server"),
+    );
 
     // Create 100 concurrent requests
     let handles: Vec<_> = (0..100)
@@ -52,8 +60,16 @@ async fn test_active_requests_counter_accuracy() {
     std::env::set_var("DEV_MODE", "true");
     std::env::set_var("AWS_REGION", "us-west-2");
 
-    let tenant_manager = Arc::new(TenantManager::new().await.expect("Failed to create tenant manager"));
-    let server = Arc::new(MCPServer::new(tenant_manager.clone()).await.expect("Failed to create server"));
+    let tenant_manager = Arc::new(
+        TenantManager::new()
+            .await
+            .expect("Failed to create tenant manager"),
+    );
+    let server = Arc::new(
+        MCPServer::new(tenant_manager.clone())
+            .await
+            .expect("Failed to create server"),
+    );
 
     // Create a session first
     let init_request = json!({
@@ -96,7 +112,10 @@ async fn test_active_requests_counter_accuracy() {
         .sum();
 
     println!("Active requests during load: {}", total_active);
-    assert!(total_active <= 50, "Active count should not exceed total requests");
+    assert!(
+        total_active <= 50,
+        "Active count should not exceed total requests"
+    );
 
     // Wait for all to complete
     for handle in handles {
@@ -111,7 +130,10 @@ async fn test_active_requests_counter_accuracy() {
         .map(|s| s.active_requests.load(std::sync::atomic::Ordering::SeqCst))
         .sum();
 
-    assert_eq!(final_active, 0, "All active requests should be decremented after completion");
+    assert_eq!(
+        final_active, 0,
+        "All active requests should be decremented after completion"
+    );
 }
 
 /// Test shutdown during active requests doesn't cause panics
@@ -120,8 +142,16 @@ async fn test_graceful_shutdown_during_requests() {
     std::env::set_var("DEV_MODE", "true");
     std::env::set_var("AWS_REGION", "us-west-2");
 
-    let tenant_manager = Arc::new(TenantManager::new().await.expect("Failed to create tenant manager"));
-    let server = Arc::new(MCPServer::new(tenant_manager.clone()).await.expect("Failed to create server"));
+    let tenant_manager = Arc::new(
+        TenantManager::new()
+            .await
+            .expect("Failed to create tenant manager"),
+    );
+    let server = Arc::new(
+        MCPServer::new(tenant_manager.clone())
+            .await
+            .expect("Failed to create server"),
+    );
 
     // Launch 20 slow requests
     let handles: Vec<_> = (0..20)
@@ -161,8 +191,16 @@ async fn test_concurrent_rate_limiting() {
     std::env::set_var("DEV_MODE", "true");
     std::env::set_var("AWS_REGION", "us-west-2");
 
-    let tenant_manager = Arc::new(TenantManager::new().await.expect("Failed to create tenant manager"));
-    let server = Arc::new(MCPServer::new(tenant_manager.clone()).await.expect("Failed to create server"));
+    let tenant_manager = Arc::new(
+        TenantManager::new()
+            .await
+            .expect("Failed to create tenant manager"),
+    );
+    let server = Arc::new(
+        MCPServer::new(tenant_manager.clone())
+            .await
+            .expect("Failed to create server"),
+    );
 
     // Create enough requests that we hit the concurrent request limit (10)
     // Launch all at once so they're truly concurrent
@@ -192,7 +230,8 @@ async fn test_concurrent_rate_limiting() {
     for handle in handles {
         if let Some(response) = handle.await.expect("Task should complete") {
             if let Some(error) = response.error {
-                if error.code == -32001 { // Rate limit error
+                if error.code == -32001 {
+                    // Rate limit error
                     rate_limited += 1;
                 }
             } else {

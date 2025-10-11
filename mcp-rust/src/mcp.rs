@@ -187,7 +187,9 @@ impl MCPServer {
         let mut total = 0;
 
         for session in sessions {
-            total += session.active_requests.load(std::sync::atomic::Ordering::SeqCst);
+            total += session
+                .active_requests
+                .load(std::sync::atomic::Ordering::SeqCst);
         }
 
         total

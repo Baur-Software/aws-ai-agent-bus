@@ -330,7 +330,11 @@ async fn test_events_query_integration_empty_result() {
         }
     }
 
-    assert!(result.is_ok(), "Empty result should not error: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "Empty result should not error: {:?}",
+        result.err()
+    );
 
     let response = result.unwrap();
     let events = response.get("events").unwrap().as_array().unwrap();
