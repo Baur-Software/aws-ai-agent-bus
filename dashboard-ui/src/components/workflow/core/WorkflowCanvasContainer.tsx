@@ -86,7 +86,6 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
   const [showCollaboration, setShowCollaboration] = createSignal(false);
   const [showWorkflowBrowser, setShowWorkflowBrowser] = createSignal(!props.workflowId);
   const [connectedIntegrations, setConnectedIntegrations] = createSignal<string[]>([]);
-  const [useMockData, setUseMockData] = createSignal(true); // Default to mock/dry-run mode
 
   // Canvas view options
   const [gridMode, setGridMode] = createSignal<'off' | 'grid' | 'dots'>('dots');
@@ -210,7 +209,7 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
   const loadWorkflow = async (workflowId: string) => {
     try {
       // const workflows = await dashboard.workflows.getAll(); // Temporarily disabled - needs DashboardServerContext integration
-      const workflow = workflows.find(w => w.workflowId === workflowId);
+      const workflow = props.workflows?.find(w => w.workflowId === workflowId);
 
       if (workflow) {
         const metadata: WorkflowMetadata = {
@@ -552,14 +551,12 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
       setIsExecuting(true);
       setExecutionStatus('running');
 
-      const mockMode = useMockData();
-      console.log(`🚀 Running workflow with event emission (${mockMode ? 'DRY RUN - Mock Data' : 'LIVE RUN - Real Data'})`);
+      console.log('🚀 Running workflow with event emission');
 
-      // Create WorkflowEngine with MCP client and event emitter
+      // Create WorkflowEngine with executeTool from DashboardServerContext
       const engine = new WorkflowEngine(
-        dashboardServer,  // MCP client
-        dashboardServer.sendMessage,  // Event emitter function
-        mockMode  // Mock data mode
+        executeTool,  // MCP tool executor
+        (event: any) => console.log('Workflow event:', event)  // Event emitter function (placeholder)
       );
 
       // Prepare workflow for execution
@@ -699,8 +696,6 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
             hasUnsavedChanges={hasUnsavedChanges()}
             isExecuting={isExecuting()}
             nodeCount={nodes().length}
-            useMockData={useMockData()}
-            onToggleMockData={() => setUseMockData(!useMockData())}
             onPositionChange={handleToolbarPositionChange}
             initialPosition={toolbarPosition()}
             navigationPinned={props.navigationPinned}

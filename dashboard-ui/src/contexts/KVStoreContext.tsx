@@ -200,9 +200,8 @@ export function KVStoreProvider(props: { children: any }) {
    * Get all app configs with prefix scanning
    */
   const getAppConfigs = async (orgId?: string): Promise<AppConfig[]> => {
-    const mcpClient = client();
-    if (!mcpClient) return [];
-
+    // Note: This would need backend support for prefix scanning
+    // For now, we'll use known app IDs
     try {
       // Get both org-specific and global configs
       const prefixes = orgId ? [`org-${orgId}-app-config-`, 'app-config-'] : ['app-config-'];

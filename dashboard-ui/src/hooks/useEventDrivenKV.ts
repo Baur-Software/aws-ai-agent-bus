@@ -11,6 +11,15 @@ export function useEventDrivenKV() {
   const { executeTool } = useDashboardServer();
   const { success, error } = useNotifications();
 
+  // Placeholder for event system - to be implemented when event bus is ready
+  const events = {
+    async send(eventType: string, payload: any) {
+      console.log(`[Event] ${eventType}:`, payload);
+      // TODO: Implement actual event emission when event bus is ready
+      return Promise.resolve();
+    }
+  };
+
   // Event-driven KV operations
   const kvOps = {
     /**
@@ -121,7 +130,8 @@ export function useEventDrivenKV() {
     async getDirectFallback(key: string) {
       // Use executeTool from context
       try {
-        return await callTool('kv.get', { key });
+        const result = await executeTool('kv_get', { key });
+        return result?.value || null;
       } catch (err) {
         console.warn(`Direct KV fallback failed for ${key}:`, err);
         return null;

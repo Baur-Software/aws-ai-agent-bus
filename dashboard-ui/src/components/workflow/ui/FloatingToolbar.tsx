@@ -73,8 +73,6 @@ interface FloatingToolbarProps {
   gridMode?: 'off' | 'grid' | 'dots';
   isPanMode?: boolean;
   nodeCount?: number;
-  useMockData?: boolean;
-  onToggleMockData?: () => void;
 
   // Auto-save
   autoSaveEnabled?: boolean;
@@ -240,23 +238,15 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
     },
     {
       icon: props.isExecuting ? Square : Play,
-      label: props.isExecuting ? 'Stop' : (props.useMockData ? 'Dry Run' : 'Live Run'),
+      label: props.isExecuting ? 'Stop' : 'Run',
       onClick: props.onRun,
-      onContextMenu: (e: MouseEvent) => {
-        e.preventDefault();
-        if (!props.isExecuting && props.onToggleMockData) {
-          props.onToggleMockData();
-        }
-      },
       show: true,
-      variant: props.isExecuting ? 'danger' : (props.useMockData ? 'secondary' : 'primary') as const,
+      variant: props.isExecuting ? 'danger' : 'primary' as const,
       loading: false, // Don't show loading spinner, show Stop icon instead
       disabled: !props.isExecuting && (props.nodeCount === 0 || props.nodeCount === undefined),
       title: props.isExecuting
         ? 'Stop workflow execution'
-        : (props.useMockData
-          ? 'Dry Run (uses sample data) • Right-click to switch to Live Run'
-          : 'Live Run (uses real data) • Right-click to switch to Dry Run')
+        : 'Run workflow • Configure test data per node in node settings'
     },
     {
       icon: Save,

@@ -509,18 +509,23 @@ console.log(\`Found \${result.rowCount} users in \${result.executionTime}ms\`);`
     try {
       setLoading(true);
 
-      // Save tool to KV store
+      // Save tool to KV store via DashboardServer
       const toolKey = `mcp-tool-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      await mcp.kvStore.set(toolKey, {
-        name: tool.name,
-        description: tool.description,
-        inputSchema: tool.inputSchema,
-        outputSchema: tool.outputSchema,
-        implementation: tool.implementation,
-        testCases: tool.testCases,
-        createdAt: new Date().toISOString(),
-        createdBy: 'user', // TODO: Get actual user ID
-        organizationId: currentOrganization()?.slug
+      const { executeTool } = dashboardServer;
+      await executeTool('kv_set', {
+        key: toolKey,
+        value: JSON.stringify({
+          name: tool.name,
+          description: tool.description,
+          inputSchema: tool.inputSchema,
+          outputSchema: tool.outputSchema,
+          implementation: tool.implementation,
+          testCases: tool.testCases,
+          createdAt: new Date().toISOString(),
+          createdBy: 'user', // TODO: Get actual user ID
+          organizationId: currentOrganization()?.slug
+        }),
+        ttl_hours: 8760 // 1 year
       });
 
       console.log('MCP tool saved successfully');

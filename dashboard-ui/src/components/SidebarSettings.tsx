@@ -1,4 +1,4 @@
-import { createSignal, For, Show } from 'solid-js';
+import { createSignal, For, Show, mergeProps } from 'solid-js';
 import { useSidebar } from '../contexts/SidebarContext';
 import { usePageHeader } from '../contexts/HeaderContext';
 import { useNotifications } from '../contexts/NotificationContext';

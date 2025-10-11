@@ -1,6 +1,6 @@
 import { Settings as SettingsIcon, Plug, User, Shield, Bell, Palette, Database, Menu, ArrowLeft, Box } from 'lucide-solid';
 import { useNavigate } from '@solidjs/router';
-import { createSignal, Show, For } from 'solid-js';
+import { createSignal, Show, For, mergeProps } from 'solid-js';
 import { usePageHeader } from '../contexts/HeaderContext';
 import SidebarSettings from '../components/SidebarSettings';
 import NotificationSettings from '../components/NotificationSettings';

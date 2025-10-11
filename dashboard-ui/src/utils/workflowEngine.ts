@@ -6,14 +6,12 @@ export class WorkflowEngine {
   private mcpClient: any;
   private executionHistory: any[];
   private eventEmitter: ((event: any) => void) | null;
-  private useMockData: boolean;
   private nodeRegistry: any;
 
-  constructor(mcpClient: any, eventEmitter: ((event: any) => void) | null = null, useMockData = false, nodeRegistry: any = null) {
+  constructor(mcpClient: any, eventEmitter: ((event: any) => void) | null = null, nodeRegistry: any = null) {
     this.mcpClient = mcpClient;
     this.executionHistory = [];
     this.eventEmitter = eventEmitter; // Dashboard server sendMessage function
-    this.useMockData = useMockData; // Mock/dry-run mode flag
     this.nodeRegistry = nodeRegistry; // Registry with node schemas/definitions
   }
 
@@ -179,7 +177,9 @@ export class WorkflowEngine {
   }
 
   async executeNode(node, allNodes, context) {
-    const modeLabel = this.useMockData ? '🧪 DRY RUN' : '⚡ LIVE';
+    // Check if node is configured to use sample data (test mode)
+    const useSampleOutput = node.config?.useSampleData === true;
+    const modeLabel = useSampleOutput ? '🧪 TEST MODE' : '⚡ LIVE';
     console.log(`🔄 ${modeLabel} Executing node: ${node.type} (${node.id})`);
 
     // Emit node.state_changed → 'executing'
@@ -189,7 +189,7 @@ export class WorkflowEngine {
       nodeType: node.type,
       previousState: 'pending',
       currentState: 'executing',
-      mockMode: this.useMockData,
+      useSampleData: useSampleOutput,
       timestamp: new Date().toISOString()
     });
 
@@ -198,8 +198,8 @@ export class WorkflowEngine {
     try {
       let result;
 
-      // If dry-run mode, use sample data from node config (Zapier-style)
-      if (this.useMockData && node.type !== 'trigger') {
+      // If node configured for sample data, use sample output (Zapier-style test mode)
+      if (useSampleOutput && node.type !== 'trigger') {
         await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300)); // Simulate processing
         result = this.useSampleData(node);
       } else {

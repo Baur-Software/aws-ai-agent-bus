@@ -287,7 +287,7 @@ export default function WorkflowCapabilityGenerator() {
     try {
       setLoading(true);
 
-      // Create a new workflow using the MCP context
+      // Create a new workflow using the DashboardServer
       const workflowData = {
         name: capability.name,
         description: capability.description,
@@ -297,15 +297,15 @@ export default function WorkflowCapabilityGenerator() {
         complexity: capability.complexity
       };
 
-      const result = await mcp.kvStore.set(
-        `workflow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        workflowData
-      );
+      const { executeTool } = dashboardServer;
+      await executeTool('kv_set', {
+        key: `workflow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        value: JSON.stringify(workflowData),
+        ttl_hours: 8760 // 1 year
+      });
 
-      if (result) {
-        // Navigate to workflows page
-        window.location.href = '/workflows';
-      }
+      // Navigate to workflows page
+      window.location.href = '/workflows';
     } catch (error) {
       console.error('Failed to create workflow:', error);
     } finally {
