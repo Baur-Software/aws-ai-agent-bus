@@ -1,5 +1,4 @@
-import { WorkflowTask, WorkflowContext } from '../../types/workflow';
-import { TaskExecutionError } from '../../errors/TaskExecutionError';
+import { WorkflowTask, WorkflowContext, TaskExecutionError, ValidationResult } from '../../types';
 
 export interface ReduceTask_Input {
   data: any[];
@@ -66,11 +65,7 @@ export class ReduceTask implements WorkflowTask<ReduceTask_Input, ReduceTask_Out
           result = this.customReduce(input.data, input.expression, input.initialValue, context);
           break;
         default:
-          throw new TaskExecutionError(
-            this.type,
-            context.nodeId || 'unknown',
-            `Unknown operation: ${input.operation}`
-          );
+          throw new TaskExecutionError(`Unknown operation: ${input.operation}`, this.type, context.nodeId || 'unknown');
       }
 
       const executionTime = Date.now() - startTime;
@@ -94,11 +89,7 @@ export class ReduceTask implements WorkflowTask<ReduceTask_Input, ReduceTask_Out
         throw error;
       }
 
-      throw new TaskExecutionError(
-        this.type,
-        context.nodeId || 'unknown',
-        `Failed to reduce data: ${error instanceof Error ? error.message : String(error)}`,
-        error instanceof Error ? error : undefined
+      throw new TaskExecutionError(`Failed to reduce data: ${error instanceof Error ? error.message : String(error)}`, this.type, context.nodeId || 'unknown', error instanceof Error ? error : undefined
       );
     }
   }
@@ -150,15 +141,11 @@ export class ReduceTask implements WorkflowTask<ReduceTask_Input, ReduceTask_Out
       );
     } catch (error) {
       this.logger?.error?.('Custom reducer failed', { expression, error });
-      throw new TaskExecutionError(
-        this.type,
-        context.nodeId || 'unknown',
-        `Custom reducer failed: ${error instanceof Error ? error.message : String(error)}`
-      );
+      throw new TaskExecutionError(`Custom reducer failed: ${error instanceof Error ? error.message : String(error)}`, this.type, context.nodeId || 'unknown');
     }
   }
 
-  async validate(input: ReduceTask_Input): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  validate(input: ReduceTask_Input): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -182,7 +169,7 @@ export class ReduceTask implements WorkflowTask<ReduceTask_Input, ReduceTask_Out
       errors.push('Expression is required for custom operation');
     }
 
-    return { valid: errors.length === 0, errors, warnings };
+    return { isValid: errors.length === 0, errors, warnings };
   }
 
   getSchema() {

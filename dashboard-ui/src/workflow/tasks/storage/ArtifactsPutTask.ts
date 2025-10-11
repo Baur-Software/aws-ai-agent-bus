@@ -1,5 +1,4 @@
-import { WorkflowTask, WorkflowContext } from '../../types/workflow';
-import { TaskExecutionError } from '../../errors/TaskExecutionError';
+import { WorkflowTask, WorkflowContext, TaskExecutionError, ValidationResult } from '../../types';
 
 export interface ArtifactsPutInput {
   key: string;
@@ -70,11 +69,7 @@ export class ArtifactsPutTask implements WorkflowTask<ArtifactsPutInput, Artifac
     } catch (error) {
       this.logger?.error?.('Failed to store artifact', { key: input.key, error });
 
-      throw new TaskExecutionError(
-        this.type,
-        context.nodeId || 'unknown',
-        `Failed to store artifact: ${error instanceof Error ? error.message : String(error)}`,
-        error instanceof Error ? error : undefined
+      throw new TaskExecutionError(`Failed to store artifact: ${error instanceof Error ? error.message : String(error)}`, this.type, context.nodeId || 'unknown', error instanceof Error ? error : undefined
       );
     }
   }
@@ -106,7 +101,7 @@ export class ArtifactsPutTask implements WorkflowTask<ArtifactsPutInput, Artifac
     return 'application/octet-stream';
   }
 
-  async validate(input: ArtifactsPutInput): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  validate(input: ArtifactsPutInput): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -117,7 +112,7 @@ export class ArtifactsPutTask implements WorkflowTask<ArtifactsPutInput, Artifac
       warnings.push('stringifyJson specified but content is not an object');
     }
 
-    return { valid: errors.length === 0, errors, warnings };
+    return { isValid: errors.length === 0, errors, warnings };
   }
 
   getSchema() {

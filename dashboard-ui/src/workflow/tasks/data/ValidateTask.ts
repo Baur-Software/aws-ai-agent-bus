@@ -1,5 +1,4 @@
-import { WorkflowTask, WorkflowContext } from '../../types/workflow';
-import { TaskExecutionError } from '../../errors/TaskExecutionError';
+import { WorkflowTask, WorkflowContext, TaskExecutionError, ValidationResult } from '../../types';
 
 export interface ValidateTask_Input {
   data: any;
@@ -43,11 +42,7 @@ export class ValidateTask implements WorkflowTask<ValidateTask_Input, ValidateTa
       const valid = errors.length === 0;
 
       if (!valid && input.strict) {
-        throw new TaskExecutionError(
-          this.type,
-          context.nodeId || 'unknown',
-          `Validation failed: ${errors.join(', ')}`
-        );
+        throw new TaskExecutionError(`Validation failed: ${errors.join(', ')}`, this.type, context.nodeId || 'unknown');
       }
 
       const executionTime = Date.now() - startTime;
@@ -73,11 +68,7 @@ export class ValidateTask implements WorkflowTask<ValidateTask_Input, ValidateTa
         throw error;
       }
 
-      throw new TaskExecutionError(
-        this.type,
-        context.nodeId || 'unknown',
-        `Validation failed: ${error instanceof Error ? error.message : String(error)}`,
-        error instanceof Error ? error : undefined
+      throw new TaskExecutionError(`Validation failed: ${error instanceof Error ? error.message : String(error)}`, this.type, context.nodeId || 'unknown', error instanceof Error ? error : undefined
       );
     }
   }
@@ -161,7 +152,7 @@ export class ValidateTask implements WorkflowTask<ValidateTask_Input, ValidateTa
     }
   }
 
-  async validate(input: ValidateTask_Input): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  validate(input: ValidateTask_Input): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -175,7 +166,7 @@ export class ValidateTask implements WorkflowTask<ValidateTask_Input, ValidateTa
       errors.push('Schema must be an object');
     }
 
-    return { valid: errors.length === 0, errors, warnings };
+    return { isValid: errors.length === 0, errors, warnings };
   }
 
   getSchema() {

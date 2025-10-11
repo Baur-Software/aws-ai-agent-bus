@@ -1,5 +1,4 @@
-import { WorkflowTask, WorkflowContext } from '../../types/workflow';
-import { TaskExecutionError } from '../../errors/TaskExecutionError';
+import { WorkflowTask, WorkflowContext, TaskExecutionError, ValidationResult } from '../../types';
 
 export interface ArtifactsGetInput {
   key: string;
@@ -35,11 +34,7 @@ export class ArtifactsGetTask implements WorkflowTask<ArtifactsGetInput, Artifac
       const result = await this.artifactsService.get(input.key);
 
       if (!result || !result.content) {
-        throw new TaskExecutionError(
-          this.type,
-          context.nodeId || 'unknown',
-          `Artifact not found: ${input.key}`
-        );
+        throw new TaskExecutionError(`Artifact not found: ${input.key}`, this.type, context.nodeId || 'unknown');
       }
 
       let content = result.content;
@@ -86,16 +81,12 @@ export class ArtifactsGetTask implements WorkflowTask<ArtifactsGetInput, Artifac
         throw error;
       }
 
-      throw new TaskExecutionError(
-        this.type,
-        context.nodeId || 'unknown',
-        `Failed to retrieve artifact: ${error instanceof Error ? error.message : String(error)}`,
-        error instanceof Error ? error : undefined
+      throw new TaskExecutionError(`Failed to retrieve artifact: ${error instanceof Error ? error.message : String(error)}`, this.type, context.nodeId || 'unknown', error instanceof Error ? error : undefined
       );
     }
   }
 
-  async validate(input: ArtifactsGetInput): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  validate(input: ArtifactsGetInput): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -107,7 +98,7 @@ export class ArtifactsGetTask implements WorkflowTask<ArtifactsGetInput, Artifac
       warnings.push('parseJson without decode assumes content is already a string');
     }
 
-    return { valid: errors.length === 0, errors, warnings };
+    return { isValid: errors.length === 0, errors, warnings };
   }
 
   getSchema() {

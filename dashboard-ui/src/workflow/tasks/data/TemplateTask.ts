@@ -1,5 +1,4 @@
-import { WorkflowTask, WorkflowContext } from '../../types/workflow';
-import { TaskExecutionError } from '../../errors/TaskExecutionError';
+import { WorkflowTask, WorkflowContext, TaskExecutionError, ValidationResult } from '../../types';
 
 export interface TemplateTask_Input {
   template: string;
@@ -71,11 +70,7 @@ export class TemplateTask implements WorkflowTask<TemplateTask_Input, TemplateTa
         throw error;
       }
 
-      throw new TaskExecutionError(
-        this.type,
-        context.nodeId || 'unknown',
-        `Failed to render template: ${error instanceof Error ? error.message : String(error)}`,
-        error instanceof Error ? error : undefined
+      throw new TaskExecutionError(`Failed to render template: ${error instanceof Error ? error.message : String(error)}`, this.type, context.nodeId || 'unknown', error instanceof Error ? error : undefined
       );
     }
   }
@@ -88,7 +83,7 @@ export class TemplateTask implements WorkflowTask<TemplateTask_Input, TemplateTa
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
-  async validate(input: TemplateTask_Input): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  validate(input: TemplateTask_Input): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -108,7 +103,7 @@ export class TemplateTask implements WorkflowTask<TemplateTask_Input, TemplateTa
       errors.push('Delimiter must be a string');
     }
 
-    return { valid: errors.length === 0, errors, warnings };
+    return { isValid: errors.length === 0, errors, warnings };
   }
 
   getSchema() {

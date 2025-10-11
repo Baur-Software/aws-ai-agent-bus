@@ -1,5 +1,4 @@
-import { WorkflowTask, WorkflowContext } from '../../types/workflow';
-import { TaskExecutionError } from '../../errors/TaskExecutionError';
+import { WorkflowTask, WorkflowContext, TaskExecutionError, ValidationResult } from '../../types';
 
 export interface EventsCreateRuleInput {
   name: string;
@@ -54,16 +53,12 @@ export class EventsCreateRuleTask implements WorkflowTask<EventsCreateRuleInput,
     } catch (error) {
       this.logger?.error?.('Failed to create event rule', { error });
 
-      throw new TaskExecutionError(
-        this.type,
-        context.nodeId || 'unknown',
-        `Failed to create event rule: ${error instanceof Error ? error.message : String(error)}`,
-        error instanceof Error ? error : undefined
+      throw new TaskExecutionError(`Failed to create event rule: ${error instanceof Error ? error.message : String(error)}`, this.type, context.nodeId || 'unknown', error instanceof Error ? error : undefined
       );
     }
   }
 
-  async validate(input: EventsCreateRuleInput): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  validate(input: EventsCreateRuleInput): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -74,7 +69,7 @@ export class EventsCreateRuleTask implements WorkflowTask<EventsCreateRuleInput,
       errors.push('Rule name cannot exceed 64 characters');
     }
 
-    return { valid: errors.length === 0, errors, warnings };
+    return { isValid: errors.length === 0, errors, warnings };
   }
 
   getSchema() {

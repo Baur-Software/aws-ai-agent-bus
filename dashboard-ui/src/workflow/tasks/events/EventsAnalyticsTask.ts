@@ -1,5 +1,4 @@
-import { WorkflowTask, WorkflowContext } from '../../types/workflow';
-import { TaskExecutionError } from '../../errors/TaskExecutionError';
+import { WorkflowTask, WorkflowContext, TaskExecutionError, ValidationResult } from '../../types';
 
 export interface EventsAnalyticsInput {
   metrics?: string[];
@@ -67,16 +66,12 @@ export class EventsAnalyticsTask implements WorkflowTask<EventsAnalyticsInput, E
     } catch (error) {
       this.logger?.error?.('Failed to retrieve analytics', { error });
 
-      throw new TaskExecutionError(
-        this.type,
-        context.nodeId || 'unknown',
-        `Failed to retrieve event analytics: ${error instanceof Error ? error.message : String(error)}`,
-        error instanceof Error ? error : undefined
+      throw new TaskExecutionError(`Failed to retrieve event analytics: ${error instanceof Error ? error.message : String(error)}`, this.type, context.nodeId || 'unknown', error instanceof Error ? error : undefined
       );
     }
   }
 
-  async validate(input: EventsAnalyticsInput): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  validate(input: EventsAnalyticsInput): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -95,7 +90,7 @@ export class EventsAnalyticsTask implements WorkflowTask<EventsAnalyticsInput, E
       }
     }
 
-    return { valid: errors.length === 0, errors, warnings };
+    return { isValid: errors.length === 0, errors, warnings };
   }
 
   getSchema() {

@@ -1,5 +1,4 @@
-import { WorkflowTask, WorkflowContext } from '../../types/workflow';
-import { TaskExecutionError } from '../../errors/TaskExecutionError';
+import { WorkflowTask, WorkflowContext, TaskExecutionError, ValidationResult } from '../../types';
 
 export interface EventsHealthCheckInput {
   checkComponents?: string[];
@@ -63,11 +62,7 @@ export class EventsHealthCheckTask implements WorkflowTask<EventsHealthCheckInpu
     } catch (error) {
       this.logger?.error?.('Failed to perform health check', { error });
 
-      throw new TaskExecutionError(
-        this.type,
-        context.nodeId || 'unknown',
-        `Failed to perform health check: ${error instanceof Error ? error.message : String(error)}`,
-        error instanceof Error ? error : undefined
+      throw new TaskExecutionError(`Failed to perform health check: ${error instanceof Error ? error.message : String(error)}`, this.type, context.nodeId || 'unknown', error instanceof Error ? error : undefined
       );
     }
   }
@@ -83,7 +78,7 @@ export class EventsHealthCheckTask implements WorkflowTask<EventsHealthCheckInpu
     return 'healthy';
   }
 
-  async validate(input: EventsHealthCheckInput): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  validate(input: EventsHealthCheckInput): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -91,7 +86,7 @@ export class EventsHealthCheckTask implements WorkflowTask<EventsHealthCheckInpu
       errors.push('checkComponents must be an array');
     }
 
-    return { valid: errors.length === 0, errors, warnings };
+    return { isValid: errors.length === 0, errors, warnings };
   }
 
   getSchema() {

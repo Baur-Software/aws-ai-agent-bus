@@ -34,33 +34,48 @@ export interface ValidationResult {
 }
 
 export interface TaskConfigSchema {
-  type: 'object';
-  properties: Record<string, SchemaProperty>;
-  required: string[];
-  title: string;
-  description: string;
+  input?: {
+    type: 'object';
+    properties: Record<string, SchemaProperty>;
+    required?: string[];
+  };
+  output?: {
+    type: 'object';
+    properties: Record<string, SchemaProperty>;
+  };
+  type?: 'object';  // Legacy support
+  properties?: Record<string, SchemaProperty>;  // Legacy support
+  required?: string[];  // Legacy support
+  title?: string;
+  description?: string;
   examples?: any[];
 }
 
 export interface SchemaProperty {
   type: 'string' | 'number' | 'boolean' | 'array' | 'object';
-  title: string;
-  description: string;
+  title?: string;
+  description?: string;
+  placeholder?: string;
+  pattern?: string;
   default?: any;
   enum?: any[];
   format?: string;
   minimum?: number;
   maximum?: number;
+  minLength?: number;
+  maxLength?: number;
   items?: SchemaProperty;
   properties?: Record<string, SchemaProperty>;
+  required?: string[];
 }
 
 export interface TaskDisplayInfo {
   category: string;
-  label: string;
-  icon: string;
-  color: string;
-  description: string;
+  name?: string;  // Used by tasks
+  label?: string;  // Legacy support
+  icon?: string;
+  color?: string;
+  description?: string;
   tags?: string[];
   integrationRequired?: string;
 }

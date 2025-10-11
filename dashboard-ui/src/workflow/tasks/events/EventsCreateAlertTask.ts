@@ -1,5 +1,4 @@
-import { WorkflowTask, WorkflowContext } from '../../types/workflow';
-import { TaskExecutionError } from '../../errors/TaskExecutionError';
+import { WorkflowTask, WorkflowContext, TaskExecutionError, ValidationResult } from '../../types';
 
 export interface EventsCreateAlertInput {
   name: string;
@@ -74,16 +73,12 @@ export class EventsCreateAlertTask implements WorkflowTask<EventsCreateAlertInpu
 
       if (error instanceof TaskExecutionError) throw error;
 
-      throw new TaskExecutionError(
-        this.type,
-        context.nodeId || 'unknown',
-        `Failed to create alert: ${error instanceof Error ? error.message : String(error)}`,
-        error instanceof Error ? error : undefined
+      throw new TaskExecutionError(`Failed to create alert: ${error instanceof Error ? error.message : String(error)}`, this.type, context.nodeId || 'unknown', error instanceof Error ? error : undefined
       );
     }
   }
 
-  async validate(input: EventsCreateAlertInput): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  validate(input: EventsCreateAlertInput): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -99,7 +94,7 @@ export class EventsCreateAlertTask implements WorkflowTask<EventsCreateAlertInpu
       errors.push('Email address required for email method');
     }
 
-    return { valid: errors.length === 0, errors, warnings };
+    return { isValid: errors.length === 0, errors, warnings };
   }
 
   getSchema() {

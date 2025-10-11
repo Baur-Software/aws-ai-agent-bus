@@ -1,5 +1,4 @@
-import { WorkflowTask, WorkflowContext } from '../../types/workflow';
-import { TaskExecutionError } from '../../errors/TaskExecutionError';
+import { WorkflowTask, WorkflowContext, TaskExecutionError, ValidationResult } from '../../types';
 
 export interface ArtifactsListInput {
   prefix?: string;
@@ -69,16 +68,12 @@ export class ArtifactsListTask implements WorkflowTask<ArtifactsListInput, Artif
     } catch (error) {
       this.logger?.error?.('Failed to list artifacts', { error });
 
-      throw new TaskExecutionError(
-        this.type,
-        context.nodeId || 'unknown',
-        `Failed to list artifacts: ${error instanceof Error ? error.message : String(error)}`,
-        error instanceof Error ? error : undefined
+      throw new TaskExecutionError(`Failed to list artifacts: ${error instanceof Error ? error.message : String(error)}`, this.type, context.nodeId || 'unknown', error instanceof Error ? error : undefined
       );
     }
   }
 
-  async validate(input: ArtifactsListInput): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  validate(input: ArtifactsListInput): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -90,7 +85,7 @@ export class ArtifactsListTask implements WorkflowTask<ArtifactsListInput, Artif
       warnings.push('maxKeys will be capped at 1000');
     }
 
-    return { valid: errors.length === 0, errors, warnings };
+    return { isValid: errors.length === 0, errors, warnings };
   }
 
   getSchema() {

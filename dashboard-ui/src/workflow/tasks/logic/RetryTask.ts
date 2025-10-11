@@ -1,5 +1,4 @@
-import { WorkflowTask, WorkflowContext } from '../../types/workflow';
-import { TaskExecutionError } from '../../errors/TaskExecutionError';
+import { WorkflowTask, WorkflowContext, TaskExecutionError, ValidationResult } from '../../types';
 
 export interface RetryTask_Input {
   maxAttempts: number;
@@ -63,11 +62,7 @@ export class RetryTask implements WorkflowTask<RetryTask_Input, RetryTask_Output
         throw error;
       }
 
-      throw new TaskExecutionError(
-        this.type,
-        context.nodeId || 'unknown',
-        `Retry task failed: ${error instanceof Error ? error.message : String(error)}`,
-        error instanceof Error ? error : undefined
+      throw new TaskExecutionError(`Retry task failed: ${error instanceof Error ? error.message : String(error)}`, this.type, context.nodeId || 'unknown', error instanceof Error ? error : undefined
       );
     }
   }
@@ -100,7 +95,7 @@ export class RetryTask implements WorkflowTask<RetryTask_Input, RetryTask_Output
     return retryOn.some(pattern => errorMessage.includes(pattern.toLowerCase()));
   }
 
-  async validate(input: RetryTask_Input): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  validate(input: RetryTask_Input): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -138,7 +133,7 @@ export class RetryTask implements WorkflowTask<RetryTask_Input, RetryTask_Output
       errors.push('retryOn must be an array');
     }
 
-    return { valid: errors.length === 0, errors, warnings };
+    return { isValid: errors.length === 0, errors, warnings };
   }
 
   getSchema() {

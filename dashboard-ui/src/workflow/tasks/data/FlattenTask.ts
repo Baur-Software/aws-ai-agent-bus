@@ -1,5 +1,4 @@
-import { WorkflowTask, WorkflowContext } from '../../types/workflow';
-import { TaskExecutionError } from '../../errors/TaskExecutionError';
+import { WorkflowTask, WorkflowContext, TaskExecutionError, ValidationResult } from '../../types';
 
 export interface FlattenTask_Input {
   data: any[];
@@ -75,11 +74,7 @@ export class FlattenTask implements WorkflowTask<FlattenTask_Input, FlattenTask_
         throw error;
       }
 
-      throw new TaskExecutionError(
-        this.type,
-        context.nodeId || 'unknown',
-        `Failed to flatten array: ${error instanceof Error ? error.message : String(error)}`,
-        error instanceof Error ? error : undefined
+      throw new TaskExecutionError(`Failed to flatten array: ${error instanceof Error ? error.message : String(error)}`, this.type, context.nodeId || 'unknown', error instanceof Error ? error : undefined
       );
     }
   }
@@ -101,7 +96,7 @@ export class FlattenTask implements WorkflowTask<FlattenTask_Input, FlattenTask_
     return result;
   }
 
-  async validate(input: FlattenTask_Input): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  validate(input: FlattenTask_Input): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -125,7 +120,7 @@ export class FlattenTask implements WorkflowTask<FlattenTask_Input, FlattenTask_
       errors.push('Field must be a string');
     }
 
-    return { valid: errors.length === 0, errors, warnings };
+    return { isValid: errors.length === 0, errors, warnings };
   }
 
   getSchema() {

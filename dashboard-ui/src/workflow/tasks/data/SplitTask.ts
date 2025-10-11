@@ -1,5 +1,4 @@
-import { WorkflowTask, WorkflowContext } from '../../types/workflow';
-import { TaskExecutionError } from '../../errors/TaskExecutionError';
+import { WorkflowTask, WorkflowContext, TaskExecutionError, ValidationResult } from '../../types';
 
 export interface SplitTask_Input {
   data: string;
@@ -70,16 +69,12 @@ export class SplitTask implements WorkflowTask<SplitTask_Input, SplitTask_Output
         throw error;
       }
 
-      throw new TaskExecutionError(
-        this.type,
-        context.nodeId || 'unknown',
-        `Failed to split string: ${error instanceof Error ? error.message : String(error)}`,
-        error instanceof Error ? error : undefined
+      throw new TaskExecutionError(`Failed to split string: ${error instanceof Error ? error.message : String(error)}`, this.type, context.nodeId || 'unknown', error instanceof Error ? error : undefined
       );
     }
   }
 
-  async validate(input: SplitTask_Input): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  validate(input: SplitTask_Input): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -101,7 +96,7 @@ export class SplitTask implements WorkflowTask<SplitTask_Input, SplitTask_Output
       warnings.push('Empty delimiter will split into individual characters');
     }
 
-    return { valid: errors.length === 0, errors, warnings };
+    return { isValid: errors.length === 0, errors, warnings };
   }
 
   getSchema() {

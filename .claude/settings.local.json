@@ -11,7 +11,8 @@
       "Bash(cargo build:*)",
       "Bash(touch:*)",
       "Bash(netstat:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(npm run typecheck:*)"
     ],
     "deny": [],
     "ask": []

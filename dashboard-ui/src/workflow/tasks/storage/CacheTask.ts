@@ -1,5 +1,4 @@
-import { WorkflowTask, WorkflowContext } from '../../types/workflow';
-import { TaskExecutionError } from '../../errors/TaskExecutionError';
+import { WorkflowTask, WorkflowContext, TaskExecutionError, ValidationResult } from '../../types';
 
 export interface CacheTask_Input {
   operation: 'get' | 'set' | 'delete' | 'clear';
@@ -123,11 +122,7 @@ export class CacheTask implements WorkflowTask<CacheTask_Input, CacheTask_Output
         }
 
         default:
-          throw new TaskExecutionError(
-            this.type,
-            context.nodeId || 'unknown',
-            `Unknown operation: ${input.operation}`
-          );
+          throw new TaskExecutionError(`Unknown operation: ${input.operation}`, this.type, context.nodeId || 'unknown');
       }
     } catch (error) {
       this.logger?.error?.('Cache operation failed', { error });
@@ -136,16 +131,12 @@ export class CacheTask implements WorkflowTask<CacheTask_Input, CacheTask_Output
         throw error;
       }
 
-      throw new TaskExecutionError(
-        this.type,
-        context.nodeId || 'unknown',
-        `Cache operation failed: ${error instanceof Error ? error.message : String(error)}`,
-        error instanceof Error ? error : undefined
+      throw new TaskExecutionError(`Cache operation failed: ${error instanceof Error ? error.message : String(error)}`, this.type, context.nodeId || 'unknown', error instanceof Error ? error : undefined
       );
     }
   }
 
-  async validate(input: CacheTask_Input): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  validate(input: CacheTask_Input): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -173,7 +164,7 @@ export class CacheTask implements WorkflowTask<CacheTask_Input, CacheTask_Output
       }
     }
 
-    return { valid: errors.length === 0, errors, warnings };
+    return { isValid: errors.length === 0, errors, warnings };
   }
 
   getSchema() {
