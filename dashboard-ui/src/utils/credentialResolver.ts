@@ -5,7 +5,7 @@
  * Credentials are stored in KV store with context-specific keys.
  */
 
-import type { KVStoreService } from '../contexts/KVStoreContext';
+import type { KVStoreContextType } from '../contexts/KVStoreContext';
 
 export interface ResolvedCredentials {
   connectionId: string;
@@ -16,7 +16,7 @@ export interface ResolvedCredentials {
 }
 
 export interface CredentialResolverOptions {
-  kvStore: KVStoreService;
+  kvStore: KVStoreContextType;
 }
 
 /**

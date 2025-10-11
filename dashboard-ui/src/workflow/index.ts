@@ -12,7 +12,7 @@ export * from './types';
 export * from './tasks';
 
 // Service integrations
-export * from '../services';
+// export * from '../services';  // Commented out to avoid duplicate WorkflowMetadata export
 
 // Complete workflow system factory
 import { ModularWorkflowEngine } from './WorkflowEngine';
