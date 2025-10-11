@@ -33,17 +33,20 @@ export interface ValidationResult {
   warnings?: string[];
 }
 
+export interface SchemaObject {
+  type: string;
+  properties?: Record<string, SchemaProperty>;
+  required?: string[];
+  additionalProperties?: any;
+  items?: SchemaProperty;
+  examples?: any[];
+  description?: string;
+}
+
 export interface TaskConfigSchema {
-  input?: {
-    type: 'object';
-    properties: Record<string, SchemaProperty>;
-    required?: string[];
-  };
-  output?: {
-    type: 'object';
-    properties: Record<string, SchemaProperty>;
-  };
-  type?: 'object';  // Legacy support
+  input?: SchemaObject;
+  output?: SchemaObject;
+  type?: string;  // Legacy support
   properties?: Record<string, SchemaProperty>;  // Legacy support
   required?: string[];  // Legacy support
   title?: string;
@@ -52,7 +55,7 @@ export interface TaskConfigSchema {
 }
 
 export interface SchemaProperty {
-  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  type: string;  // Accept any JSON Schema type string
   title?: string;
   description?: string;
   placeholder?: string;
@@ -64,9 +67,11 @@ export interface SchemaProperty {
   maximum?: number;
   minLength?: number;
   maxLength?: number;
-  items?: SchemaProperty;
+  items?: SchemaProperty | { type: string };
   properties?: Record<string, SchemaProperty>;
   required?: string[];
+  additionalProperties?: SchemaProperty | { type: string } | any;
+  examples?: any[];
 }
 
 export interface TaskDisplayInfo {
