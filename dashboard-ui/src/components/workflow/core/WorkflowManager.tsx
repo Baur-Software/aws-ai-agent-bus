@@ -48,7 +48,7 @@ export interface WorkflowMetadata {
   };
 }
 
-function WorkflowManager({ onSelectWorkflow, onNewWorkflow }) {
+function WorkflowManager(props) {
   const [workflows, setWorkflows] = createSignal<WorkflowMetadata[]>([]);
   const [filteredWorkflows, setFilteredWorkflows] = createSignal<WorkflowMetadata[]>([]);
   const [searchQuery, setSearchQuery] = createSignal('');
@@ -200,8 +200,8 @@ function WorkflowManager({ onSelectWorkflow, onNewWorkflow }) {
     newWorkflow.versions = [initialVersion];
 
     await saveWorkflow(newWorkflow);
-    onNewWorkflow?.(newWorkflow);
-    onSelectWorkflow(newWorkflow);
+    props.onNewWorkflow?.(newWorkflow);
+    props.onSelectWorkflow(newWorkflow);
     success('New workflow created');
   };
 
@@ -480,7 +480,7 @@ function WorkflowManager({ onSelectWorkflow, onNewWorkflow }) {
                       <div class="flex items-center gap-1">
                         <button
                           class="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                          onClick={() => onSelectWorkflow(workflow)}
+                          onClick={() => props.onSelectWorkflow(workflow)}
                           title="Edit workflow"
                         >
                           <Edit3 class="w-4 h-4" />
@@ -548,7 +548,7 @@ function WorkflowManager({ onSelectWorkflow, onNewWorkflow }) {
           </Show>
         }>
           <div class="text-center py-12">
-            <div class="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <div class="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
             <p class="text-slate-600 dark:text-slate-400">Loading workflows...</p>
           </div>
         </Show>

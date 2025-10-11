@@ -297,9 +297,9 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
 
         {/* Navigation Items */}
         <div class={isPinned() ? "flex-1 flex flex-col justify-start px-2 py-4" : "p-2"}>
-          {navItems.map((item) => (
+          <For each={navItems}>{(item) => (
             <button
-              key={item.id}
+              
               onClick={() => handleNavigation(item)}
               class={`w-full flex items-center transition-colors ${
                 isPinned()
@@ -322,7 +322,7 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
                 </Show>
               </Show>
             </button>
-          ))}
+          )}</For>
         </div>
 
         {/* User Section with Organization Switcher */}

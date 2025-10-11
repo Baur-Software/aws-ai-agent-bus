@@ -49,10 +49,16 @@ export default [
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_'
       }],
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      '@typescript-eslint/no-unsafe-function-type': 'warn',
+      '@typescript-eslint/no-empty-interface': 'warn',
+      'no-case-declarations': 'error',
+      'no-console': ['warn', { allow: ['warn', 'error', 'log'] }],
       'no-debugger': 'warn',
       'no-undef': 'off', // TypeScript handles this
-      'no-unused-vars': 'off' // TypeScript handles this
+      'no-unused-vars': 'off', // TypeScript handles this
+      'solid/no-innerhtml': 'warn',
+      'solid/reactivity': 'warn',
+      'solid/prefer-for': 'warn'
     }
   },
   {

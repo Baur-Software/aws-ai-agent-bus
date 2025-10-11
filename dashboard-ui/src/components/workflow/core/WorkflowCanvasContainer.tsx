@@ -1,4 +1,5 @@
-import { createSignal, createEffect, Show, onMount, onCleanup, Portal } from 'solid-js';
+import { Portal } from "solid-js/web";
+import { createSignal, createEffect, Show, onMount, onCleanup,  } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import WorkflowCanvas, { WorkflowNode, WorkflowConnection } from './WorkflowCanvas';
 import FloatingToolbar from '../ui/FloatingToolbar';

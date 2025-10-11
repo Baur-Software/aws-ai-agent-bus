@@ -41,7 +41,7 @@ export default function ActionButton(props: ActionButtonProps) {
       <props.icon class={`w-4 h-4 ${props.loading ? 'animate-spin' : ''}`} />
       {!props.compact && <span>{props.label}</span>}
       {props.badge && (
-        <div class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></div>
+        <div class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
       )}
     </button>
   );

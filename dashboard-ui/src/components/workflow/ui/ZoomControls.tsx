@@ -48,7 +48,7 @@ export default function ZoomControls(props: ZoomControlsProps) {
       </button>
 
       {/* Divider */}
-      <div class="border-t border-gray-200 dark:border-gray-600 my-1"></div>
+      <div class="border-t border-gray-200 dark:border-gray-600 my-1" />
 
       {/* Reset View */}
       <button

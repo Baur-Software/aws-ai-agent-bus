@@ -1,4 +1,4 @@
-import { createSignal, Show } from 'solid-js';
+import { createSignal, Show, For } from 'solid-js';
 import {
   ArrowRight,
   ArrowLeft,
@@ -133,7 +133,7 @@ export default function ConnectionToolbar(props: ConnectionToolbarProps) {
 
         <Show when={showLineStyles()}>
           <div class="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-2 min-w-[120px]">
-            {lineStyles.map(style => (
+            <For each={lineStyles}>{style => (
               <button
                 class="w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-left text-sm transition-colors"
                 onClick={() => {
@@ -154,7 +154,7 @@ export default function ConnectionToolbar(props: ConnectionToolbarProps) {
                   <span>{style.name}</span>
                 </div>
               </button>
-            ))}
+            )}</For>
           </div>
         </Show>
       </div>
@@ -178,7 +178,7 @@ export default function ConnectionToolbar(props: ConnectionToolbarProps) {
         <Show when={showColorPicker()}>
           <div class="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-3">
             <div class="grid grid-cols-5 gap-2">
-              {colors.map(color => (
+              <For each={colors}>{color => (
                 <button
                   class={`w-6 h-6 rounded border-2 transition-transform hover:scale-110 ${
                     props.currentStyle.color === color ? 'border-gray-400' : 'border-gray-200'
@@ -189,7 +189,7 @@ export default function ConnectionToolbar(props: ConnectionToolbarProps) {
                     setShowColorPicker(false);
                   }}
                 />
-              ))}
+              )}</For>
             </div>
           </div>
         </Show>

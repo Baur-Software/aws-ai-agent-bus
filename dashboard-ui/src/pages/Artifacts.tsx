@@ -162,7 +162,7 @@ function Artifacts() {
 
         <Show when={artifactsList.loading}>
           <div class="p-8 text-center">
-            <div class="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
+            <div class="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full mx-auto" />
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">Loading artifacts...</p>
           </div>
         </Show>

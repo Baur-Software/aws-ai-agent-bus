@@ -231,9 +231,9 @@ Error details: ${toolError.message}`;
             <div class="max-w-[75%]">
               <div class="px-4 py-2 rounded-2xl bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700">
                 <div class="flex items-center gap-1">
-                  <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-                  <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.1s;"></div>
-                  <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.2s;"></div>
+                  <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
+                  <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{"animation-delay":"0.1s"}} />
+                  <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{"animation-delay":"0.2s"}} />
                 </div>
               </div>
             </div>
@@ -254,7 +254,7 @@ Error details: ${toolError.message}`;
               onKeyPress={handleKeyPress}
               disabled={isProcessing()}
               rows={1}
-              style="field-sizing: content;"
+              style={{"field-sizing":"content"}}
             />
             <button 
               class="absolute right-2 bottom-2 w-8 h-8 bg-blue-500 hover:bg-blue-600 disabled:bg-slate-400 disabled:cursor-not-allowed rounded-full flex items-center justify-center text-white transition-colors"

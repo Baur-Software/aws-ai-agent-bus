@@ -102,7 +102,7 @@ export default function ConnectionStatus(props: ConnectionStatusProps = {}) {
         wsConnected()
           ? 'bg-green-500 dark:bg-green-400'
           : 'bg-red-500 dark:bg-red-400'
-      } w-2 h-2 ${animate && wsConnected() ? 'animate-pulse' : ''}`}></div>
+      } w-2 h-2 ${animate && wsConnected() ? 'animate-pulse' : ''}`} />
       <Show when={showLabel}>
         <span>{wsConnected() ? 'Connected' : 'Disconnected'}</span>
       </Show>

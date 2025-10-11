@@ -9,9 +9,10 @@ interface SidebarSettingsProps {
   isOverlay?: boolean;
 }
 
-function SidebarSettings({ isOverlay = false }: SidebarSettingsProps) {
+function SidebarSettings(_props: SidebarSettingsProps) {
   // Set page-specific header (only when not in overlay)
-  if (!isOverlay) {
+    const props = mergeProps({ isOverlay: false }, _props);
+if (!props.isOverlay) {
     usePageHeader('Sidebar Settings', 'Customize your navigation menu');
   }
 
@@ -56,7 +57,7 @@ function SidebarSettings({ isOverlay = false }: SidebarSettingsProps) {
   return (
     <div class="max-w-4xl mx-auto space-y-8">
       {/* Header - only show when not in overlay mode */}
-      <Show when={!isOverlay}>
+      <Show when={!props.isOverlay}>
         <div class="flex items-center gap-4">
           <A href="/settings" class="p-2 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
             <ArrowLeft class="w-5 h-5" />

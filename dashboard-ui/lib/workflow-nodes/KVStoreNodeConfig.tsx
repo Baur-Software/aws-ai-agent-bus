@@ -1,4 +1,4 @@
-import { createSignal, Show } from 'solid-js';
+import { createSignal, Show, For } from 'solid-js';
 import { Database, Key, Clock, Info } from 'lucide-solid';
 
 export interface KVGetConfig {
@@ -144,7 +144,7 @@ export function KVStoreNodeConfig(props: KVStoreNodeConfigProps) {
             Storage Scope
           </label>
           <div class="flex gap-2">
-            {(['user', 'organization', 'global'] as const).map((scope) => (
+            <For each={['user', 'organization', 'global'] as const}>{(scope) => (
               <button
                 type="button"
                 class={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
@@ -156,7 +156,7 @@ export function KVStoreNodeConfig(props: KVStoreNodeConfigProps) {
               >
                 {scope.charAt(0).toUpperCase() + scope.slice(1)}
               </button>
-            ))}
+            )}</For>
           </div>
           <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
             <Show when={(props.value as KVSetConfig).scope === 'user'}>
