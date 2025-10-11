@@ -578,10 +578,7 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
         connections: connections()
       };
 
-      success(mockMode
-        ? '🧪 Dry run started with mock data - check Events panel'
-        : '⚠️ LIVE run started with real data - check Events panel'
-      );
+      success('⚡ Workflow started - check Events panel for real-time updates');
 
       // Execute workflow (this will emit events throughout execution)
       const result = await engine.executeWorkflow(workflow);
