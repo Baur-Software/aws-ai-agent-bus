@@ -472,10 +472,10 @@ export default function WorkflowMarketplace(props: WorkflowMarketplaceProps = {}
                               {template.name}
                             </h3>
                             <Show when={template.isOfficial}>
-                              <Award class="w-4 h-4 text-yellow-500" title="Official Template" />
+                              <Award class="w-4 h-4 text-yellow-500" />
                             </Show>
                             <Show when={template.isFeatured}>
-                              <Sparkles class="w-4 h-4 text-purple-500" title="Featured Template" />
+                              <Sparkles class="w-4 h-4 text-purple-500" />
                             </Show>
                           </div>
                           <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">

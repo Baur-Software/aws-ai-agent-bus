@@ -110,7 +110,7 @@ function Header(props) {
                             </Show>
                           </div>
                           <div class="text-xs text-slate-500 dark:text-slate-400 truncate">
-                            {org.role} • {org.memberCount} members
+                            {org.userRole} • {org.memberCount} members
                           </div>
                         </div>
                       </button>
