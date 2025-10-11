@@ -13,7 +13,8 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest --watch",
     "test:workflow": "vitest run --reporter=verbose src/components/__tests__/WorkflowManager.test.tsx src/components/__tests__/WorkflowVersioning.test.tsx src/components/__tests__/AutoSave.test.tsx src/components/__tests__/AgentModelConfiguration.test.tsx",
-    "lint": "echo 'No linter configured yet'",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "typecheck": "tsc --noEmit",
     "test:ci": "vitest run --coverage --reporter=junit --reporter=json --outputFile.junit=test-results.xml --outputFile.json=test-results.json"
   },
@@ -39,6 +40,7 @@
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.4",
     "dotenv": "^17.2.2",
+    "eslint-plugin-solid": "^0.14.5",
     "jsdom": "^26.1.0",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.9.2",

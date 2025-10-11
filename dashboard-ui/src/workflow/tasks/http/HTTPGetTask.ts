@@ -12,7 +12,7 @@ import {
   NODE_CATEGORIES
 } from '../../types';
 
-import { HTTPService, HTTPRequestOptions, HTTPResponse } from '../../../services';
+import { HTTPService, HTTPResponse, HTTPRequestParams } from '../../../services';
 
 export interface HTTPGetInput {
   url: string;
@@ -31,13 +31,11 @@ export interface HTTPGetInput {
 }
 
 export interface HTTPGetOutput {
+  url: string;
   status: number;
   statusText: string;
-  headers: Record<string, string>;
   data: any;
-  url: string;
-  method: 'GET';
-  duration: number;
+  headers: Record<string, string>;
   success: boolean;
   timestamp: string;
 }
@@ -52,11 +50,11 @@ export class HTTPGetTask implements WorkflowTask<HTTPGetInput, HTTPGetOutput> {
 
   async execute(input: HTTPGetInput, context: WorkflowContext): Promise<HTTPGetOutput> {
     const startTime = Date.now();
-    
+
     // Determine URL
     let url = input.url;
     if (input.useContextUrl) {
-      const contextKey = input.contextUrlKey || 'url';
+      const contextKey = input.contextUrlKey || 'apiUrl';
       const contextUrl = context.data[contextKey];
       if (!contextUrl) {
         throw new Error(`Context URL key '${contextKey}' not found`);
@@ -64,31 +62,28 @@ export class HTTPGetTask implements WorkflowTask<HTTPGetInput, HTTPGetOutput> {
       url = contextUrl;
     }
 
-    this.logger?.info(`Making GET request to: ${url}`);
+    this.logger?.info(`Making HTTP GET request to: ${url}`);
 
     try {
-      const options: HTTPRequestOptions = {
-        headers: input.headers,
-        params: input.params,
-        timeout: input.timeout,
+      const options: Omit<HTTPRequestParams, 'url' | 'method'> = {
+        headers: input.headers || {},
+        timeout: input.timeout || 30000,
         auth: input.auth
       };
 
       const response: HTTPResponse = await this.httpService.get(url, options);
 
       const output: HTTPGetOutput = {
+        url: url,
         status: response.status,
         statusText: response.statusText,
-        headers: response.headers,
         data: response.data,
-        url: response.url,
-        method: 'GET',
-        duration: Date.now() - startTime,
+        headers: response.headers,
         success: response.status >= 200 && response.status < 300,
         timestamp: new Date().toISOString()
       };
 
-      this.logger?.info(`GET request completed: ${response.status} ${response.statusText} (${output.duration}ms)`);
+      this.logger?.info(`HTTP GET request completed successfully (${response.status})`);
 
       // Store response data in context for downstream tasks
       context.data.httpResponse = response.data;
@@ -112,8 +107,8 @@ export class HTTPGetTask implements WorkflowTask<HTTPGetInput, HTTPGetOutput> {
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    if (!input.useContextUrl && (!input.url || input.url.trim().length === 0)) {
-      errors.push('URL is required when not using context URL');
+    if (!input.useContextUrl && !input.url) {
+      errors.push('Either URL or context URL must be provided');
     }
 
     if (input.url) {
@@ -125,11 +120,16 @@ export class HTTPGetTask implements WorkflowTask<HTTPGetInput, HTTPGetOutput> {
     }
 
     if (input.useContextUrl && !input.contextUrlKey) {
-      warnings.push('No context URL key specified, will use "url"');
+      warnings.push('No context URL key specified, will use "apiUrl"');
     }
 
-    if (input.timeout && (input.timeout < 1000 || input.timeout > 300000)) {
-      warnings.push('Timeout should be between 1000ms and 300000ms (5 minutes)');
+    if (input.timeout !== undefined) {
+      if (input.timeout < 1000) {
+        errors.push('Timeout must be at least 1000ms');
+      }
+      if (input.timeout > 60000) {
+        errors.push('Timeout cannot exceed 60000ms');
+      }
     }
 
     if (input.auth) {
@@ -252,12 +252,12 @@ export class HTTPGetTask implements WorkflowTask<HTTPGetInput, HTTPGetOutput> {
 
   getDisplayInfo(): TaskDisplayInfo {
     return {
-      category: NODE_CATEGORIES.HTTP_API,
+      category: NODE_CATEGORIES.HTTP,
       label: 'HTTP GET',
-      icon: 'Globe',
+      icon: 'Download',
       color: 'bg-indigo-600',
-      description: 'Make HTTP GET requests to retrieve data',
-      tags: ['http', 'api', 'get', 'request', 'data']
+      description: 'Make HTTP GET request to retrieve data',
+      tags: ['http', 'get', 'request', 'api']
     };
   }
 }

@@ -10,8 +10,13 @@ import {
   useInfraDeployed,
   useFeatureLimit
 } from '../../src/hooks/useFeatureFlag';
-import { OrganizationProvider } from '../../src/contexts/OrganizationContext';
 import type { Organization } from '../../src/services/OrganizationService';
+
+// Unmock OrganizationContext for this test file to use our custom TestWrapper
+vi.unmock('../../src/contexts/OrganizationContext');
+
+// Import after unmocking
+import OrganizationContext, { useOrganization } from '../../src/contexts/OrganizationContext';
 
 // Mock organization with feature flags
 const createMockOrg = (overrides?: Partial<Organization>): Organization => ({
@@ -46,7 +51,7 @@ const createMockOrg = (overrides?: Partial<Organization>): Organization => ({
 // Test wrapper component that provides organization context
 function TestWrapper(props: { org: Organization | null; children: any }) {
   return (
-    <OrganizationProvider
+    <OrganizationContext.Provider
       value={{
         user: () => null,
         currentOrganization: () => props.org,
@@ -61,14 +66,18 @@ function TestWrapper(props: { org: Organization | null; children: any }) {
         updateMember: vi.fn(),
         removeMember: vi.fn(),
         resendInvitation: vi.fn(),
+        hasPermission: vi.fn(() => true),
+        canManageMembers: vi.fn(() => true),
+        canManageOrganization: vi.fn(() => true),
+        canInviteMembers: vi.fn(() => true),
         refreshOrganizations: vi.fn(),
         refreshMembers: vi.fn(),
-        isLoading: () => false,
+        loading: () => false,
         error: () => null
       } as any}
     >
       {props.children}
-    </OrganizationProvider>
+    </OrganizationContext.Provider>
   );
 }
 
@@ -76,22 +85,11 @@ describe('useFeatureFlag', () => {
   describe('basic feature flag checks', () => {
     it('should return true for enabled node', () => {
       function TestComponent() {
-        const { currentOrganization } = useOrganization();
-        const org = currentOrganization();
         const canUseTrigger = useFeatureFlag('nodes.trigger');
-
-        // Debug logging
-        console.log('Org:', org);
-        console.log('Features:', org?.features);
-        console.log('Nodes:', org?.features?.nodes);
-        console.log('Trigger value:', org?.features?.nodes?.['trigger']);
-        console.log('Hook result:', canUseTrigger());
-
         return <div data-testid="result">{canUseTrigger() ? 'enabled' : 'disabled'}</div>;
       }
 
       const org = createMockOrg();
-      console.log('Created org:', org);
       render(() => (
         <TestWrapper org={org}>
           <TestComponent />
