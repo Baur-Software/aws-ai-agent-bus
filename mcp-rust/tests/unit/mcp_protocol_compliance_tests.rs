@@ -8,6 +8,10 @@ use std::sync::Arc;
 
 #[tokio::test]
 async fn test_notification_handling_no_response() {
+    // Set required environment variables for tests
+    std::env::set_var("DEFAULT_TENANT_ID", "test");
+    std::env::set_var("DEFAULT_USER_ID", "test");
+
     let tenant_manager = Arc::new(TenantManager::new().await.unwrap());
     let server = MCPServer::new(tenant_manager).await.unwrap();
 
@@ -27,6 +31,9 @@ async fn test_notification_handling_no_response() {
 
 #[tokio::test]
 async fn test_request_handling_with_response() {
+    std::env::set_var("DEFAULT_TENANT_ID", "test");
+    std::env::set_var("DEFAULT_USER_ID", "test");
+
     let tenant_manager = Arc::new(TenantManager::new().await.unwrap());
     let server = MCPServer::new(tenant_manager).await.unwrap();
 

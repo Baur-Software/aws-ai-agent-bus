@@ -182,12 +182,12 @@ impl MCPServer {
     }
 
     async fn get_total_active_requests(&self) -> u32 {
-        // Count active requests across all sessions
+        // Count active requests across all sessions (now lock-free with atomics)
         let sessions = self.tenant_manager.get_all_sessions().await;
         let mut total = 0;
 
         for session in sessions {
-            total += *session.active_requests.read().await;
+            total += session.active_requests.load(std::sync::atomic::Ordering::SeqCst);
         }
 
         total
@@ -239,8 +239,8 @@ impl MCPServer {
         // Create or get tenant session
         let session = self.get_or_create_session(&request).await?;
 
-        // Check legacy rate limiting first
-        if !session.check_rate_limit().await {
+        // Check legacy rate limiting first (now synchronous with atomics)
+        if !session.check_rate_limit() {
             return Err(MCPError::RateLimitExceeded);
         }
 
@@ -261,9 +261,9 @@ impl MCPServer {
             }
         }
 
-        // Increment request counters
-        session.increment_request_count().await;
-        let _active_count = session.increment_active_requests().await;
+        // Increment request counters (now synchronous with atomics)
+        session.increment_request_count();
+        let _active_count = session.increment_active_requests();
 
         // Track request for cleanup
         let _guard = RequestGuard::new(session.clone());
@@ -393,22 +393,8 @@ impl RequestGuard {
 
 impl Drop for RequestGuard {
     fn drop(&mut self) {
-        // Use blocking decrement to avoid spawning new tasks during shutdown
-        // This is safe because the RwLock operation is quick
-        let session = self.session.clone();
-        let rt_handle = tokio::runtime::Handle::try_current();
-
-        if let Ok(handle) = rt_handle {
-            // We're in a tokio runtime context
-            // Spawn only if not shutting down
-            handle.spawn(async move {
-                session.decrement_active_requests().await;
-            });
-        } else {
-            // Fallback: use futures executor for immediate decrement
-            futures::executor::block_on(async {
-                session.decrement_active_requests().await;
-            });
-        }
+        // CRITICAL FIX: Use lock-free atomic decrement (no async needed)
+        // This is safe to call from any context, including Drop
+        self.session.decrement_active_requests();
     }
 }

@@ -11,7 +11,7 @@ mod tenant;
 use mcp::MCPServer;
 use tenant::TenantManager;
 
-#[tokio::main(flavor = "current_thread")]
+#[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() -> anyhow::Result<()> {
     // Initialize tracing to stderr (stdout must be reserved for JSON-RPC)
     tracing_subscriber::fmt()

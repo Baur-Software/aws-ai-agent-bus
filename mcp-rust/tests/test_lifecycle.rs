@@ -10,25 +10,16 @@ fn test_server_exits_on_stdin_close() {
     std::env::set_var("DEFAULT_USER_ID", "test-user");
     std::env::set_var("AWS_REGION", "us-west-2");
 
-    // Build the binary first - build in current dir
-    println!("Building release binary...");
-    let build_output = Command::new("cargo")
-        .args(&["build", "--release"])
-        .current_dir(env!("CARGO_MANIFEST_DIR"))
-        .output()
-        .expect("Failed to build binary");
-
-    if !build_output.status.success() {
-        eprintln!(
-            "Build stderr: {}",
-            String::from_utf8_lossy(&build_output.stderr)
-        );
-        panic!("Build failed");
-    }
+    // Use debug binary for tests to avoid file locking issues
+    let binary_path = if cfg!(windows) {
+        "target/debug/mcp-multi-tenant.exe"
+    } else {
+        "target/debug/mcp-multi-tenant"
+    };
 
     println!("Starting server...");
     // Start the server process
-    let mut child = Command::new("target/release/mcp-multi-tenant")
+    let mut child = Command::new(binary_path)
         .current_dir(env!("CARGO_MANIFEST_DIR"))
         .env("DEFAULT_TENANT_ID", "test-tenant")
         .env("DEFAULT_USER_ID", "test-user")
@@ -99,7 +90,13 @@ fn test_server_exits_on_stdin_close() {
 /// Test server behavior with empty input (immediate EOF)
 #[test]
 fn test_server_exits_on_immediate_eof() {
-    let mut child = Command::new("target/release/mcp-multi-tenant")
+    let binary_path = if cfg!(windows) {
+        "target/debug/mcp-multi-tenant.exe"
+    } else {
+        "target/debug/mcp-multi-tenant"
+    };
+
+    let mut child = Command::new(binary_path)
         .current_dir(env!("CARGO_MANIFEST_DIR"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

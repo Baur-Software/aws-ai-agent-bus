@@ -6,8 +6,16 @@ use std::process::{Command, Stdio};
 
 #[test]
 fn test_mcp_server_notification_vs_request_handling() {
-    // Start the MCP server binary
-    let mut child = Command::new("./target/release/mcp-multi-tenant.exe")
+    // Start the MCP server binary (use debug build for tests)
+    let binary_path = if cfg!(debug_assertions) {
+        "./target/debug/mcp-multi-tenant.exe"
+    } else {
+        "./target/release/mcp-multi-tenant.exe"
+    };
+    let mut child = Command::new(binary_path)
+        .env("DEFAULT_TENANT_ID", "test")
+        .env("DEFAULT_USER_ID", "test")
+        .env("AWS_REGION", "us-west-2")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -89,7 +97,15 @@ fn test_mcp_server_notification_vs_request_handling() {
 
 #[test]
 fn test_mcp_server_protocol_version() {
-    let mut child = Command::new("./target/release/mcp-multi-tenant.exe")
+    let binary_path = if cfg!(debug_assertions) {
+        "./target/debug/mcp-multi-tenant.exe"
+    } else {
+        "./target/release/mcp-multi-tenant.exe"
+    };
+    let mut child = Command::new(binary_path)
+        .env("DEFAULT_TENANT_ID", "test")
+        .env("DEFAULT_USER_ID", "test")
+        .env("AWS_REGION", "us-west-2")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -132,7 +148,15 @@ fn test_mcp_server_protocol_version() {
 
 #[test]
 fn test_mcp_server_json_rpc_compliance() {
-    let mut child = Command::new("./target/release/mcp-multi-tenant.exe")
+    let binary_path = if cfg!(debug_assertions) {
+        "./target/debug/mcp-multi-tenant.exe"
+    } else {
+        "./target/release/mcp-multi-tenant.exe"
+    };
+    let mut child = Command::new(binary_path)
+        .env("DEFAULT_TENANT_ID", "test")
+        .env("DEFAULT_USER_ID", "test")
+        .env("AWS_REGION", "us-west-2")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
