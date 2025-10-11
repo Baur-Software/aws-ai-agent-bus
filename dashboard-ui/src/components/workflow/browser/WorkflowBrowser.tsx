@@ -8,8 +8,8 @@ import {
   Calendar, BarChart3, Settings, Share2, Eye, FileText,
   ChevronDown, SortAsc, SortDesc, Folder, Globe
 } from 'lucide-solid';
-import { WorkflowStorageService, WorkflowListItem, WorkflowSearchFilters } from '../services/WorkflowStorageService';
-import { WorkflowDefinition } from '../workflow/types';
+import { WorkflowStorageService, WorkflowListItem, WorkflowSearchFilters } from '../../../services/WorkflowStorageService';
+import { WorkflowDefinition } from '../../../workflow/types';
 
 interface WorkflowBrowserProps {
   workflowStorage: WorkflowStorageService;

@@ -13,6 +13,7 @@ import OrganizationService, {
 
 export interface User {
   id: string;
+  userId?: string;  // Alias for id for compatibility
   email: string;
   name: string;
   avatar?: string;

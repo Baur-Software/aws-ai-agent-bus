@@ -5,7 +5,7 @@ import WorkflowCanvas, { WorkflowNode, WorkflowConnection } from './WorkflowCanv
 import FloatingToolbar from '../ui/FloatingToolbar';
 import FloatingNodePanel from '../ui/FloatingNodePanel';
 import WorkflowNodeDetails from '../ui/WorkflowNodeDetails';
-import WorkflowCollaboration, { WorkflowCollaborator, WorkflowPermissions } from './WorkflowCollaboration';
+import WorkflowCollaboration, { WorkflowCollaborator, WorkflowPermissions } from '../collaboration/WorkflowCollaboration';
 import WorkflowBrowserModal from '../modals/WorkflowBrowserModal';
 import { useOrganization } from '../../../contexts/OrganizationContext';
 import { useNotifications } from '../../../contexts/NotificationContext';

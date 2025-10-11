@@ -76,7 +76,7 @@ export default function NotificationSettings() {
     try {
       const contextKey = currentOrganization()
         ? `notification-prefs-${currentOrganization()!.id}`
-        : `notification-prefs-${user()?.userId}`;
+        : `notification-prefs-${user()?.id}`;
 
       const result = await callMCPTool('kv_get', { key: contextKey });
 
@@ -101,7 +101,7 @@ export default function NotificationSettings() {
     try {
       const contextKey = currentOrganization()
         ? `notification-prefs-${currentOrganization()!.id}`
-        : `notification-prefs-${user()?.userId}`;
+        : `notification-prefs-${user()?.id}`;
 
       const data = {
         preferences: preferences(),
@@ -146,7 +146,7 @@ export default function NotificationSettings() {
         endpoint,
         topicName: currentOrganization()
           ? `${currentOrganization()!.id}-notifications`
-          : `${user()?.userId}-notifications`
+          : `${user()?.id}-notifications`
       });
 
       if (result?.success) {
@@ -182,7 +182,7 @@ export default function NotificationSettings() {
           type: channel === 'in-app' ? 'websocket' : channel,
           config: { enabled: true }
         })),
-        userId: user()?.userId,
+        userId: user()?.id,
         organizationId: currentOrganization()?.id
       });
 

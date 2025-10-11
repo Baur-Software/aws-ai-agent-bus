@@ -161,7 +161,7 @@ export const WorkflowProvider: ParentComponent = (props) => {
   // Initialize versioning service
   let versioningService: WorkflowVersioningService | null = null;
   createEffect(() => {
-    const userId = user()?.userId;
+    const userId = user()?.id;
     const orgId = currentOrganization()?.id;
     if (userId) {
       versioningService = new WorkflowVersioningService(kvStore, userId, orgId);
