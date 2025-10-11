@@ -225,13 +225,13 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
             role: 'owner',
             addedAt: workflow.createdAt,
             addedBy: workflow.createdBy,
-            status: 'accepted'
+            status: 'active'
           }],
           permissions: {
-            isPublic: false,
-            allowOrgMembers: true,
-            allowExternalCollaborators: false,
-            requireApproval: false
+            canEdit: true,
+            canShare: true,
+            canDelete: true,
+            canManageAccess: true
           },
           createdAt: workflow.createdAt,
           updatedAt: workflow.updatedAt,
@@ -354,13 +354,13 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
         role: 'owner',
         addedAt: timestamp,
         addedBy: currentUser.id,
-        status: 'accepted'
+        status: 'active'
       }],
       permissions: {
-        isPublic: false,
-        allowOrgMembers: true,
-        allowExternalIntegrations: false,
-        requireApproval: false
+        canEdit: true,
+        canShare: true,
+        canDelete: true,
+        canManageAccess: true
       },
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -486,13 +486,13 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
           role: 'owner',
           addedAt: newWorkflow.createdAt,
           addedBy: currentUser.id,
-          status: 'accepted'
+          status: 'active'
         }],
         permissions: {
-          isPublic: false,
-          allowOrgMembers: true,
-          allowExternalCollaborators: false,
-          requireApproval: false
+          canEdit: true,
+          canShare: true,
+          canDelete: true,
+          canManageAccess: true
         },
         createdAt: newWorkflow.createdAt,
         updatedAt: newWorkflow.updatedAt,
