@@ -15,6 +15,14 @@
  * - Easier to maintain and extend
  */
 
+// Import default configs for use in this module
+import { DEFAULT_CONDITIONAL_CONFIG } from './ConditionalNodeConfig';
+import { DEFAULT_SWITCH_CONFIG } from './SwitchNodeConfig';
+import { DEFAULT_HTTP_CONFIG } from './HttpNodeConfig';
+import { DEFAULT_KV_GET_CONFIG, DEFAULT_KV_SET_CONFIG } from './KVStoreNodeConfig';
+import { DEFAULT_MANUAL_TRIGGER_CONFIG, DEFAULT_WEBHOOK_TRIGGER_CONFIG, DEFAULT_SCHEDULE_TRIGGER_CONFIG } from './TriggerNodeConfig';
+import { DEFAULT_DOCKER_CONFIG } from './DockerNodeConfig';
+
 // ============================================================================
 // Node Registry System
 // ============================================================================

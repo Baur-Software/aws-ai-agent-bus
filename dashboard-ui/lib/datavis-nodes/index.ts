@@ -12,6 +12,11 @@
  * - Multiple chart libraries support (Chart.js, D3, Plotly)
  */
 
+// Import default configs for use in this module
+import { DEFAULT_CHART_CONFIG } from './ChartNodeConfig';
+import { DEFAULT_TABLE_CONFIG } from './TableNodeConfig';
+import { DEFAULT_METRICS_CONFIG } from './MetricsNodeConfig';
+
 // Chart Nodes
 export { ChartNodeConfig, DEFAULT_CHART_CONFIG } from './ChartNodeConfig';
 export { ChartRenderer } from './ChartRenderer';

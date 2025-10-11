@@ -837,6 +837,7 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
               </Show>
             </div>
           </Show>
+          </Show>
 
           {/* Agent Configuration Tab - Using Shared AgentConfigForm */}
           <Show when={activeTab() === 'agent' && nodeConfig()?.agentConfig}>
@@ -1134,7 +1135,7 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
               </div>
             </div>
           </Show>
-          </Show>
+        </Show>
         </div>
 
         {/* Footer Actions */}
