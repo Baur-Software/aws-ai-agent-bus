@@ -89,30 +89,35 @@ src/workflow/tasks/
 ## Real-World Use Cases
 
 ### 1. ETL Pipeline
+
 ```
 HTTP GET → Parse JSON → Transform → Group By →
 Reduce → Template → Artifacts Put → Events Send
 ```
 
 ### 2. Event Monitoring & Alerts
+
 ```
 Events Query → Group By → Analytics → Conditional →
 Webhook → Events Create Alert
 ```
 
 ### 3. Resilient API Integration
+
 ```
 Retry → HTTP GET → Validate → Cache →
 Conditional → Transform → Output
 ```
 
 ### 4. Email Notification System
+
 ```
 Trigger → Validate → Template → Email →
 Cache → Events Send
 ```
 
 ### 5. File Processing Workflow
+
 ```
 Artifacts Get → Parse → Map → Filter → Reduce →
 JSON Stringify → Artifacts Put → Email
@@ -121,6 +126,7 @@ JSON Stringify → Artifacts Put → Email
 ## Technical Architecture
 
 ### Task Interface
+
 ```typescript
 interface WorkflowTask<Input, Output> {
   readonly type: string;
@@ -132,6 +138,7 @@ interface WorkflowTask<Input, Output> {
 ```
 
 ### Service Dependencies
+
 ```typescript
 registerAllTasks(taskRegistry, {
   http,              // HTTPGetTask, HTTPPostTask, HTTPPutTask, HTTPDeleteTask, WebhookTask
@@ -144,6 +151,7 @@ registerAllTasks(taskRegistry, {
 ```
 
 ### Error Handling
+
 - Comprehensive try/catch with `TaskExecutionError`
 - Detailed error messages with context
 - Input validation with warnings
@@ -153,6 +161,7 @@ registerAllTasks(taskRegistry, {
 ## Production Readiness
 
 ### Quality Metrics
+
 - ✅ **Type Safety**: 100% TypeScript
 - ✅ **Error Handling**: Comprehensive with structured errors
 - ✅ **Validation**: All inputs validated with detailed feedback
@@ -161,6 +170,7 @@ registerAllTasks(taskRegistry, {
 - ✅ **Service Abstraction**: Clean dependency injection
 
 ### Testing Strategy
+
 - Unit tests for core task logic
 - Integration tests with mocked services
 - Validation framework tests
@@ -172,6 +182,7 @@ registerAllTasks(taskRegistry, {
 The following optional enhancements could bring coverage to 95-100%:
 
 ### Potential Additions
+
 1. **DateTime Task** - Date/time operations and formatting
 2. **Random Task** - Random data generation for testing
 3. **Hash Task** - Hashing and encryption utilities
@@ -179,6 +190,7 @@ The following optional enhancements could bring coverage to 95-100%:
 5. **SMS Task** - SMS notifications via Twilio
 
 ### AI/ML Extensions
+
 - AI Prompt Task - Direct LLM integration
 - Sentiment Task - Text sentiment analysis
 - Embedding Task - Vector embedding generation

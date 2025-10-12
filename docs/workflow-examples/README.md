@@ -11,11 +11,13 @@ These examples showcase real-world workflows you can import and customize. Each 
 ## Quick Import
 
 ### Via Dashboard UI
+
 1. Navigate to **Workflows → Import**
 2. Select a JSON file from this directory
 3. Click **Import** to add to your canvas
 
 ### Via WorkflowStorageService
+
 ```typescript
 import { WorkflowStorageService } from '../dashboard-ui/src/services/WorkflowStorageService';
 
@@ -89,40 +91,49 @@ Each workflow JSON file contains:
 Before using these workflows, connect the required apps:
 
 ### Infrastructure Workflows
+
 - AWS (native integration)
 - GitHub (OAuth2)
 - Terraform (via MCP server)
 
 ### Business Workflows
+
 - QuickBooks (OAuth2)
 - Salesforce/CRM (OAuth2)
 - Google Drive (OAuth2)
 
 ### Analytics Workflows
+
 - Google Analytics (OAuth2 - see [setup guide](../docs/mcp-server/google-analytics-setup.md))
 - OpenAI/Bedrock (API key)
 
 ### Home Automation Workflows
+
 - Home Assistant (API token)
 
 ## Customization Guide
 
 ### 1. Import the Workflow
+
 Start with a template that matches your use case
 
 ### 2. Configure Nodes
+
 Click on each node to configure:
+
 - API endpoints
 - Credentials
 - Data transformations
 - Conditional logic
 
 ### 3. Test & Iterate
+
 - Use the built-in debugger
 - View real-time execution
 - Adjust based on results
 
 ### 4. Save & Schedule
+
 - Save your customized workflow
 - Set up triggers (schedule, webhook, event)
 - Monitor execution history
@@ -138,6 +149,7 @@ traffic spikes above 10,000 visitors."
 ```
 
 The AI will:
+
 1. ✅ Check which apps you've connected
 2. ✅ Install required workflow nodes
 3. ✅ Design the complete workflow
@@ -147,16 +159,19 @@ The AI will:
 ## Versioning & Forking
 
 ### Version Control
+
 - Canvas autosaves continuously
 - Backend supports atomic rollbacks
 - Full version history (UI support coming soon)
 
 ### Fork Workflows
+
 - Make a copy: **Right-click → Duplicate**
 - Customize without affecting original
 - Share your improved version
 
 ### Import/Export
+
 - Export: **Workflow → Export → JSON**
 - Import: **Workflows → Import → Select File**
 - Share with team or community
@@ -164,21 +179,25 @@ The AI will:
 ## Example Use Cases from Our Vision
 
 ### Infrastructure Automation
+
 > "Connect AWS infrastructure together. Configure AWS components right from the node's details panel. Take your design and output it to Terraform using our AI Terraform experts."
 
 **Try:** `infrastructure/terraform-generator.json`
 
 ### Financial Dashboard
+
 > "Add bar chart nodes and connect to QuickBooks to make a financial dashboard. Connect other apps like CRMs to match up invoices with sales pipelines."
 
 **Try:** `business/financial-dashboard.json`
 
 ### Content Strategy
+
 > "Pull down Google Analytics data and store it in DynamoDB. Use AI to write content to your blogs based on keyword analysis."
 
 **Try:** `analytics/content-generator.json`
 
 ### Smart Home
+
 > "Connect it to Home Assistant to quickly build out workflows and customize your home integrations. Create custom nodes to represent your home the way you want it."
 
 **Try:** `home-automation/home-assistant-integration.json`
