@@ -475,7 +475,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
       // Use the agent delegation system to create a new agent via WebSocket
       const messageId = `create_agent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      const result = await new Promise((resolve, reject) => {
+      const result = await new Promise<{ success: boolean; agent?: any }>((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Agent creation request timed out'));
         }, 30000);

@@ -147,8 +147,8 @@ export function KVStoreProvider(props: { children: any }) {
     );
 
     return results
-      .filter((result): result is PromiseFulfilledResult<KVItem> => result.status === 'fulfilled')
-      .map(result => result.value)
+      .filter(result => result.status === 'fulfilled')
+      .map((result: any) => result.value)
       .filter(value => value !== null);
   };
 
