@@ -81,6 +81,7 @@ async fn setup_test_events(
 }
 
 #[tokio::test]
+#[ignore] // Requires AWS infrastructure with event data
 async fn test_events_query_integration_with_user_filter() {
     if !can_run_integration_tests().await {
         println!("⏭️  Skipping integration test - no AWS or LocalStack available");
@@ -142,6 +143,7 @@ async fn test_events_query_integration_with_user_filter() {
 }
 
 #[tokio::test]
+#[ignore] // Requires AWS infrastructure with event data
 async fn test_events_query_integration_with_source_filter() {
     if !can_run_integration_tests().await {
         println!("⏭️  Skipping integration test - no AWS or LocalStack available");
