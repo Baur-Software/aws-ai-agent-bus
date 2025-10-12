@@ -1,16 +1,20 @@
 import type { AppConfig } from '../contexts/KVStoreContext';
 
 // Common field templates
-export const FIELD_TEMPLATES = {
+export const FIELD_TEMPLATES: {
+  client_credentials: Array<{ key: string; label: string; type: 'text' | 'password' | 'url' | 'email' | 'textarea'; required: boolean; placeholder?: string; help?: string; }>;
+  api_key: Array<{ key: string; label: string; type: 'text' | 'password' | 'url' | 'email' | 'textarea'; required: boolean; placeholder?: string; help?: string; }>;
+  bearer_token: Array<{ key: string; label: string; type: 'text' | 'password' | 'url' | 'email' | 'textarea'; required: boolean; placeholder?: string; help?: string; }>;
+} = {
   client_credentials: [
-    { key: 'client_id', label: 'Client ID', type: 'text', required: true as boolean },
-    { key: 'client_secret', label: 'Client Secret', type: 'password', required: true as boolean }
+    { key: 'client_id', label: 'Client ID', type: 'text', required: true },
+    { key: 'client_secret', label: 'Client Secret', type: 'password', required: true }
   ],
   api_key: [
-    { key: 'api_key', label: 'API Key', type: 'password', required: true as boolean }
+    { key: 'api_key', label: 'API Key', type: 'password', required: true }
   ],
   bearer_token: [
-    { key: 'access_token', label: 'Access Token', type: 'password', required: true as boolean }
+    { key: 'access_token', label: 'Access Token', type: 'password', required: true }
   ]
 };
 

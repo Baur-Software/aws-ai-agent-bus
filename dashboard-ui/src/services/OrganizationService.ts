@@ -273,10 +273,18 @@ export class OrganizationService {
         id: orgId,
         name: orgId, // Placeholder - actual org data should come from WebSocket response
         slug: orgId,
-        workspaceTier: 'free',
+        workspaceTier: 'small',
         memberCount: 0,
         userRole: 'member',
-        settings: {},
+        settings: {
+          allowMemberInvites: true,
+          requireApprovalForApps: false,
+          defaultMemberRole: 'member',
+          sessionTimeout: 3600,
+          enforceSSO: false,
+          maxWorkflows: 100,
+          maxIntegrations: 50
+        },
         infraId: '',
         members: [],
         createdAt: new Date().toISOString(),
