@@ -109,7 +109,6 @@ export default function AppsTab() {
       // Verification filter
       const matchesVerification = verification === 'all' ||
         (verification === 'official' && server.isOfficial) ||
-        (verification === 'signed' && server.isSigned) ||
         (verification === 'popular' && server.verificationBadges.includes('popular'));
 
       return matchesSearch && matchesTags && matchesVerification;

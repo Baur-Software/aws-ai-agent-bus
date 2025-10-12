@@ -254,7 +254,7 @@ Error details: ${toolError.message}`;
               onKeyPress={handleKeyPress}
               disabled={isProcessing()}
               rows={1}
-              style={{"field-sizing":"content"}}
+              style={{resize: "none"}}
             />
             <button 
               class="absolute right-2 bottom-2 w-8 h-8 bg-blue-500 hover:bg-blue-600 disabled:bg-slate-400 disabled:cursor-not-allowed rounded-full flex items-center justify-center text-white transition-colors"
