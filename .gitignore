@@ -61,3 +61,5 @@ build/
 out/
 localstack-data/
 nul
+
+.mcp.json
