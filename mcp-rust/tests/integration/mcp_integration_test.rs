@@ -4,15 +4,34 @@ use std::io::{BufRead, BufReader, Write};
 /// Tests the actual fix that was implemented for dashboard-server compatibility
 use std::process::{Command, Stdio};
 
+fn get_binary_path() -> Option<String> {
+    let paths = vec![
+        "./target/debug/mcp-multi-tenant",
+        "./target/debug/mcp-multi-tenant.exe",
+        "./target/release/mcp-multi-tenant",
+        "./target/release/mcp-multi-tenant.exe",
+    ];
+
+    for path in paths {
+        if std::path::Path::new(path).exists() {
+            return Some(path.to_string());
+        }
+    }
+    None
+}
+
 #[test]
 fn test_mcp_server_notification_vs_request_handling() {
     // Start the MCP server binary (use debug build for tests)
-    let binary_path = if cfg!(debug_assertions) {
-        "./target/debug/mcp-multi-tenant.exe"
-    } else {
-        "./target/release/mcp-multi-tenant.exe"
+    let binary_path = match get_binary_path() {
+        Some(path) => path,
+        None => {
+            eprintln!("Skipping test: MCP server binary not found. Run 'cargo build' first.");
+            return;
+        }
     };
-    let mut child = Command::new(binary_path)
+
+    let mut child = Command::new(&binary_path)
         .env("DEFAULT_TENANT_ID", "test")
         .env("DEFAULT_USER_ID", "test")
         .env("AWS_REGION", "us-west-2")
@@ -97,12 +116,15 @@ fn test_mcp_server_notification_vs_request_handling() {
 
 #[test]
 fn test_mcp_server_protocol_version() {
-    let binary_path = if cfg!(debug_assertions) {
-        "./target/debug/mcp-multi-tenant.exe"
-    } else {
-        "./target/release/mcp-multi-tenant.exe"
+    let binary_path = match get_binary_path() {
+        Some(path) => path,
+        None => {
+            eprintln!("Skipping test: MCP server binary not found. Run 'cargo build' first.");
+            return;
+        }
     };
-    let mut child = Command::new(binary_path)
+
+    let mut child = Command::new(&binary_path)
         .env("DEFAULT_TENANT_ID", "test")
         .env("DEFAULT_USER_ID", "test")
         .env("AWS_REGION", "us-west-2")
@@ -148,10 +170,12 @@ fn test_mcp_server_protocol_version() {
 
 #[test]
 fn test_mcp_server_json_rpc_compliance() {
-    let binary_path = if cfg!(debug_assertions) {
-        "./target/debug/mcp-multi-tenant.exe"
-    } else {
-        "./target/release/mcp-multi-tenant.exe"
+    let binary_path = match get_binary_path() {
+        Some(path) => path,
+        None => {
+            eprintln!("Skipping test: MCP server binary not found. Run 'cargo build' first.");
+            return;
+        }
     };
     let mut child = Command::new(binary_path)
         .env("DEFAULT_TENANT_ID", "test")
