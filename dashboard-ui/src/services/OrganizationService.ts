@@ -292,7 +292,6 @@ export class OrganizationService {
         },
         features: {
           maxWorkflows: 100,
-          maxExecutionsPerMonth: 10000,
           enabledFeatures: []
         },
         infraId: '',

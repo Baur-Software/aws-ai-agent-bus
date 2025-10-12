@@ -96,7 +96,7 @@ export function getDataVisDefaultConfig(nodeType: string): any {
     case 'chart-pie':
     case 'chart-area':
     case 'chart-scatter':
-      return { ...DEFAULT_CHART_CONFIG, type: entry.chartType };
+      return { ...DEFAULT_CHART_CONFIG, type: (entry as any).chartType };
 
     case 'table':
       return DEFAULT_TABLE_CONFIG;
