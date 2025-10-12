@@ -51,10 +51,10 @@ export function generateOAuth2Config(input: {
     redirect_uri: 'http://localhost:3000/oauth/callback'
   };
 
-  // Build UI fields
+  // Build UI fields - ensure required is always defined
   const ui_fields = [
     ...FIELD_TEMPLATES.client_credentials,
-    ...additional_fields
+    ...additional_fields.map(field => ({ ...field, required: field.required ?? false }))
   ];
 
   return {
@@ -99,7 +99,7 @@ export function generateAPIKeyConfig(input: {
     category,
     description,
     type: 'api_key',
-    ui_fields: fields.length > 0 ? fields : FIELD_TEMPLATES.api_key,
+    ui_fields: fields.length > 0 ? fields.map(f => ({ ...f, required: f.required ?? false })) : FIELD_TEMPLATES.api_key,
     workflow_capabilities,
     docsUrl: docs_url,
     verified: false,

@@ -282,11 +282,22 @@ export class OrganizationService {
           defaultMemberRole: 'member',
           sessionTimeout: 3600,
           enforceSSO: false,
+          requireMFA: false,
+          passwordPolicy: {
+            minLength: 8,
+            requireSpecialChars: false,
+            requireNumbers: false,
+            requireUppercase: false
+          }
+        },
+        features: {
           maxWorkflows: 100,
-          maxIntegrations: 50
+          maxExecutionsPerMonth: 10000,
+          enabledFeatures: []
         },
         infraId: '',
         members: [],
+        createdBy: 'system',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }
