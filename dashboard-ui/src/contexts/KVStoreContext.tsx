@@ -39,7 +39,7 @@ export interface AppConfig {
   updated_at?: string;
 }
 
-interface KVStoreContextType {
+export interface KVStoreContextType {
   // Core KV operations
   get: (key: string) => Promise<any>;
   set: (key: string, value: any, ttlHours?: number, options?: { showNotification?: boolean }) => Promise<boolean>;
@@ -147,8 +147,9 @@ export function KVStoreProvider(props: { children: any }) {
     );
 
     return results
-      .filter((result): result is PromiseFulfilledResult<KVItem> => result.status === 'fulfilled' && result.value !== null)
-      .map(result => result.value);
+      .filter((result): result is PromiseFulfilledResult<KVItem> => result.status === 'fulfilled')
+      .map(result => result.value)
+      .filter(value => value !== null);
   };
 
   /**
