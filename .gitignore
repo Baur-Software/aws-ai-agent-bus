@@ -62,4 +62,9 @@ out/
 localstack-data/
 nul
 
+# Test results (may contain test data that triggers security scans)
+test-results.json
+test-results.xml
+coverage/
+
 .mcp.json
