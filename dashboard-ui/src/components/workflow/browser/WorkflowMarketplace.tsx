@@ -164,12 +164,10 @@ export default function WorkflowMarketplace(props: WorkflowMarketplaceProps = {}
     try {
       setLoading(true);
 
-      // Use mock data in development mode
-      if (MockDataGenerator.shouldUseMockData('templates')) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setTemplates(mockWorkflowTemplates);
-        return;
-      }
+      // Use mock data for now (TODO: implement API endpoint)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setTemplates(mockWorkflowTemplates);
+      return;
 
       // Load from API in production (TODO: implement API endpoint)
       const sampleTemplates: WorkflowTemplate[] = [
