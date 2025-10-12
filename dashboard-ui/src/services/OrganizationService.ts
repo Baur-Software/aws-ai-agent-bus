@@ -292,7 +292,13 @@ export class OrganizationService {
         },
         features: {
           maxWorkflows: 100,
-          enabledFeatures: []
+          maxAppsConnections: 50,
+          customBranding: false,
+          advancedAnalytics: false,
+          apiAccess: true,
+          ssoIntegration: false,
+          auditLogs: false,
+          prioritySupport: false
         },
         infraId: '',
         members: [],

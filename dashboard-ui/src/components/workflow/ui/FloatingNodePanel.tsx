@@ -1095,7 +1095,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
               when={isDataVisNode(localNode().type)}
               fallback={
                 <NodeConfigRenderer
-                  nodeDefinition={nodeDefinition}
+                  nodeDefinition={nodeDefinition as any}
                   config={localNode().config}
                   onConfigChange={updateConfig}
                 />
@@ -1196,7 +1196,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
 
     // Add any remaining groups that weren't in the saved order
     groupMap.forEach((agents, groupName) => {
-      ordered.push([groupName, agents]);
+      ordered.push([groupName, agents] as [string, any[]]);
     });
 
     return ordered;

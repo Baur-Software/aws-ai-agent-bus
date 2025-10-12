@@ -381,7 +381,7 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
           {/* Workflow Info */}
           <Show when={props.currentWorkflow}>
             <WorkflowInfo
-              currentWorkflow={props.currentWorkflow}
+              currentWorkflow={props.currentWorkflow as any}
               onRename={props.onWorkflowRename}
               onEditRef={(editFn) => { triggerWorkflowEdit = editFn; }}
               class="mr-3"
@@ -399,10 +399,10 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
                   label={action.label}
                   onClick={action.onClick}
                   onContextMenu={action.onContextMenu}
-                  variant={action.variant}
+                  variant={action.variant as 'primary' | 'secondary' | 'danger' | 'warning'}
                   loading={action.loading}
                   disabled={action.disabled}
-                  badge={action.badge}
+                  badge={(action as any).badge}
                   title={action.title || action.label}
                   compact={isCompact()}
                 />

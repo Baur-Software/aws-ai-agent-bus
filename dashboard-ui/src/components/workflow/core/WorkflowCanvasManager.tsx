@@ -223,7 +223,7 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
 
   // Canvas view controls
   const handleToggleGrid = () => {
-    workflowUI.setGridMode(current => {
+    workflowUI.setGridMode((current: 'grid' | 'off' | 'dots') => {
       switch (current) {
         case 'off': return 'grid';
         case 'grid': return 'dots';
@@ -234,7 +234,7 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
   };
 
   const handleToggleGridOff = () => {
-    workflowUI.setGridMode(current => current === 'off' ? 'grid' : 'off');
+    workflowUI.setGridMode((current: 'grid' | 'off' | 'dots') => current === 'off' ? 'grid' : 'off');
   };
 
 
@@ -323,11 +323,6 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
                 name: workflow.currentWorkflow()!.name,
                 description: workflow.currentWorkflow()!.description,
                 version: workflow.currentWorkflow()!.version,
-                stats: workflow.currentWorkflow()!.stats || {
-                  starCount: 0,
-                  forkCount: 0,
-                  usageCount: 0
-                },
                 metadata: {
                   createdAt: workflow.currentWorkflow()!.createdAt,
                   updatedAt: workflow.currentWorkflow()!.updatedAt,
