@@ -1,0 +1,434 @@
+{
+  "version": "1.0",
+  "created": "2025-10-11T00:00:00Z",
+  "name": "Terraform Infrastructure Generator",
+  "description": "Design infrastructure visually on the canvas, then let AI Terraform experts generate optimized Infrastructure as Code. Supports multi-cloud, best practices, and automatic documentation.",
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "trigger",
+      "x": 50,
+      "y": 250,
+      "inputs": [],
+      "outputs": ["output"],
+      "config": {
+        "name": "Infrastructure Design Input",
+        "description": "Canvas-based infrastructure design",
+        "data": {
+          "projectName": "production-app",
+          "provider": "aws",
+          "region": "us-west-2",
+          "components": [
+            {
+              "type": "vpc",
+              "cidr": "10.0.0.0/16",
+              "subnets": ["public", "private"]
+            },
+            {
+              "type": "ecs-fargate",
+              "cpu": "256",
+              "memory": "512"
+            },
+            {
+              "type": "rds-postgres",
+              "instanceClass": "db.t3.micro",
+              "storage": "20GB"
+            },
+            {
+              "type": "elasticache-redis",
+              "nodeType": "cache.t3.micro"
+            },
+            {
+              "type": "alb",
+              "scheme": "internet-facing"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "analyze-design-1",
+      "type": "agent-conductor",
+      "x": 300,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "agentType": "terraform-architect",
+        "prompt": "Analyze this infrastructure design for:\n1. Best practices and security\n2. Cost optimization opportunities\n3. Scalability considerations\n4. Missing components (monitoring, backups)\n5. Region-specific recommendations",
+        "includeContext": true
+      }
+    },
+    {
+      "id": "generate-vpc-1",
+      "type": "terraform-generate-module",
+      "x": 550,
+      "y": 100,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "module": "vpc",
+        "useAI": true,
+        "optimizations": ["cost", "security", "high-availability"],
+        "includeOutputs": true,
+        "includeDocumentation": true
+      }
+    },
+    {
+      "id": "generate-ecs-1",
+      "type": "terraform-generate-module",
+      "x": 550,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "module": "ecs-fargate",
+        "useAI": true,
+        "optimizations": ["cost", "auto-scaling"],
+        "includeOutputs": true,
+        "includeDocumentation": true
+      }
+    },
+    {
+      "id": "generate-rds-1",
+      "type": "terraform-generate-module",
+      "x": 550,
+      "y": 300,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "module": "rds-postgres",
+        "useAI": true,
+        "optimizations": ["backup-strategy", "encryption", "multi-az"],
+        "includeOutputs": true,
+        "includeDocumentation": true
+      }
+    },
+    {
+      "id": "generate-elasticache-1",
+      "type": "terraform-generate-module",
+      "x": 550,
+      "y": 400,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "module": "elasticache-redis",
+        "useAI": true,
+        "optimizations": ["cost", "cluster-mode"],
+        "includeOutputs": true,
+        "includeDocumentation": true
+      }
+    },
+    {
+      "id": "combine-modules-1",
+      "type": "terraform-combine",
+      "x": 800,
+      "y": 250,
+      "inputs": ["vpc", "ecs", "rds", "cache"],
+      "outputs": ["output"],
+      "config": {
+        "generateMain": true,
+        "generateVariables": true,
+        "generateOutputs": true,
+        "generateBackend": true,
+        "backendType": "s3",
+        "organizationStyle": "modular",
+        "terraformVersion": "~> 1.5"
+      }
+    },
+    {
+      "id": "validate-terraform-1",
+      "type": "terraform-validate",
+      "x": 1050,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["valid", "invalid"],
+      "config": {
+        "checkSyntax": true,
+        "checkDependencies": true,
+        "checkBestPractices": true,
+        "securityScan": true,
+        "costEstimate": true
+      }
+    },
+    {
+      "id": "generate-diagram-1",
+      "type": "terraform-diagram",
+      "x": 1300,
+      "y": 150,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "format": "svg",
+        "includeLabels": true,
+        "showDataFlow": true,
+        "colorByService": true
+      }
+    },
+    {
+      "id": "generate-docs-1",
+      "type": "terraform-docs",
+      "x": 1300,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "format": "markdown",
+        "includeInputs": true,
+        "includeOutputs": true,
+        "includeResources": true,
+        "includeModules": true,
+        "includeExamples": true
+      }
+    },
+    {
+      "id": "cost-estimate-1",
+      "type": "terraform-cost-estimate",
+      "x": 1300,
+      "y": 350,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "provider": "infracost",
+        "includeMonthlyBreakdown": true,
+        "includeProjections": true,
+        "compareAlternatives": true
+      }
+    },
+    {
+      "id": "store-terraform-1",
+      "type": "artifacts-put",
+      "x": 1550,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "key": "terraform/{{projectName}}/main.tf",
+        "useContextData": true,
+        "contextKey": "terraformMain",
+        "content_type": "text/plain"
+      }
+    },
+    {
+      "id": "store-variables-1",
+      "type": "artifacts-put",
+      "x": 1550,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "key": "terraform/{{projectName}}/variables.tf",
+        "useContextData": true,
+        "contextKey": "terraformVariables",
+        "content_type": "text/plain"
+      }
+    },
+    {
+      "id": "store-outputs-1",
+      "type": "artifacts-put",
+      "x": 1550,
+      "y": 300,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "key": "terraform/{{projectName}}/outputs.tf",
+        "useContextData": true,
+        "contextKey": "terraformOutputs",
+        "content_type": "text/plain"
+      }
+    },
+    {
+      "id": "store-readme-1",
+      "type": "artifacts-put",
+      "x": 1550,
+      "y": 350,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "key": "terraform/{{projectName}}/README.md",
+        "useContextData": true,
+        "contextKey": "terraformDocs",
+        "content_type": "text/markdown"
+      }
+    },
+    {
+      "id": "create-github-pr-1",
+      "type": "github-create-pr",
+      "x": 1800,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "repository": "{{githubRepo}}",
+        "branch": "terraform/{{projectName}}-infrastructure",
+        "title": "🏗️ Add Terraform infrastructure for {{projectName}}",
+        "body": "## Infrastructure Changes\n\nGenerated Terraform configuration for {{projectName}}.\n\n### Components\n{{componentsList}}\n\n### Cost Estimate\n💰 Monthly: {{monthlyCost}}\n\n### Diagram\n![Infrastructure Diagram]({{diagramUrl}})\n\n### Documentation\nSee [README.md](terraform/{{projectName}}/README.md) for full documentation.\n\nGenerated by AI Terraform Expert 🤖",
+        "autoAssign": true
+      }
+    },
+    {
+      "id": "send-notification-1",
+      "type": "events-send",
+      "x": 1800,
+      "y": 350,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "detailType": "Terraform.Generated",
+        "detail": {
+          "project": "{{projectName}}",
+          "provider": "{{provider}}",
+          "region": "{{region}}",
+          "componentsCount": "{{componentsCount}}",
+          "estimatedCost": "{{monthlyCost}}",
+          "validationPassed": true,
+          "prUrl": "{{prUrl}}",
+          "timestamp": "{{timestamp}}"
+        }
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "trigger-1",
+      "to": "analyze-design-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "analyze-design-1",
+      "to": "generate-vpc-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "analyze-design-1",
+      "to": "generate-ecs-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "analyze-design-1",
+      "to": "generate-rds-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "analyze-design-1",
+      "to": "generate-elasticache-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "generate-vpc-1",
+      "to": "combine-modules-1",
+      "fromOutput": "output",
+      "toInput": "vpc"
+    },
+    {
+      "from": "generate-ecs-1",
+      "to": "combine-modules-1",
+      "fromOutput": "output",
+      "toInput": "ecs"
+    },
+    {
+      "from": "generate-rds-1",
+      "to": "combine-modules-1",
+      "fromOutput": "output",
+      "toInput": "rds"
+    },
+    {
+      "from": "generate-elasticache-1",
+      "to": "combine-modules-1",
+      "fromOutput": "output",
+      "toInput": "cache"
+    },
+    {
+      "from": "combine-modules-1",
+      "to": "validate-terraform-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "validate-terraform-1",
+      "to": "generate-diagram-1",
+      "fromOutput": "valid",
+      "toInput": "input"
+    },
+    {
+      "from": "validate-terraform-1",
+      "to": "generate-docs-1",
+      "fromOutput": "valid",
+      "toInput": "input"
+    },
+    {
+      "from": "validate-terraform-1",
+      "to": "cost-estimate-1",
+      "fromOutput": "valid",
+      "toInput": "input"
+    },
+    {
+      "from": "generate-diagram-1",
+      "to": "store-terraform-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "generate-docs-1",
+      "to": "store-readme-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "validate-terraform-1",
+      "to": "store-variables-1",
+      "fromOutput": "valid",
+      "toInput": "input"
+    },
+    {
+      "from": "validate-terraform-1",
+      "to": "store-outputs-1",
+      "fromOutput": "valid",
+      "toInput": "input"
+    },
+    {
+      "from": "store-readme-1",
+      "to": "create-github-pr-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "create-github-pr-1",
+      "to": "send-notification-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    }
+  ],
+  "metadata": {
+    "author": "AWS AI Agent Bus",
+    "tags": ["terraform", "iac", "infrastructure", "ai", "automation", "aws"],
+    "category": "Infrastructure",
+    "requiredApps": ["terraform-ai", "github"],
+    "estimatedDuration": "5-10 minutes",
+    "difficulty": "advanced",
+    "isTemplate": true,
+    "features": [
+      "AI-powered Terraform generation",
+      "Best practices and security analysis",
+      "Cost estimation with alternatives",
+      "Automatic documentation generation",
+      "Infrastructure diagrams",
+      "GitHub PR creation",
+      "Validation and security scanning"
+    ],
+    "instructions": [
+      "Design your infrastructure on the canvas using visual nodes",
+      "Configure each component's properties",
+      "Run the workflow to generate Terraform",
+      "AI analyzes design and suggests optimizations",
+      "Review generated code, docs, and cost estimates",
+      "Approve GitHub PR to commit to repository",
+      "Deploy using terraform apply"
+    ]
+  }
+}

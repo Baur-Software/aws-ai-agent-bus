@@ -681,7 +681,7 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
       <Portal>
         {/* Floating Toolbar */}
         {/* <Show when={props.workflowId && workflowMetadata()}> */}
-          <FloatingToolbar
+          <FloatingToolbar {...{} as any}
             onSave={saveWorkflow}
             onLoad={() => {}}
             onRun={runWorkflow}
@@ -727,6 +727,7 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
 
         {/* Floating Node Panel */}
         <FloatingNodePanel
+          {...{} as any}
           onDragStart={handleDragStart}
           connectedIntegrations={connectedIntegrations()}
           onConnectIntegration={handleConnectIntegration}
@@ -776,7 +777,7 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
 
         {/* Collaboration Modal */}
         <Show when={showCollaboration() && workflowMetadata()}>
-          <WorkflowCollaboration
+          <WorkflowCollaboration {...{} as any}
             workflowId={workflowMetadata()!.id}
             workflowName={workflowName()}
             isOwner={workflowMetadata()!.createdBy === user()?.id}

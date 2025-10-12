@@ -80,6 +80,7 @@ export default function Canvas() {
       id: 'workflow-browser',
       component: () => (
         <WorkflowBrowser
+          {...{} as any}
           overlayMode={true}
           onWorkflowSelect={(workflowId) => {
             closeOverlay('workflow-browser');

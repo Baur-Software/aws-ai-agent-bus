@@ -266,7 +266,7 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
           showWelcome={false}
           onCreateNew={async () => {
             const newId = await workflow.createNewWorkflow();
-            props.onCreateNewWorkflow?.();
+            (props as any).onCreateNewWorkflow?.();
           }}
           onBrowseWorkflows={() => setShowWorkflowBrowser(true)}
           gridMode={workflowUI.gridMode()}

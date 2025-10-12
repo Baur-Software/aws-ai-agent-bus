@@ -715,7 +715,7 @@ export default function NodeSidebar(props: NodeSidebarProps) {
       {/* MCP Tool Discovery Modal */}
       <Show when={showMCPDiscovery()}>
         <div class="fixed inset-0 z-50">
-          <MCPToolDiscovery
+          <MCPToolDiscovery {...{} as any}
             onClose={() => setShowMCPDiscovery(false)}
             onToolSelect={handleMCPToolSelect}
             showOnlyAvailable={true}

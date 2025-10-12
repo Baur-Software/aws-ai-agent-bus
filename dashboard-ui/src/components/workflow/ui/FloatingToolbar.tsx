@@ -394,7 +394,7 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
               .filter(action => action.show)
               .map((action, index) => (
                 <ActionButton
-                  key={index}
+                  {...{} as any}
                   icon={action.icon}
                   label={action.label}
                   onClick={action.onClick}
