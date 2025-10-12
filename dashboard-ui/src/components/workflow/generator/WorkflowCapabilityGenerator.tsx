@@ -49,7 +49,7 @@ export default function WorkflowCapabilityGenerator() {
       capabilities: ['web-analytics', 'reporting', 'audience-insights'],
       triggers: ['traffic-spike', 'goal-completion', 'new-audience-segment'],
       actions: ['generate-report', 'create-audience', 'track-event'],
-      isConnected: integrations.getConnections('google-analytics').length > 0
+      isConnected: false // TODO: Fix integrations.getAllConnections signature
     },
     {
       appId: 'slack',
@@ -57,7 +57,7 @@ export default function WorkflowCapabilityGenerator() {
       capabilities: ['messaging', 'notifications', 'team-communication'],
       triggers: ['new-message', 'mention', 'channel-activity'],
       actions: ['send-message', 'create-channel', 'invite-user'],
-      isConnected: integrations.getConnections('slack').length > 0
+      isConnected: integrations.getAllConnections('slack').length > 0
     },
     {
       appId: 'github',
@@ -65,7 +65,7 @@ export default function WorkflowCapabilityGenerator() {
       capabilities: ['code-management', 'issue-tracking', 'ci-cd'],
       triggers: ['push', 'pull-request', 'issue-created', 'release'],
       actions: ['create-issue', 'merge-pr', 'create-release', 'update-status'],
-      isConnected: integrations.getConnections('github').length > 0
+      isConnected: integrations.getAllConnections('github').length > 0
     },
     {
       appId: 'stripe',
@@ -73,7 +73,7 @@ export default function WorkflowCapabilityGenerator() {
       capabilities: ['payments', 'subscriptions', 'invoicing'],
       triggers: ['payment-success', 'payment-failed', 'subscription-created'],
       actions: ['create-customer', 'process-payment', 'send-invoice'],
-      isConnected: integrations.getConnections('stripe').length > 0
+      isConnected: integrations.getAllConnections('stripe').length > 0
     }
   ];
 
