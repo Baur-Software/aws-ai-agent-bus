@@ -218,13 +218,12 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
           description: workflow.description,
           organizationId: 'demo-org-456',
           collaborators: [{
-            userId: workflow.createdBy,
+            id: workflow.createdBy,
             email: 'demo@example.com',
             name: 'Demo User',
             avatar: '',
             role: 'owner',
-            addedAt: workflow.createdAt,
-            addedBy: workflow.createdBy,
+            joinedAt: workflow.createdAt,
             status: 'active'
           }],
           permissions: {
@@ -347,13 +346,12 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
       name: 'Untitled Workflow',
       organizationId: org.id,
       collaborators: [{
-        userId: currentUser.id,
+        id: currentUser.id,
         email: currentUser.email,
         name: currentUser.name,
         avatar: currentUser.avatar,
         role: 'owner',
-        addedAt: timestamp,
-        addedBy: currentUser.id,
+        joinedAt: timestamp,
         status: 'active'
       }],
       permissions: {
@@ -479,13 +477,12 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
         description: newWorkflow.description,
         organizationId: org.id,
         collaborators: [{
-          userId: currentUser.id,
+          id: currentUser.id,
           email: currentUser.email,
           name: currentUser.name,
           avatar: currentUser.avatar,
           role: 'owner',
-          addedAt: newWorkflow.createdAt,
-          addedBy: currentUser.id,
+          joinedAt: newWorkflow.createdAt,
           status: 'active'
         }],
         permissions: {
