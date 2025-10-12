@@ -26,7 +26,7 @@ export interface WorkflowUIState {
 
   // Grid and canvas view state
   gridMode: () => 'off' | 'grid' | 'dots';
-  setGridMode: (mode: 'off' | 'grid' | 'dots') => void;
+  setGridMode: (mode: 'off' | 'grid' | 'dots' | ((prev: 'off' | 'grid' | 'dots') => 'off' | 'grid' | 'dots')) => void;
   canvasOffset: () => { x: number; y: number };
   setCanvasOffset: (offset: { x: number; y: number }) => void;
   zoom: () => number;

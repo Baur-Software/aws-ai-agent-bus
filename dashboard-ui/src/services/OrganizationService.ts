@@ -300,7 +300,6 @@ export class OrganizationService {
           auditLogs: false,
           prioritySupport: false
         },
-        infraId: '',
         members: [],
         createdBy: 'system',
         createdAt: new Date().toISOString(),

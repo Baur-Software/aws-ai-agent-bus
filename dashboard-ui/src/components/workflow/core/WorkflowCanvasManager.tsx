@@ -329,8 +329,7 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
                   createdBy: workflow.currentWorkflow()!.createdBy,
                   nodeCount: workflow.currentNodes().length,
                   tags: workflow.currentWorkflow()!.tags || []
-                },
-                forkedFrom: workflow.currentWorkflow()!.forkedFrom
+                }
               } : undefined}
               onWorkflowRename={props.onWorkflowRename}
             />
