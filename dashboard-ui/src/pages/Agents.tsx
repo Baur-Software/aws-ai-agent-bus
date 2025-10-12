@@ -72,7 +72,7 @@ export default function Agents(props: AgentsProps) {
     if (!confirm('Are you sure you want to delete this agent?')) return;
 
     try {
-      await artifactService.delete(`agents/${agentId}.md`);
+      await artifactService.delete(agentId, 'agent', 'personal');
       await loadAgents();
     } catch (error) {
       console.error('Failed to delete agent:', error);
@@ -213,7 +213,7 @@ export default function Agents(props: AgentsProps) {
           agentId={editingAgent()!}
           context="personal"
           onSave={async (markdown, metadata) => {
-            await artifactService.save(editingAgent()!, 'agent', 'personal', { content: markdown, metadata });
+            await artifactService.save(editingAgent()!, { content: markdown, ...metadata }, { type: 'agent', context: 'personal' });
             await loadAgents();
           }}
           onClose={() => setEditingAgent(null)}

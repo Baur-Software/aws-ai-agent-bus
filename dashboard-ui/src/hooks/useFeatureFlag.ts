@@ -138,7 +138,7 @@ export function useFeatureFlags(flags: FeatureFlagKey[]): Record<string, boolean
 
   for (const flag of flags) {
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    results[flag] = useFeatureFlag(flag);
+    results[flag] = useFeatureFlag(flag)();
   }
 
   return results;

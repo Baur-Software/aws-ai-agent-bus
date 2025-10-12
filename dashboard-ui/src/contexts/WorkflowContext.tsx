@@ -107,7 +107,7 @@ interface WorkflowContextType {
   // Actions
   loadWorkflow: (id: string) => Promise<void>;
   saveWorkflow: (message?: string) => Promise<void>;
-  createNewWorkflow: () => Promise<void>;
+  createNewWorkflow: () => Promise<string>;
   importWorkflow: () => Promise<void>;
 
   // Version control
@@ -390,6 +390,12 @@ export const WorkflowProvider: ParentComponent = (props) => {
           name: 'Untitled Workflow',
           description: 'A new workflow ready to be built',
           organizationId: currentOrganization()?.id || 'demo-org',
+          createdBy: user()?.id || 'demo-user',
+          isPublic: false,
+          context: 'user',
+          stats: { forkCount: 0, starCount: 0, usageCount: 0 },
+          versionHistory: [],
+          topics: [],
           collaborators: [{
             userId: user()?.id || 'demo-user',
             email: user()?.email || 'demo@example.com',
@@ -457,7 +463,7 @@ export const WorkflowProvider: ParentComponent = (props) => {
         versionHistory: [],
         tags: workflow.metadata.tags,
         topics: [],
-        forkedFrom: workflow.forkedFrom
+        forkedFrom: workflow.forkedFrom ? { ...workflow.forkedFrom, version: workflow.version } : undefined
       };
 
       setCurrentWorkflow(metadata);
@@ -489,42 +495,45 @@ export const WorkflowProvider: ParentComponent = (props) => {
         } else {
           // No saved workflow found - this is a new workflow, use sample nodes
           console.log('📝 New workflow - initializing with sample nodes');
-          const sampleNodes = [
+          const sampleNodes: WorkflowNode[] = [
             {
               id: 'sample-trigger-1',
               type: 'trigger',
-              x: 100,
-              y: 100,
-              inputs: [],
-              outputs: ['output'],
-              config: { triggerType: 'manual' },
-              title: 'Start Process',
-              description: 'Manual trigger to start the workflow',
-              enabled: true
+              position: { x: 100, y: 100 },
+              data: {
+                inputs: [],
+                outputs: ['output'],
+                config: { triggerType: 'manual' },
+                title: 'Start Process',
+                description: 'Manual trigger to start the workflow',
+                enabled: true
+              }
             },
             {
               id: 'sample-process-1',
               type: 'lead-qualification',
-              x: 300,
-              y: 100,
-              inputs: ['input'],
-              outputs: ['qualified', 'unqualified'],
-              config: { criteria: 'basic qualification' },
-              title: 'Qualify Lead',
-              description: 'Evaluate and qualify incoming leads',
-              enabled: true
+              position: { x: 300, y: 100 },
+              data: {
+                inputs: ['input'],
+                outputs: ['qualified', 'unqualified'],
+                config: { criteria: 'basic qualification' },
+                title: 'Qualify Lead',
+                description: 'Evaluate and qualify incoming leads',
+                enabled: true
+              }
             },
             {
               id: 'sample-action-1',
               type: 'email',
-              x: 500,
-              y: 50,
-              inputs: ['input'],
-              outputs: ['sent', 'failed'],
-              config: { template: 'welcome-email' },
-              title: 'Send Welcome Email',
-              description: 'Send welcome email to qualified leads',
-              enabled: true
+              position: { x: 500, y: 50 },
+              data: {
+                inputs: ['input'],
+                outputs: ['sent', 'failed'],
+                config: { template: 'welcome-email' },
+                title: 'Send Welcome Email',
+                description: 'Send welcome email to qualified leads',
+                enabled: true
+              }
             }
           ];
 

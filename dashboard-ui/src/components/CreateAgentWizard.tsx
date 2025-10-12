@@ -157,7 +157,7 @@ Generate a complete, professional agent markdown file following the template str
         }, 1000);
       });
 
-      const markdown = response?.markdown || '';
+      const markdown = (response as any)?.markdown || '';
 
       if (!markdown) {
         throw new Error('Failed to generate agent definition');
