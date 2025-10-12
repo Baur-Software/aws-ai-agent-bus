@@ -1,4 +1,4 @@
-use mcp_rust::mcp::{MCPRequest, MCPServer};
+use mcp_rust::mcp::MCPServer;
 use mcp_rust::tenant::TenantManager;
 use serde_json::json;
 use std::sync::Arc;

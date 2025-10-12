@@ -7,7 +7,7 @@ use std::sync::Arc;
 // Import test utilities
 use mcp_rust::aws::AwsService;
 use mcp_rust::handlers::{
-    EventsAnalyticsHandler, EventsCreateAlertHandler, EventsCreateRuleHandler,
+    EventsCreateAlertHandler, EventsCreateRuleHandler,
     EventsHealthCheckHandler, EventsQueryHandler, Handler, HandlerError,
 };
 use mcp_rust::tenant::{
@@ -333,7 +333,7 @@ mod events_query_handler_tests {
         let mut session = create_test_session();
         session.context.permissions = vec![Permission::ReadKV]; // Missing SendEvents
 
-        let arguments = json!({
+        let _arguments = json!({
             "userId": "test-user-123",
             "limit": 10
         });

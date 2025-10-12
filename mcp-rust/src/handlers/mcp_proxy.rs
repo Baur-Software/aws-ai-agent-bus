@@ -36,11 +36,11 @@ impl MCPProxyHandler {
             .map_err(|e| HandlerError::Internal(e.to_string()))?;
 
         // For now, we'll need to enhance the registry to expose tool listings
-        // This is a simplified version
-        for server in servers {
+        // This is a simplified version - return first server if available
+        if let Some(server) = servers.first() {
             // Try to execute on this server and see if it has the tool
             // In production, we'd cache this mapping
-            return Ok(server.id);
+            return Ok(server.id.clone());
         }
 
         Err(HandlerError::Internal(format!(

@@ -47,7 +47,7 @@ fn test_mcp_server_notification_vs_request_handling() {
         .expect("Failed to read response");
 
     let response: serde_json::Value =
-        serde_json::from_str(&line.trim()).expect("Failed to parse response");
+        serde_json::from_str(line.trim()).expect("Failed to parse response");
 
     // Verify proper JSON-RPC response
     assert_eq!(response["jsonrpc"], "2.0");
@@ -82,7 +82,7 @@ fn test_mcp_server_notification_vs_request_handling() {
         .expect("Failed to read test response");
 
     let test_response: serde_json::Value =
-        serde_json::from_str(&test_line.trim()).expect("Failed to parse test response");
+        serde_json::from_str(test_line.trim()).expect("Failed to parse test response");
 
     // Verify we got the expected response (server is still working)
     assert_eq!(test_response["jsonrpc"], "2.0");
@@ -135,7 +135,7 @@ fn test_mcp_server_protocol_version() {
         .expect("Failed to read response");
 
     let response: serde_json::Value =
-        serde_json::from_str(&line.trim()).expect("Failed to parse response");
+        serde_json::from_str(line.trim()).expect("Failed to parse response");
 
     // Verify server responds with correct protocol version
     assert_eq!(response["result"]["protocolVersion"], "2025-06-18");
@@ -176,7 +176,7 @@ fn test_mcp_server_json_rpc_compliance() {
         .expect("Failed to read response");
 
     let response: serde_json::Value =
-        serde_json::from_str(&line.trim()).expect("Failed to parse error response");
+        serde_json::from_str(line.trim()).expect("Failed to parse error response");
 
     // Should get proper JSON-RPC error response
     assert_eq!(response["jsonrpc"], "2.0");

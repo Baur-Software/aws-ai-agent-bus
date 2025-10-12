@@ -14,11 +14,6 @@ Current test debt status:
 
 Before claiming "production ready": ALL tests must pass without `.skip()`.
 
-See detailed tracking in:
-
-- `dashboard-ui/TECHNICAL_DEBT.md` - Strategic overview
-- `dashboard-ui/TODO_TESTS.md` - Specific failing tests and solutions
-
 ## Core Commands
 
 ### MCP Server Setup
