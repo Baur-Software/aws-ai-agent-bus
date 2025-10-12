@@ -420,7 +420,7 @@ export class WorkflowStorageService {
         ...metadata,
         executionCount: metadata.executionCount + 1,
         lastExecuted: result.endTime || result.startTime,
-        lastExecutionStatus: result.status
+        lastExecutionStatus: result.status === 'running' ? 'completed' : result.status
       };
 
       await this.saveWorkflowMetadata(workflowId, updatedMetadata);

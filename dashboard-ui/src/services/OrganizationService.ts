@@ -273,6 +273,11 @@ export class OrganizationService {
         id: orgId,
         name: orgId, // Placeholder - actual org data should come from WebSocket response
         slug: orgId,
+        workspaceTier: 'free',
+        memberCount: 0,
+        userRole: 'member',
+        settings: {},
+        infraId: '',
         members: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()

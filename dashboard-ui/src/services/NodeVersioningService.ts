@@ -193,11 +193,11 @@ export class NodeVersioningService {
       const field2 = v2.schema.fields.find((f: any) => f.name === fieldName);
 
       if (JSON.stringify(field1) !== JSON.stringify(field2)) {
-        modified.push(fieldName);
+        modified.push(fieldName as string);
       }
     }
 
-    return { added, removed, modified };
+    return { added: added as string[], removed: removed as string[], modified: modified as string[] };
   }
 
   /**

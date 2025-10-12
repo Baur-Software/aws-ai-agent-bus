@@ -3,14 +3,14 @@ import type { AppConfig } from '../contexts/KVStoreContext';
 // Common field templates
 export const FIELD_TEMPLATES = {
   client_credentials: [
-    { key: 'client_id', label: 'Client ID', type: 'text' as const, required: true },
-    { key: 'client_secret', label: 'Client Secret', type: 'password' as const, required: true }
+    { key: 'client_id', label: 'Client ID', type: 'text', required: true as boolean },
+    { key: 'client_secret', label: 'Client Secret', type: 'password', required: true as boolean }
   ],
   api_key: [
-    { key: 'api_key', label: 'API Key', type: 'password' as const, required: true }
+    { key: 'api_key', label: 'API Key', type: 'password', required: true as boolean }
   ],
   bearer_token: [
-    { key: 'access_token', label: 'Access Token', type: 'password' as const, required: true }
+    { key: 'access_token', label: 'Access Token', type: 'password', required: true as boolean }
   ]
 };
 
