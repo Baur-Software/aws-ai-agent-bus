@@ -86,11 +86,11 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
 
       // Add to workflow
       const currentNodes = workflow.currentNodes();
-      workflow.setNodes([...currentNodes, newNode]);
+      workflow.setNodes([...currentNodes, newNode as any]);
       workflow.setHasUnsavedChanges(true);
 
       // Select the new node
-      workflowUI.setSelectedNode(newNode);
+      workflowUI.setSelectedNode(newNode as any);
 
       return true;
     }
@@ -257,10 +257,10 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
       >
         {/* Canvas component for nodes and connections */}
         <WorkflowCanvas
-          nodes={workflow.currentNodes()}
-          setNodes={workflow.setNodes}
-          connections={workflow.currentConnections()}
-          setConnections={workflow.setConnections}
+          nodes={workflow.currentNodes() as any}
+          setNodes={workflow.setNodes as any}
+          connections={workflow.currentConnections() as any}
+          setConnections={workflow.setConnections as any}
           selectedNode={workflowUI.selectedNode()}
           setSelectedNode={workflowUI.setSelectedNode}
           showWelcome={false}
@@ -319,18 +319,8 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
               initialPosition={workflowUI.toolbarPosition()}
               navigationPinned={props.navigationPinned}
               currentWorkflow={workflow.currentWorkflow() ? {
-                id: workflow.currentWorkflow()!.id,
-                name: workflow.currentWorkflow()!.name,
-                description: workflow.currentWorkflow()!.description,
-                version: workflow.currentWorkflow()!.version,
-                metadata: {
-                  createdAt: workflow.currentWorkflow()!.createdAt,
-                  updatedAt: workflow.currentWorkflow()!.updatedAt,
-                  createdBy: workflow.currentWorkflow()!.createdBy,
-                  nodeCount: workflow.currentNodes().length,
-                  tags: workflow.currentWorkflow()!.tags || []
-                }
-              } : undefined}
+                ...workflow.currentWorkflow()!
+              } as any : undefined}
               onWorkflowRename={props.onWorkflowRename}
             />
         </div>
