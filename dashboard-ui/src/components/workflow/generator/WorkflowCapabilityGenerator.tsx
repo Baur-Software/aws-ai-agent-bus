@@ -1,6 +1,6 @@
-import { createSignal, createEffect, For, Show, createMemo } from 'solid-js';
+import { createSignal, For, Show, createMemo } from 'solid-js';
 import { useDashboardServer } from '../../../contexts/DashboardServerContext';
-import { useIntegrations } from '../../../contexts/IntegrationsContext';
+// import { useIntegrations } from '../../../contexts/IntegrationsContext'; // Unused - functionality disabled
 import { useOrganization } from '../../../contexts/OrganizationContext';
 
 interface WorkflowCapability {
@@ -33,7 +33,7 @@ interface AppCapability {
 
 export default function WorkflowCapabilityGenerator() {
   const dashboardServer = useDashboardServer();
-  const integrations = useIntegrations();
+  // const integrations = useIntegrations(); // Disabled - leftover scaffolding
   const { currentOrganization } = useOrganization();
 
   const [loading, setLoading] = createSignal(false);
@@ -57,7 +57,7 @@ export default function WorkflowCapabilityGenerator() {
       capabilities: ['messaging', 'notifications', 'team-communication'],
       triggers: ['new-message', 'mention', 'channel-activity'],
       actions: ['send-message', 'create-channel', 'invite-user'],
-      isConnected: integrations.getAllConnections('slack').length > 0
+      isConnected: false // TODO: Fix integrations signature
     },
     {
       appId: 'github',
@@ -65,7 +65,7 @@ export default function WorkflowCapabilityGenerator() {
       capabilities: ['code-management', 'issue-tracking', 'ci-cd'],
       triggers: ['push', 'pull-request', 'issue-created', 'release'],
       actions: ['create-issue', 'merge-pr', 'create-release', 'update-status'],
-      isConnected: integrations.getAllConnections('github').length > 0
+      isConnected: false // TODO: Fix integrations signature
     },
     {
       appId: 'stripe',
@@ -73,7 +73,7 @@ export default function WorkflowCapabilityGenerator() {
       capabilities: ['payments', 'subscriptions', 'invoicing'],
       triggers: ['payment-success', 'payment-failed', 'subscription-created'],
       actions: ['create-customer', 'process-payment', 'send-invoice'],
-      isConnected: integrations.getAllConnections('stripe').length > 0
+      isConnected: false // TODO: Fix integrations signature
     }
   ];
 
@@ -270,12 +270,12 @@ export default function WorkflowCapabilityGenerator() {
   };
 
   // Auto-generate capabilities when integrations change
-  createEffect(() => {
-    const hasConnections = integrations.getAllConnections().length > 0;
-    if (hasConnections) {
-      generateCapabilities();
-    }
-  });
+  // createEffect(() => {
+  //   const hasConnections = Array.isArray(integrations.getAllConnections()) && integrations.getAllConnections().length > 0;
+  //   if (hasConnections) {
+  //     generateCapabilities();
+  //   }
+  // });
 
   const createWorkflowFromTemplate = async (capability: WorkflowCapability) => {
     if (capability.missingApps.length > 0) {
