@@ -213,7 +213,7 @@ export default function Agents(props: AgentsProps) {
           agentId={editingAgent()!}
           context="personal"
           onSave={async (markdown, metadata) => {
-            await artifactService.put(`agents/${editingAgent()}.md`, markdown);
+            await artifactService.save(editingAgent()!, 'agent', 'personal', { content: markdown, metadata });
             await loadAgents();
           }}
           onClose={() => setEditingAgent(null)}

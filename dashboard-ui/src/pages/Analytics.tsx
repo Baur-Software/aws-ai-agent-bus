@@ -4,8 +4,8 @@ import { usePageHeader } from '../contexts/HeaderContext';
 
 function Analytics() {
   const [loading, setLoading] = createSignal(false);
-  const { analytics } = useDashboardServer();
-  
+  // const { analytics } = useDashboardServer(); // TODO: Add analytics to DashboardServerContext
+
   // Set page-specific header
   usePageHeader('Analytics', 'Google Analytics insights and reports');
 

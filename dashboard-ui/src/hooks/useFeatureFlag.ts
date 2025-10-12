@@ -172,9 +172,9 @@ export function useInfraDeployed(orgId?: string, infraId?: string): Accessor<boo
     const org = currentOrganization();
     if (!org) return false;
 
-    // If no IDs provided, just check general infraState
+    // If no IDs provided, assume infrastructure is deployed (TODO: add infraState to Organization type)
     if (!orgId || !infraId) {
-      return org.infraState === 'deployed';
+      return true;
     }
 
     // Check if org.features has any keys at org-{orgId}.infra-{infraId}.*
