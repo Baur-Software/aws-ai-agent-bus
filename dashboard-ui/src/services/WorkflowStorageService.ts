@@ -108,11 +108,11 @@ export class WorkflowStorageService {
 
     // Save workflow definition
     const workflowKey = `${this.storagePrefix}${id}`;
-    await this.mcpService.artifactsPut({
-      key: workflowKey,
-      content: JSON.stringify(updatedWorkflow, null, 2),
-      content_type: 'application/json'
-    });
+    await this.mcpService.artifactsPut(
+      workflowKey,
+      JSON.stringify(updatedWorkflow, null, 2),
+      'application/json'
+    );
 
     // Extract and save metadata
     const metadata = this.extractMetadata(updatedWorkflow);
@@ -160,11 +160,11 @@ export class WorkflowStorageService {
       // Delete workflow definition
       const workflowKey = `${this.storagePrefix}${id}`;
       // Note: MCP doesn't have delete, so we'll store a deleted marker
-      await this.mcpService.artifactsPut({
-        key: workflowKey,
-        content: JSON.stringify({ deleted: true, deletedAt: new Date().toISOString() }),
-        content_type: 'application/json'
-      });
+      await this.mcpService.artifactsPut(
+        workflowKey,
+        JSON.stringify({ deleted: true, deletedAt: new Date().toISOString() }),
+        'application/json'
+      );
 
       // Remove from workflow list
       await this.removeFromWorkflowList(id);
@@ -557,11 +557,11 @@ export class WorkflowStorageService {
 
       // Also store the workflow data globally
       const globalWorkflowKey = `global-template-${workflowId}`;
-      await this.mcpService.artifactsPut({
-        key: globalWorkflowKey,
-        content: JSON.stringify(templateWorkflow, null, 2),
-        content_type: 'application/json'
-      });
+      await this.mcpService.artifactsPut(
+        globalWorkflowKey,
+        JSON.stringify(templateWorkflow, null, 2),
+        'application/json'
+      );
 
       console.log(`🌍 Shared workflow as global template: ${workflowId}`);
       return true;
@@ -765,11 +765,11 @@ export class WorkflowStorageService {
       const workflow = await this.loadWorkflow(id);
       if (workflow) {
         const backupKey = `${this.storagePrefix}${id}-backup-${Date.now()}`;
-        await this.mcpService.artifactsPut({
-          key: backupKey,
-          content: JSON.stringify(workflow, null, 2),
-          content_type: 'application/json'
-        });
+        await this.mcpService.artifactsPut(
+          backupKey,
+          JSON.stringify(workflow, null, 2),
+          'application/json'
+        );
       }
     } catch (error) {
       console.warn(`Failed to create backup for ${id}:`, error);
