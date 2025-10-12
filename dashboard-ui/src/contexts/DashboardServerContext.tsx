@@ -268,7 +268,7 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
       const timeout = setTimeout(() => {
         pendingRequests.delete(messageId);
         reject(new Error(`Request '${message.type}' timed out`));
-      }, 15000); // 15 second timeout
+      }, 15000) as unknown as number; // 15 second timeout (cast for browser compat)
 
       // Store the pending request
       pendingRequests.set(messageId, {
@@ -494,7 +494,7 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
       const timeout = setTimeout(() => {
         pendingRequests.delete(messageId);
         reject(new Error(`MCP tool call '${tool}' timed out after 5s - check MCP server connection`));
-      }, 5000);
+      }, 5000) as unknown as number;
 
       // Store the pending request
       pendingRequests.set(messageId, { resolve, reject, timeout });
