@@ -1,0 +1,165 @@
+{
+  "version": "1.0",
+  "created": "2025-10-11T00:00:00Z",
+  "name": "Home Assistant Smart Automation",
+  "description": "Connect to Home Assistant to quickly build custom automation workflows. Control lights, climate, security, and appliances with visual logic on the canvas. Create scenes and routines that match your lifestyle.",
+  "nodes": [
+    {
+      "id": "motion-trigger-1",
+      "type": "home-assistant-trigger",
+      "x": 50,
+      "y": 300,
+      "inputs": [],
+      "outputs": ["motion", "noMotion"],
+      "config": {
+        "entity": "binary_sensor.living_room_motion",
+        "from": "off",
+        "to": "on",
+        "for": "00:00:05"
+      }
+    },
+    {
+      "id": "check-time-1",
+      "type": "condition",
+      "x": 300,
+      "y": 300,
+      "inputs": ["input"],
+      "outputs": ["night", "day"],
+      "config": {
+        "conditions": [
+          {
+            "condition": "time",
+            "after": "sunset",
+            "before": "sunrise",
+            "output": "night"
+          }
+        ],
+        "defaultOutput": "day"
+      }
+    },
+    {
+      "id": "check-occupancy-1",
+      "type": "home-assistant-state",
+      "x": 550,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "entity": "group.all_people",
+        "attribute": "state"
+      }
+    },
+    {
+      "id": "smart-lighting-1",
+      "type": "home-assistant-scene",
+      "x": 800,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "scene": "scene.evening_ambient",
+        "transition": 3,
+        "entities": [
+          {"entity": "light.living_room", "brightness": 60, "color_temp": 370},
+          {"entity": "light.kitchen", "brightness": 40}
+        ]
+      }
+    },
+    {
+      "id": "climate-control-1",
+      "type": "home-assistant-climate",
+      "x": 800,
+      "y": 300,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "entity": "climate.thermostat",
+        "hvac_mode": "heat_cool",
+        "temperature": 72,
+        "fan_mode": "auto"
+      }
+    },
+    {
+      "id": "security-check-1",
+      "type": "home-assistant-state",
+      "x": 800,
+      "y": 400,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "entity": "alarm_control_panel.home",
+        "state": "armed_away"
+      }
+    },
+    {
+      "id": "send-notification-1",
+      "type": "home-assistant-notify",
+      "x": 1050,
+      "y": 400,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "service": "mobile_app",
+        "title": "Motion Detected",
+        "message": "Motion detected in living room while alarm is armed",
+        "data": {
+          "priority": "high",
+          "ttl": 0,
+          "image": "{{cameraSnapshot}}"
+        }
+      }
+    },
+    {
+      "id": "log-event-1",
+      "type": "events-send",
+      "x": 1050,
+      "y": 300,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "detailType": "HomeAutomation.MotionDetected",
+        "detail": {
+          "room": "living_room",
+          "timeOfDay": "{{timeOfDay}}",
+          "occupancyStatus": "{{occupancyStatus}}",
+          "actionsTriggered": "{{actions}}",
+          "timestamp": "{{timestamp}}"
+        }
+      }
+    }
+  ],
+  "connections": [
+    {"from": "motion-trigger-1", "to": "check-time-1", "fromOutput": "motion", "toInput": "input"},
+    {"from": "check-time-1", "to": "check-occupancy-1", "fromOutput": "night", "toInput": "input"},
+    {"from": "check-occupancy-1", "to": "smart-lighting-1", "fromOutput": "output", "toInput": "input"},
+    {"from": "check-occupancy-1", "to": "climate-control-1", "fromOutput": "output", "toInput": "input"},
+    {"from": "check-occupancy-1", "to": "security-check-1", "fromOutput": "output", "toInput": "input"},
+    {"from": "security-check-1", "to": "send-notification-1", "fromOutput": "output", "toInput": "input"},
+    {"from": "smart-lighting-1", "to": "log-event-1", "fromOutput": "output", "toInput": "input"}
+  ],
+  "metadata": {
+    "author": "AWS AI Agent Bus",
+    "tags": ["home-assistant", "smart-home", "automation", "iot"],
+    "category": "Home Automation",
+    "requiredApps": ["home-assistant"],
+    "estimatedDuration": "Real-time automation",
+    "difficulty": "intermediate",
+    "isTemplate": true,
+    "features": [
+      "Motion-activated lighting",
+      "Time-based scenes",
+      "Smart climate control",
+      "Security integration",
+      "Mobile notifications",
+      "Event logging"
+    ],
+    "instructions": [
+      "Connect Home Assistant with API token",
+      "Configure entity IDs for your devices",
+      "Test scenes manually first",
+      "Adjust timing and conditions",
+      "Enable automation",
+      "Monitor event logs"
+    ]
+  }
+}

@@ -1,0 +1,255 @@
+{
+  "version": "1.0",
+  "created": "2025-10-11T00:00:00Z",
+  "name": "AI Content Generator from Keyword Analysis",
+  "description": "Use AI to write blog content based on Google Analytics keyword analysis. Finds trending keywords, generates SEO-optimized content, and publishes directly to your blog.",
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "trigger",
+      "x": 50,
+      "y": 250,
+      "inputs": [],
+      "outputs": ["output"],
+      "config": {
+        "name": "Weekly Content Generation",
+        "schedule": "0 9 * * 1"
+      }
+    },
+    {
+      "id": "fetch-keywords-1",
+      "type": "google-analytics-query",
+      "x": 300,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "propertyId": "{{GA_PROPERTY_ID}}",
+        "metrics": ["sessions", "bounceRate", "avgSessionDuration"],
+        "dimensions": ["landingPage", "query"],
+        "dateRange": "last30days",
+        "orderBy": "sessions DESC",
+        "limit": 100
+      }
+    },
+    {
+      "id": "analyze-opportunities-1",
+      "type": "agent-conductor",
+      "x": 550,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "agentType": "content-strategist",
+        "prompt": "Analyze these keywords and identify:\n1. High-traffic, low-bounce keywords (content performing well)\n2. High-traffic, high-bounce keywords (needs better content)\n3. Trending topics from search queries\n4. Content gaps where we're getting impressions but low clicks\n\nProvide 3-5 content recommendations with SEO focus.",
+        "includeContext": true
+      }
+    },
+    {
+      "id": "select-topic-1",
+      "type": "transform",
+      "x": 800,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "operations": [
+          {"field": "selectedTopic", "formula": "recommendations[0]"},
+          {"field": "targetKeywords", "formula": "selectedTopic.keywords"},
+          {"field": "searchIntent", "formula": "selectedTopic.intent"}
+        ]
+      }
+    },
+    {
+      "id": "generate-outline-1",
+      "type": "agent-conductor",
+      "x": 1050,
+      "y": 150,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "agentType": "content-writer",
+        "prompt": "Create a comprehensive blog post outline for: {{selectedTopic}}\n\nTarget keywords: {{targetKeywords}}\nSearch intent: {{searchIntent}}\n\nRequirements:\n- 1500-2000 word target\n- 5-7 H2 sections\n- Include H3 subsections where appropriate\n- SEO-optimized headings\n- Include FAQ section\n- Add internal linking opportunities",
+        "model": "claude-3-5-sonnet"
+      }
+    },
+    {
+      "id": "generate-content-1",
+      "type": "agent-conductor",
+      "x": 1050,
+      "y": 300,
+      "inputs": ["outline"],
+      "outputs": ["output"],
+      "config": {
+        "agentType": "content-writer",
+        "prompt": "Write a complete blog post following this outline:\n\n{{outline}}\n\nGuidelines:\n- Engaging, conversational tone\n- Use target keywords naturally\n- Include examples and data\n- Add actionable takeaways\n- Optimize for featured snippets\n- Include meta description (155 chars)\n- Suggest 3-5 internal links",
+        "model": "claude-3-5-sonnet",
+        "maxTokens": 4000
+      }
+    },
+    {
+      "id": "generate-image-prompts-1",
+      "type": "transform",
+      "x": 1300,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "operations": [
+          {
+            "field": "featuredImagePrompt",
+            "formula": "'Professional blog featured image: ' + selectedTopic + ', modern, clean, high-quality'"
+          },
+          {
+            "field": "sectionImagePrompts",
+            "formula": "MAP(outline.sections, section => 'Illustration for: ' + section.heading)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "optimize-seo-1",
+      "type": "agent-conductor",
+      "x": 1300,
+      "y": 350,
+      "inputs": ["content"],
+      "outputs": ["output"],
+      "config": {
+        "agentType": "seo-specialist",
+        "prompt": "Review and optimize this content for SEO:\n\n{{content}}\n\nTarget keywords: {{targetKeywords}}\n\nProvide:\n1. Keyword density analysis\n2. Readability score\n3. SEO improvements\n4. Schema markup suggestions\n5. Social media snippets (Twitter, LinkedIn, Facebook)",
+        "model": "claude-3-5-sonnet"
+      }
+    },
+    {
+      "id": "format-markdown-1",
+      "type": "transform",
+      "x": 1550,
+      "y": 275,
+      "inputs": ["content", "seo"],
+      "outputs": ["output"],
+      "config": {
+        "operations": [
+          {
+            "field": "markdownContent",
+            "formula": "MARKDOWN_FORMAT(content, {includeYAMLFrontmatter: true, addTableOfContents: true})"
+          },
+          {
+            "field": "frontmatter",
+            "formula": "{\n  title: selectedTopic,\n  description: seo.metaDescription,\n  keywords: targetKeywords,\n  date: FORMAT_DATE(NOW(), 'YYYY-MM-DD'),\n  author: 'AI Content Generator',\n  seoScore: seo.score,\n  readability: seo.readability\n}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "store-draft-1",
+      "type": "artifacts-put",
+      "x": 1800,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "key": "content/drafts/{{slugify(selectedTopic)}}-{{date}}.md",
+        "useContextData": true,
+        "contextKey": "markdownContent",
+        "content_type": "text/markdown"
+      }
+    },
+    {
+      "id": "publish-wordpress-1",
+      "type": "wordpress-create-post",
+      "x": 1800,
+      "y": 300,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "status": "draft",
+        "title": "{{selectedTopic}}",
+        "content": "{{markdownContent}}",
+        "excerpt": "{{seo.metaDescription}}",
+        "categories": "{{categories}}",
+        "tags": "{{targetKeywords}}",
+        "seoMeta": {
+          "metaDescription": "{{seo.metaDescription}}",
+          "focusKeyword": "{{targetKeywords[0]}}",
+          "canonical": "{{canonicalUrl}}"
+        }
+      }
+    },
+    {
+      "id": "send-notification-1",
+      "type": "slack-message",
+      "x": 2050,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "channel": "#content-team",
+        "message": "✍️ **New AI-Generated Content Ready**\n\nTopic: {{selectedTopic}}\nTarget Keywords: {{targetKeywords}}\nSEO Score: {{seo.score}}/100\nReadability: {{seo.readability}}\n\n📝 [Review Draft]({{draftUrl}})\n📊 [View Analytics]({{analyticsUrl}})\n\nGenerated from GA keyword analysis. Please review and publish!"
+      }
+    },
+    {
+      "id": "send-event-1",
+      "type": "events-send",
+      "x": 2050,
+      "y": 350,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "detailType": "Content.Generated",
+        "detail": {
+          "topic": "{{selectedTopic}}",
+          "keywords": "{{targetKeywords}}",
+          "wordCount": "{{wordCount}}",
+          "seoScore": "{{seo.score}}",
+          "readability": "{{seo.readability}}",
+          "draftUrl": "{{draftUrl}}",
+          "publishUrl": "{{publishUrl}}",
+          "timestamp": "{{timestamp}}"
+        }
+      }
+    }
+  ],
+  "connections": [
+    {"from": "trigger-1", "to": "fetch-keywords-1", "fromOutput": "output", "toInput": "input"},
+    {"from": "fetch-keywords-1", "to": "analyze-opportunities-1", "fromOutput": "output", "toInput": "input"},
+    {"from": "analyze-opportunities-1", "to": "select-topic-1", "fromOutput": "output", "toInput": "input"},
+    {"from": "select-topic-1", "to": "generate-outline-1", "fromOutput": "output", "toInput": "input"},
+    {"from": "generate-outline-1", "to": "generate-content-1", "fromOutput": "output", "toInput": "outline"},
+    {"from": "generate-content-1", "to": "generate-image-prompts-1", "fromOutput": "output", "toInput": "input"},
+    {"from": "generate-content-1", "to": "optimize-seo-1", "fromOutput": "output", "toInput": "content"},
+    {"from": "optimize-seo-1", "to": "format-markdown-1", "fromOutput": "output", "toInput": "seo"},
+    {"from": "generate-content-1", "to": "format-markdown-1", "fromOutput": "output", "toInput": "content"},
+    {"from": "format-markdown-1", "to": "store-draft-1", "fromOutput": "output", "toInput": "input"},
+    {"from": "format-markdown-1", "to": "publish-wordpress-1", "fromOutput": "output", "toInput": "input"},
+    {"from": "publish-wordpress-1", "to": "send-notification-1", "fromOutput": "output", "toInput": "input"},
+    {"from": "publish-wordpress-1", "to": "send-event-1", "fromOutput": "output", "toInput": "input"}
+  ],
+  "metadata": {
+    "author": "AWS AI Agent Bus",
+    "tags": ["ai", "content-generation", "seo", "google-analytics", "wordpress", "automation"],
+    "category": "Analytics & Content",
+    "requiredApps": ["google-analytics", "wordpress", "slack", "bedrock"],
+    "estimatedDuration": "10-15 minutes per article",
+    "difficulty": "advanced",
+    "isTemplate": true,
+    "features": [
+      "Google Analytics keyword analysis",
+      "AI-powered content strategy",
+      "Automated blog post generation (1500-2000 words)",
+      "SEO optimization with scoring",
+      "WordPress draft creation",
+      "Slack notifications for review",
+      "Markdown storage for version control"
+    ],
+    "instructions": [
+      "Connect Google Analytics and WordPress",
+      "Configure Bedrock or Ollama for AI generation",
+      "Set up Slack webhook for notifications",
+      "Customize content guidelines in agent prompts",
+      "Test with manual trigger first",
+      "Review first few AI-generated drafts",
+      "Enable weekly automation",
+      "Monitor SEO scores and adjust prompts"
+    ]
+  }
+}

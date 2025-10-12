@@ -1,0 +1,567 @@
+{
+  "version": "1.0",
+  "created": "2025-10-11T00:00:00Z",
+  "name": "Company Data Backup to Google Drive",
+  "description": "Automated backup of all company data to Google Drive. Backs up CRM data, QuickBooks records, documents, and databases on a schedule. Maintains version history and sends notifications.",
+  "nodes": [
+    {
+      "id": "schedule-trigger-1",
+      "type": "trigger",
+      "x": 50,
+      "y": 300,
+      "inputs": [],
+      "outputs": ["output"],
+      "config": {
+        "name": "Weekly Backup Schedule",
+        "description": "Run full backup every Sunday at 2 AM",
+        "schedule": "0 2 * * 0",
+        "timezone": "America/Los_Angeles"
+      }
+    },
+    {
+      "id": "parallel-fetch-1",
+      "type": "parallel",
+      "x": 300,
+      "y": 300,
+      "inputs": ["input"],
+      "outputs": ["crm", "quickbooks", "documents", "database"],
+      "config": {
+        "branches": [
+          { "name": "CRM Data", "output": "crm" },
+          { "name": "QuickBooks", "output": "quickbooks" },
+          { "name": "Documents", "output": "documents" },
+          { "name": "Database", "output": "database" }
+        ],
+        "waitForAll": true
+      }
+    },
+    {
+      "id": "export-crm-1",
+      "type": "salesforce-export",
+      "x": 550,
+      "y": 100,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "objects": ["Account", "Contact", "Lead", "Opportunity", "Case"],
+        "includeAttachments": true,
+        "includeNotes": true,
+        "format": "json",
+        "compress": true
+      }
+    },
+    {
+      "id": "export-quickbooks-1",
+      "type": "quickbooks-export",
+      "x": 550,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "entities": ["Invoice", "Payment", "Customer", "Vendor", "Expense", "Bill"],
+        "dateRange": "all",
+        "includeAttachments": true,
+        "format": "json",
+        "compress": true
+      }
+    },
+    {
+      "id": "export-documents-1",
+      "type": "sharepoint-export",
+      "x": 550,
+      "y": 400,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "sites": ["CompanyDocs", "HR", "Finance", "Sales"],
+        "includeVersionHistory": false,
+        "compress": true
+      }
+    },
+    {
+      "id": "export-database-1",
+      "type": "database-backup",
+      "x": 550,
+      "y": 550,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "connectionString": "{{DB_CONNECTION_STRING}}",
+        "format": "sql",
+        "compress": true,
+        "includeSchema": true
+      }
+    },
+    {
+      "id": "create-manifest-1",
+      "type": "transform",
+      "x": 800,
+      "y": 300,
+      "inputs": ["crm", "quickbooks", "docs", "db"],
+      "outputs": ["output"],
+      "config": {
+        "operations": [
+          {
+            "field": "backupDate",
+            "formula": "NOW()"
+          },
+          {
+            "field": "backupId",
+            "formula": "UUID()"
+          },
+          {
+            "field": "files",
+            "formula": "[\n  {name: 'crm-data.json.gz', size: crmFileSize, checksum: crmChecksum},\n  {name: 'quickbooks-data.json.gz', size: qbFileSize, checksum: qbChecksum},\n  {name: 'documents.zip', size: docsFileSize, checksum: docsChecksum},\n  {name: 'database.sql.gz', size: dbFileSize, checksum: dbChecksum}\n]"
+          },
+          {
+            "field": "totalSize",
+            "formula": "SUM(files.size)"
+          },
+          {
+            "field": "backupVersion",
+            "formula": "FORMAT_DATE(NOW(), 'YYYY-MM-DD-HHmmss')"
+          }
+        ]
+      }
+    },
+    {
+      "id": "create-drive-folder-1",
+      "type": "google-drive-create-folder",
+      "x": 1050,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "parentFolder": "Company Backups",
+        "folderName": "backup-{{backupVersion}}",
+        "createParentIfNotExists": true
+      }
+    },
+    {
+      "id": "upload-crm-1",
+      "type": "google-drive-upload",
+      "x": 1300,
+      "y": 100,
+      "inputs": ["file", "folder"],
+      "outputs": ["output"],
+      "config": {
+        "fileName": "crm-data.json.gz",
+        "mimeType": "application/gzip",
+        "description": "CRM data backup - {{backupDate}}"
+      }
+    },
+    {
+      "id": "upload-quickbooks-1",
+      "type": "google-drive-upload",
+      "x": 1300,
+      "y": 200,
+      "inputs": ["file", "folder"],
+      "outputs": ["output"],
+      "config": {
+        "fileName": "quickbooks-data.json.gz",
+        "mimeType": "application/gzip",
+        "description": "QuickBooks data backup - {{backupDate}}"
+      }
+    },
+    {
+      "id": "upload-documents-1",
+      "type": "google-drive-upload",
+      "x": 1300,
+      "y": 300,
+      "inputs": ["file", "folder"],
+      "outputs": ["output"],
+      "config": {
+        "fileName": "documents.zip",
+        "mimeType": "application/zip",
+        "description": "Document archive - {{backupDate}}"
+      }
+    },
+    {
+      "id": "upload-database-1",
+      "type": "google-drive-upload",
+      "x": 1300,
+      "y": 400,
+      "inputs": ["file", "folder"],
+      "outputs": ["output"],
+      "config": {
+        "fileName": "database.sql.gz",
+        "mimeType": "application/gzip",
+        "description": "Database backup - {{backupDate}}"
+      }
+    },
+    {
+      "id": "upload-manifest-1",
+      "type": "google-drive-upload",
+      "x": 1300,
+      "y": 500,
+      "inputs": ["file", "folder"],
+      "outputs": ["output"],
+      "config": {
+        "fileName": "manifest.json",
+        "mimeType": "application/json",
+        "description": "Backup manifest with checksums - {{backupDate}}"
+      }
+    },
+    {
+      "id": "verify-backup-1",
+      "type": "transform",
+      "x": 1550,
+      "y": 300,
+      "inputs": ["uploads"],
+      "outputs": ["output"],
+      "config": {
+        "operations": [
+          {
+            "field": "allUploadsSuccessful",
+            "formula": "ALL(uploads.status == 'success')"
+          },
+          {
+            "field": "uploadedFiles",
+            "formula": "COUNT(uploads)"
+          },
+          {
+            "field": "totalUploadedSize",
+            "formula": "SUM(uploads.size)"
+          },
+          {
+            "field": "backupStatus",
+            "formula": "IF(allUploadsSuccessful, 'completed', 'failed')"
+          },
+          {
+            "field": "driveUrl",
+            "formula": "uploads[0].folderUrl"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cleanup-old-backups-1",
+      "type": "google-drive-cleanup",
+      "x": 1550,
+      "y": 450,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "parentFolder": "Company Backups",
+        "retentionPolicy": {
+          "keepLast": 12,
+          "deleteOlderThan": "90 days"
+        },
+        "moveToTrash": true
+      }
+    },
+    {
+      "id": "store-backup-record-1",
+      "type": "kv-set",
+      "x": 1800,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "key": "backup-record-{{backupId}}",
+        "useContextData": true,
+        "ttl_hours": 8760
+      }
+    },
+    {
+      "id": "update-backup-index-1",
+      "type": "kv-get-set",
+      "x": 1800,
+      "y": 350,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "key": "backup-index",
+        "operation": "append",
+        "value": {
+          "backupId": "{{backupId}}",
+          "date": "{{backupDate}}",
+          "version": "{{backupVersion}}",
+          "status": "{{backupStatus}}",
+          "size": "{{totalUploadedSize}}",
+          "driveUrl": "{{driveUrl}}"
+        },
+        "ttl_hours": 8760
+      }
+    },
+    {
+      "id": "send-notification-1",
+      "type": "email",
+      "x": 2050,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "to": "it@company.com, admin@company.com",
+        "subject": "✅ Company Backup Completed - {{backupVersion}}",
+        "body": "Hi Team,\n\nThe weekly company data backup has completed successfully.\n\n📦 **Backup Details**\n- Backup ID: {{backupId}}\n- Date: {{backupDate}}\n- Version: {{backupVersion}}\n- Total Size: {{totalUploadedSize}} MB\n\n📁 **Files Backed Up**\n- CRM Data: {{crmFileSize}} MB\n- QuickBooks: {{qbFileSize}} MB\n- Documents: {{docsFileSize}} MB\n- Database: {{dbFileSize}} MB\n\n🔗 **Access Backup**\n[Open in Google Drive]({{driveUrl}})\n\n♻️ **Retention**\nOld backups cleaned up: {{deletedBackupsCount}}\nCurrent backups retained: 12\n\n---\nAutomated by AWS AI Agent Bus"
+      }
+    },
+    {
+      "id": "send-slack-1",
+      "type": "slack-message",
+      "x": 2050,
+      "y": 350,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "channel": "#it-notifications",
+        "message": "✅ **Weekly Backup Completed**\n\nBackup ID: `{{backupId}}`\nSize: {{totalUploadedSize}} MB\n[View in Drive]({{driveUrl}})"
+      }
+    },
+    {
+      "id": "send-event-1",
+      "type": "events-send",
+      "x": 2050,
+      "y": 450,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "detailType": "Backup.Completed",
+        "detail": {
+          "backupId": "{{backupId}}",
+          "backupVersion": "{{backupVersion}}",
+          "backupDate": "{{backupDate}}",
+          "status": "{{backupStatus}}",
+          "totalSize": "{{totalUploadedSize}}",
+          "filesCount": "{{uploadedFiles}}",
+          "driveUrl": "{{driveUrl}}",
+          "retentionApplied": true,
+          "timestamp": "{{timestamp}}"
+        }
+      }
+    },
+    {
+      "id": "handle-failure-1",
+      "type": "condition",
+      "x": 1800,
+      "y": 500,
+      "inputs": ["input"],
+      "outputs": ["success", "failure"],
+      "config": {
+        "field": "backupStatus",
+        "operator": "==",
+        "value": "failed"
+      }
+    },
+    {
+      "id": "send-alert-1",
+      "type": "email",
+      "x": 2050,
+      "y": 550,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "to": "it@company.com, admin@company.com",
+        "subject": "🚨 URGENT: Company Backup Failed - {{backupVersion}}",
+        "priority": "high",
+        "body": "⚠️ **BACKUP FAILURE ALERT**\n\nThe weekly company data backup has FAILED.\n\n❌ **Failure Details**\n- Backup ID: {{backupId}}\n- Date: {{backupDate}}\n- Failed Files: {{failedUploads}}\n- Error: {{errorMessage}}\n\n🔍 **Action Required**\nPlease investigate and re-run the backup manually.\n\n[View Logs]({{logsUrl}})\n\n---\nThis is an automated alert. Please respond immediately."
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "schedule-trigger-1",
+      "to": "parallel-fetch-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "parallel-fetch-1",
+      "to": "export-crm-1",
+      "fromOutput": "crm",
+      "toInput": "input"
+    },
+    {
+      "from": "parallel-fetch-1",
+      "to": "export-quickbooks-1",
+      "fromOutput": "quickbooks",
+      "toInput": "input"
+    },
+    {
+      "from": "parallel-fetch-1",
+      "to": "export-documents-1",
+      "fromOutput": "documents",
+      "toInput": "input"
+    },
+    {
+      "from": "parallel-fetch-1",
+      "to": "export-database-1",
+      "fromOutput": "database",
+      "toInput": "input"
+    },
+    {
+      "from": "export-crm-1",
+      "to": "create-manifest-1",
+      "fromOutput": "output",
+      "toInput": "crm"
+    },
+    {
+      "from": "export-quickbooks-1",
+      "to": "create-manifest-1",
+      "fromOutput": "output",
+      "toInput": "quickbooks"
+    },
+    {
+      "from": "export-documents-1",
+      "to": "create-manifest-1",
+      "fromOutput": "output",
+      "toInput": "docs"
+    },
+    {
+      "from": "export-database-1",
+      "to": "create-manifest-1",
+      "fromOutput": "output",
+      "toInput": "db"
+    },
+    {
+      "from": "create-manifest-1",
+      "to": "create-drive-folder-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "export-crm-1",
+      "to": "upload-crm-1",
+      "fromOutput": "output",
+      "toInput": "file"
+    },
+    {
+      "from": "create-drive-folder-1",
+      "to": "upload-crm-1",
+      "fromOutput": "output",
+      "toInput": "folder"
+    },
+    {
+      "from": "export-quickbooks-1",
+      "to": "upload-quickbooks-1",
+      "fromOutput": "output",
+      "toInput": "file"
+    },
+    {
+      "from": "create-drive-folder-1",
+      "to": "upload-quickbooks-1",
+      "fromOutput": "output",
+      "toInput": "folder"
+    },
+    {
+      "from": "export-documents-1",
+      "to": "upload-documents-1",
+      "fromOutput": "output",
+      "toInput": "file"
+    },
+    {
+      "from": "create-drive-folder-1",
+      "to": "upload-documents-1",
+      "fromOutput": "output",
+      "toInput": "folder"
+    },
+    {
+      "from": "export-database-1",
+      "to": "upload-database-1",
+      "fromOutput": "output",
+      "toInput": "file"
+    },
+    {
+      "from": "create-drive-folder-1",
+      "to": "upload-database-1",
+      "fromOutput": "output",
+      "toInput": "folder"
+    },
+    {
+      "from": "create-manifest-1",
+      "to": "upload-manifest-1",
+      "fromOutput": "output",
+      "toInput": "file"
+    },
+    {
+      "from": "create-drive-folder-1",
+      "to": "upload-manifest-1",
+      "fromOutput": "output",
+      "toInput": "folder"
+    },
+    {
+      "from": "upload-manifest-1",
+      "to": "verify-backup-1",
+      "fromOutput": "output",
+      "toInput": "uploads"
+    },
+    {
+      "from": "verify-backup-1",
+      "to": "cleanup-old-backups-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "verify-backup-1",
+      "to": "store-backup-record-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "store-backup-record-1",
+      "to": "update-backup-index-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "update-backup-index-1",
+      "to": "handle-failure-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "handle-failure-1",
+      "to": "send-notification-1",
+      "fromOutput": "success",
+      "toInput": "input"
+    },
+    {
+      "from": "handle-failure-1",
+      "to": "send-slack-1",
+      "fromOutput": "success",
+      "toInput": "input"
+    },
+    {
+      "from": "handle-failure-1",
+      "to": "send-event-1",
+      "fromOutput": "success",
+      "toInput": "input"
+    },
+    {
+      "from": "handle-failure-1",
+      "to": "send-alert-1",
+      "fromOutput": "failure",
+      "toInput": "input"
+    }
+  ],
+  "metadata": {
+    "author": "AWS AI Agent Bus",
+    "tags": ["backup", "google-drive", "crm", "quickbooks", "data-protection", "automation"],
+    "category": "Business Intelligence",
+    "requiredApps": ["google-drive", "salesforce", "quickbooks", "sharepoint", "slack"],
+    "estimatedDuration": "30-60 minutes depending on data size",
+    "difficulty": "intermediate",
+    "isTemplate": true,
+    "features": [
+      "Automated weekly backups to Google Drive",
+      "Parallel data export for speed",
+      "Comprehensive backup manifest with checksums",
+      "Automatic retention policy (keep last 12 backups)",
+      "Email and Slack notifications",
+      "Failure detection and alerting",
+      "Version-controlled backup folders",
+      "Compressed storage to save space"
+    ],
+    "instructions": [
+      "Connect all required apps in integrations settings",
+      "Configure database connection string in secrets",
+      "Set up Google Drive parent folder permissions",
+      "Customize retention policy (default: 12 backups, 90 days)",
+      "Configure notification recipients",
+      "Test with manual trigger first",
+      "Enable weekly schedule",
+      "Monitor backup index for history"
+    ]
+  }
+}

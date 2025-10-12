@@ -1,0 +1,491 @@
+{
+  "version": "1.0",
+  "created": "2025-10-11T00:00:00Z",
+  "name": "Google Analytics to DynamoDB Reporter",
+  "description": "Pull Google Analytics data daily and store it in DynamoDB for historical analysis. Create time-series visualizations showing traffic trends, user behavior, and content performance over time.",
+  "nodes": [
+    {
+      "id": "schedule-trigger-1",
+      "type": "trigger",
+      "x": 50,
+      "y": 300,
+      "inputs": [],
+      "outputs": ["output"],
+      "config": {
+        "name": "Daily Analytics Collection",
+        "description": "Fetch GA data every day at midnight",
+        "schedule": "0 0 * * *",
+        "timezone": "America/Los_Angeles"
+      }
+    },
+    {
+      "id": "fetch-ga-metrics-1",
+      "type": "google-analytics-query",
+      "x": 300,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "propertyId": "{{GA_PROPERTY_ID}}",
+        "metrics": [
+          "sessions",
+          "pageviews",
+          "users",
+          "newUsers",
+          "bounceRate",
+          "avgSessionDuration",
+          "screenPageViews",
+          "conversions"
+        ],
+        "dimensions": ["date"],
+        "dateRange": "yesterday",
+        "orderBy": "date"
+      }
+    },
+    {
+      "id": "fetch-top-pages-1",
+      "type": "google-analytics-query",
+      "x": 300,
+      "y": 350,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "propertyId": "{{GA_PROPERTY_ID}}",
+        "metrics": ["pageviews", "users", "avgTimeOnPage", "bounceRate"],
+        "dimensions": ["pagePath", "pageTitle"],
+        "dateRange": "yesterday",
+        "orderBy": "pageviews DESC",
+        "limit": 50
+      }
+    },
+    {
+      "id": "fetch-traffic-sources-1",
+      "type": "google-analytics-query",
+      "x": 300,
+      "y": 500,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "propertyId": "{{GA_PROPERTY_ID}}",
+        "metrics": ["sessions", "users", "conversions"],
+        "dimensions": ["sessionSource", "sessionMedium", "sessionCampaign"],
+        "dateRange": "yesterday",
+        "orderBy": "sessions DESC"
+      }
+    },
+    {
+      "id": "transform-metrics-1",
+      "type": "transform",
+      "x": 550,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "operations": [
+          {
+            "field": "pk",
+            "formula": "'METRICS#' + FORMAT_DATE(date, 'YYYY-MM-DD')"
+          },
+          {
+            "field": "sk",
+            "formula": "'DAILY'"
+          },
+          {
+            "field": "gsi1pk",
+            "formula": "'METRICS'"
+          },
+          {
+            "field": "gsi1sk",
+            "formula": "FORMAT_DATE(date, 'YYYY-MM-DD')"
+          },
+          {
+            "field": "timestamp",
+            "formula": "UNIX_TIMESTAMP(date)"
+          },
+          {
+            "field": "ttl",
+            "formula": "UNIX_TIMESTAMP(date) + (365 * 24 * 60 * 60)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "transform-pages-1",
+      "type": "map",
+      "x": 550,
+      "y": 350,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "operation": {
+          "pk": "'PAGE#' + SLUGIFY(pagePath)",
+          "sk": "'DATE#' + FORMAT_DATE(NOW(), 'YYYY-MM-DD')",
+          "gsi1pk": "'PAGES'",
+          "gsi1sk": "'VIEWS#' + LPAD(pageviews, 10, '0')",
+          "pagePath": "pagePath",
+          "pageTitle": "pageTitle",
+          "metrics": {
+            "pageviews": "pageviews",
+            "users": "users",
+            "avgTimeOnPage": "avgTimeOnPage",
+            "bounceRate": "bounceRate"
+          },
+          "date": "FORMAT_DATE(NOW(), 'YYYY-MM-DD')",
+          "timestamp": "UNIX_TIMESTAMP(NOW())",
+          "ttl": "UNIX_TIMESTAMP(NOW()) + (365 * 24 * 60 * 60)"
+        }
+      }
+    },
+    {
+      "id": "transform-sources-1",
+      "type": "map",
+      "x": 550,
+      "y": 500,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "operation": {
+          "pk": "'SOURCE#' + sessionSource + '#' + sessionMedium",
+          "sk": "'DATE#' + FORMAT_DATE(NOW(), 'YYYY-MM-DD')",
+          "gsi1pk": "'SOURCES'",
+          "gsi1sk": "'SESSIONS#' + LPAD(sessions, 10, '0')",
+          "source": "sessionSource",
+          "medium": "sessionMedium",
+          "campaign": "sessionCampaign",
+          "metrics": {
+            "sessions": "sessions",
+            "users": "users",
+            "conversions": "conversions"
+          },
+          "date": "FORMAT_DATE(NOW(), 'YYYY-MM-DD')",
+          "timestamp": "UNIX_TIMESTAMP(NOW())",
+          "ttl": "UNIX_TIMESTAMP(NOW()) + (365 * 24 * 60 * 60)"
+        }
+      }
+    },
+    {
+      "id": "store-metrics-1",
+      "type": "dynamodb-put",
+      "x": 800,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "tableName": "{{DYNAMODB_TABLE}}",
+        "item": "{{item}}",
+        "conditionExpression": "attribute_not_exists(pk)"
+      }
+    },
+    {
+      "id": "store-pages-batch-1",
+      "type": "dynamodb-batch-write",
+      "x": 800,
+      "y": 350,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "tableName": "{{DYNAMODB_TABLE}}",
+        "items": "{{items}}",
+        "batchSize": 25
+      }
+    },
+    {
+      "id": "store-sources-batch-1",
+      "type": "dynamodb-batch-write",
+      "x": 800,
+      "y": 500,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "tableName": "{{DYNAMODB_TABLE}}",
+        "items": "{{items}}",
+        "batchSize": 25
+      }
+    },
+    {
+      "id": "query-historical-1",
+      "type": "dynamodb-query",
+      "x": 1050,
+      "y": 300,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "tableName": "{{DYNAMODB_TABLE}}",
+        "indexName": "gsi1",
+        "keyConditionExpression": "gsi1pk = :pk AND gsi1sk BETWEEN :start AND :end",
+        "expressionAttributeValues": {
+          ":pk": "METRICS",
+          ":start": "{{thirtyDaysAgo}}",
+          ":end": "{{today}}"
+        },
+        "scanIndexForward": true
+      }
+    },
+    {
+      "id": "create-time-series-1",
+      "type": "chart-time-series",
+      "x": 1300,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["output", "image"],
+      "config": {
+        "title": "30-Day Traffic Trends",
+        "timeField": "date",
+        "series": [
+          {
+            "field": "sessions",
+            "label": "Sessions",
+            "color": "#2196F3",
+            "yAxis": "left"
+          },
+          {
+            "field": "users",
+            "label": "Users",
+            "color": "#4CAF50",
+            "yAxis": "left"
+          },
+          {
+            "field": "bounceRate",
+            "label": "Bounce Rate",
+            "color": "#FF5722",
+            "yAxis": "right",
+            "format": "percent"
+          }
+        ],
+        "showTrendLine": true,
+        "showAverage": true,
+        "width": 1200,
+        "height": 400
+      }
+    },
+    {
+      "id": "create-bar-chart-1",
+      "type": "chart-bar",
+      "x": 1300,
+      "y": 350,
+      "inputs": ["input"],
+      "outputs": ["output", "image"],
+      "config": {
+        "title": "Top 10 Pages Yesterday",
+        "xAxis": "pageTitle",
+        "yAxis": "pageviews",
+        "colorScheme": "analytics",
+        "orientation": "horizontal",
+        "showValues": true,
+        "limit": 10,
+        "width": 800,
+        "height": 500
+      }
+    },
+    {
+      "id": "create-pie-chart-1",
+      "type": "chart-pie",
+      "x": 1300,
+      "y": 500,
+      "inputs": ["input"],
+      "outputs": ["output", "image"],
+      "config": {
+        "title": "Traffic Sources",
+        "labelField": "source",
+        "valueField": "sessions",
+        "showPercentages": true,
+        "showLegend": true,
+        "width": 600,
+        "height": 400
+      }
+    },
+    {
+      "id": "store-report-1",
+      "type": "artifacts-put",
+      "x": 1550,
+      "y": 300,
+      "inputs": ["charts"],
+      "outputs": ["output"],
+      "config": {
+        "key": "analytics-reports/daily-{{date}}.json",
+        "useContextData": true,
+        "content_type": "application/json"
+      }
+    },
+    {
+      "id": "send-notification-1",
+      "type": "email",
+      "x": 1800,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "to": "marketing@company.com",
+        "subject": "Daily Analytics Report - {{date}}",
+        "body": "Hi Team,\n\nYour daily Google Analytics report is ready.\n\n📊 **Yesterday's Performance**\n- Sessions: {{sessions}} ({{sessionsTrend}})\n- Users: {{users}} ({{usersTrend}})\n- Pageviews: {{pageviews}} ({{pageviewsTrend}})\n- Bounce Rate: {{bounceRate}}% ({{bounceRateTrend}})\n- Avg Session Duration: {{avgSessionDuration}}s\n\n🔥 **Top Page**\n{{topPageTitle}} - {{topPageViews}} views\n\n📈 **30-Day Trend**\n[View Time Series Chart]({{timeSeriesUrl}})\n\n[View Full Report]({{reportUrl}})\n[View in DynamoDB]({{dynamodbUrl}})"
+      }
+    },
+    {
+      "id": "send-event-1",
+      "type": "events-send",
+      "x": 1800,
+      "y": 350,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "detailType": "Analytics.DailyReport",
+        "detail": {
+          "date": "{{date}}",
+          "metrics": {
+            "sessions": "{{sessions}}",
+            "users": "{{users}}",
+            "pageviews": "{{pageviews}}",
+            "bounceRate": "{{bounceRate}}",
+            "conversions": "{{conversions}}"
+          },
+          "topPage": {
+            "path": "{{topPagePath}}",
+            "title": "{{topPageTitle}}",
+            "views": "{{topPageViews}}"
+          },
+          "reportUrl": "{{reportUrl}}",
+          "chartsGenerated": 3,
+          "dataStoredInDynamoDB": true,
+          "timestamp": "{{timestamp}}"
+        }
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "schedule-trigger-1",
+      "to": "fetch-ga-metrics-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "schedule-trigger-1",
+      "to": "fetch-top-pages-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "schedule-trigger-1",
+      "to": "fetch-traffic-sources-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "fetch-ga-metrics-1",
+      "to": "transform-metrics-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "fetch-top-pages-1",
+      "to": "transform-pages-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "fetch-traffic-sources-1",
+      "to": "transform-sources-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "transform-metrics-1",
+      "to": "store-metrics-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "transform-pages-1",
+      "to": "store-pages-batch-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "transform-sources-1",
+      "to": "store-sources-batch-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "store-metrics-1",
+      "to": "query-historical-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "query-historical-1",
+      "to": "create-time-series-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "store-pages-batch-1",
+      "to": "create-bar-chart-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "store-sources-batch-1",
+      "to": "create-pie-chart-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "create-time-series-1",
+      "to": "store-report-1",
+      "fromOutput": "output",
+      "toInput": "charts"
+    },
+    {
+      "from": "store-report-1",
+      "to": "send-notification-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "store-report-1",
+      "to": "send-event-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    }
+  ],
+  "metadata": {
+    "author": "AWS AI Agent Bus",
+    "tags": ["google-analytics", "dynamodb", "reporting", "time-series", "analytics"],
+    "category": "Analytics & Content",
+    "requiredApps": ["google-analytics", "aws"],
+    "estimatedDuration": "5-10 minutes daily",
+    "difficulty": "intermediate",
+    "isTemplate": true,
+    "features": [
+      "Daily Google Analytics data collection",
+      "Historical data storage in DynamoDB",
+      "30-day time-series trend visualization",
+      "Top pages and traffic sources charts",
+      "Automatic TTL for data retention (1 year)",
+      "Email reports with key metrics",
+      "Event-driven notifications",
+      "Query historical data anytime"
+    ],
+    "instructions": [
+      "Connect Google Analytics in integrations settings",
+      "Set GA_PROPERTY_ID environment variable",
+      "Create DynamoDB table with GSI (see schema below)",
+      "Configure email recipients",
+      "Run once to test data collection",
+      "Enable daily schedule",
+      "Query historical data using time-series charts",
+      "Export data for further analysis"
+    ],
+    "dynamodbSchema": {
+      "tableName": "analytics-data",
+      "partitionKey": "pk",
+      "sortKey": "sk",
+      "gsi1": {
+        "partitionKey": "gsi1pk",
+        "sortKey": "gsi1sk"
+      },
+      "ttl": "ttl"
+    }
+  }
+}

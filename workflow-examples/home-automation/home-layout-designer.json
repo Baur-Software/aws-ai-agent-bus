@@ -1,0 +1,229 @@
+{
+  "version": "1.0",
+  "created": "2025-10-11T00:00:00Z",
+  "name": "Visual Home Layout Designer",
+  "description": "Create custom nodes and canvas layouts to represent your home the way you want it. Design room-specific automations, visualize device status, and control everything from a personalized dashboard.",
+  "nodes": [
+    {
+      "id": "kitchen-room-1",
+      "type": "home-room-group",
+      "x": 100,
+      "y": 100,
+      "inputs": [],
+      "outputs": ["lights", "appliances", "sensors"],
+      "config": {
+        "roomName": "Kitchen",
+        "entities": [
+          "light.kitchen_main",
+          "light.kitchen_under_cabinet",
+          "switch.coffee_maker",
+          "binary_sensor.kitchen_motion",
+          "sensor.kitchen_temperature"
+        ],
+        "icon": "🍳",
+        "backgroundColor": "#FFF3E0"
+      }
+    },
+    {
+      "id": "living-room-1",
+      "type": "home-room-group",
+      "x": 400,
+      "y": 100,
+      "inputs": [],
+      "outputs": ["lights", "media", "climate", "sensors"],
+      "config": {
+        "roomName": "Living Room",
+        "entities": [
+          "light.living_room_main",
+          "light.living_room_accent",
+          "media_player.tv",
+          "climate.living_room",
+          "binary_sensor.living_room_motion"
+        ],
+        "icon": "🛋️",
+        "backgroundColor": "#E3F2FD"
+      }
+    },
+    {
+      "id": "bedroom-1",
+      "type": "home-room-group",
+      "x": 700,
+      "y": 100,
+      "inputs": [],
+      "outputs": ["lights", "climate", "blinds"],
+      "config": {
+        "roomName": "Master Bedroom",
+        "entities": [
+          "light.bedroom_main",
+          "light.bedroom_nightstand",
+          "climate.bedroom",
+          "cover.bedroom_blinds",
+          "binary_sensor.bedroom_door"
+        ],
+        "icon": "🛏️",
+        "backgroundColor": "#F3E5F5"
+      }
+    },
+    {
+      "id": "morning-routine-1",
+      "type": "home-routine",
+      "x": 100,
+      "y": 400,
+      "inputs": ["trigger"],
+      "outputs": ["output"],
+      "config": {
+        "routineName": "Morning Routine",
+        "trigger": {
+          "time": "07:00",
+          "days": ["mon", "tue", "wed", "thu", "fri"]
+        },
+        "actions": [
+          {"room": "bedroom", "action": "open_blinds", "duration": 120},
+          {"room": "bedroom", "action": "lights_on", "brightness": 30, "transition": 60},
+          {"room": "kitchen", "action": "coffee_maker_on"},
+          {"room": "living_room", "action": "climate_heat", "temperature": 72}
+        ],
+        "icon": "🌅"
+      }
+    },
+    {
+      "id": "evening-routine-1",
+      "type": "home-routine",
+      "x": 400,
+      "y": 400,
+      "inputs": ["trigger"],
+      "outputs": ["output"],
+      "config": {
+        "routineName": "Evening Routine",
+        "trigger": {
+          "time": "sunset",
+          "offset": "-00:30"
+        },
+        "actions": [
+          {"room": "living_room", "action": "scene_activate", "scene": "evening_ambient"},
+          {"room": "kitchen", "action": "lights_on", "brightness": 60},
+          {"room": "bedroom", "action": "close_blinds"}
+        ],
+        "icon": "🌆"
+      }
+    },
+    {
+      "id": "away-mode-1",
+      "type": "home-routine",
+      "x": 700,
+      "y": 400,
+      "inputs": ["trigger"],
+      "outputs": ["output"],
+      "config": {
+        "routineName": "Away Mode",
+        "trigger": {
+          "entity": "group.all_people",
+          "from": "home",
+          "to": "not_home",
+          "for": "00:10:00"
+        },
+        "actions": [
+          {"room": "all", "action": "lights_off"},
+          {"room": "all", "action": "climate_eco"},
+          {"room": "all", "action": "locks_secure"},
+          {"action": "alarm_arm_away"}
+        ],
+        "icon": "🏃"
+      }
+    },
+    {
+      "id": "energy-monitor-1",
+      "type": "chart-gauge",
+      "x": 100,
+      "y": 650,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "title": "Current Energy Usage",
+        "value": "{{sensor.total_power}}",
+        "unit": "W",
+        "min": 0,
+        "max": 5000,
+        "zones": [
+          {"from": 0, "to": 1000, "color": "#4CAF50"},
+          {"from": 1000, "to": 3000, "color": "#FF9800"},
+          {"from": 3000, "to": 5000, "color": "#F44336"}
+        ]
+      }
+    },
+    {
+      "id": "room-status-1",
+      "type": "home-status-panel",
+      "x": 400,
+      "y": 650,
+      "inputs": ["rooms"],
+      "outputs": ["output"],
+      "config": {
+        "displayMode": "grid",
+        "showOccupancy": true,
+        "showTemperature": true,
+        "showLightStatus": true,
+        "updateInterval": 5
+      }
+    },
+    {
+      "id": "automation-log-1",
+      "type": "home-activity-log",
+      "x": 700,
+      "y": 650,
+      "inputs": ["events"],
+      "outputs": ["output"],
+      "config": {
+        "maxEntries": 50,
+        "filterTypes": ["automation", "scene", "routine"],
+        "showTimestamp": true,
+        "groupByRoom": true
+      }
+    }
+  ],
+  "connections": [
+    {"from": "kitchen-room-1", "to": "morning-routine-1", "fromOutput": "appliances", "toInput": "trigger"},
+    {"from": "living-room-1", "to": "evening-routine-1", "fromOutput": "lights", "toInput": "trigger"},
+    {"from": "bedroom-1", "to": "away-mode-1", "fromOutput": "sensors", "toInput": "trigger"},
+    {"from": "kitchen-room-1", "to": "room-status-1", "fromOutput": "sensors", "toInput": "rooms"},
+    {"from": "living-room-1", "to": "room-status-1", "fromOutput": "sensors", "toInput": "rooms"},
+    {"from": "bedroom-1", "to": "room-status-1", "fromOutput": "sensors", "toInput": "rooms"},
+    {"from": "morning-routine-1", "to": "automation-log-1", "fromOutput": "output", "toInput": "events"},
+    {"from": "evening-routine-1", "to": "automation-log-1", "fromOutput": "output", "toInput": "events"}
+  ],
+  "metadata": {
+    "author": "AWS AI Agent Bus",
+    "tags": ["home-assistant", "dashboard", "visualization", "smart-home", "canvas-design"],
+    "category": "Home Automation",
+    "requiredApps": ["home-assistant"],
+    "estimatedDuration": "30 minutes to design, real-time updates",
+    "difficulty": "beginner",
+    "isTemplate": true,
+    "features": [
+      "Visual room layouts on canvas",
+      "Custom room groupings with icons",
+      "Pre-built routine templates (morning, evening, away)",
+      "Real-time status monitoring",
+      "Energy usage gauges",
+      "Activity log with filtering",
+      "Drag-and-drop room customization"
+    ],
+    "instructions": [
+      "Connect Home Assistant integration",
+      "Customize room nodes with your entity IDs",
+      "Arrange rooms to match your home layout",
+      "Configure routine triggers and actions",
+      "Add custom icons and colors",
+      "Test routines individually",
+      "Monitor real-time status on canvas",
+      "Create additional rooms as needed"
+    ],
+    "customization": {
+      "rooms": "Add more room nodes by duplicating and editing entity IDs",
+      "routines": "Create custom routines by combining room actions",
+      "colors": "Match room colors to your actual decor",
+      "layout": "Arrange nodes to mirror your floor plan",
+      "widgets": "Add gauges, charts, and status panels as needed"
+    }
+  }
+}
