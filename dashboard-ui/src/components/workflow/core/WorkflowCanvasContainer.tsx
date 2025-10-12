@@ -465,10 +465,14 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
       // });
 
       // Temporary placeholder since the above is disabled
+      const timestamp = new Date().toISOString();
       const newWorkflow = {
         workflowId: 'temp-workflow-' + Date.now(),
         name: workflowName(),
-        description: 'Created via workflow builder'
+        description: 'Created via workflow builder',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        createdBy: currentUser.id
       };
 
       const metadata: WorkflowMetadata = {
