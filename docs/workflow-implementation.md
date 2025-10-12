@@ -46,6 +46,7 @@ src/workflow/tasks/
 ## Key Features
 
 ### ✅ Complete Data Processing Pipeline
+
 - JSON parse/stringify
 - Map, reduce, filter, group, flatten
 - Split/join strings
@@ -54,6 +55,7 @@ src/workflow/tasks/
 - Data merging and transformation
 
 ### ✅ Event-Driven Architecture
+
 - Event publishing to EventBridge
 - Event querying with filters
 - Analytics and aggregations
@@ -62,18 +64,21 @@ src/workflow/tasks/
 - Health monitoring
 
 ### ✅ Storage & Caching
+
 - Key-value operations with TTL
 - S3 artifact storage (get/put/list)
 - Performance caching layer
 - Automatic cache invalidation
 
 ### ✅ Communication
+
 - Full REST API support (GET/POST/PUT/DELETE)
 - Webhook delivery to external systems
 - Email notifications
 - Authentication and headers
 
 ### ✅ Flow Control
+
 - Conditional branching (if/else)
 - Multi-way switches
 - Loop iteration over arrays

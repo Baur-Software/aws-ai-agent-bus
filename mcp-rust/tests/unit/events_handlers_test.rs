@@ -7,8 +7,8 @@ use std::sync::Arc;
 // Import test utilities
 use mcp_rust::aws::AwsService;
 use mcp_rust::handlers::{
-    EventsCreateAlertHandler, EventsCreateRuleHandler,
-    EventsHealthCheckHandler, EventsQueryHandler, Handler, HandlerError,
+    EventsCreateAlertHandler, EventsCreateRuleHandler, EventsHealthCheckHandler,
+    EventsQueryHandler, Handler, HandlerError,
 };
 use mcp_rust::tenant::{
     ContextType, Permission, ResourceLimits, TenantContext, TenantSession, UserRole,
