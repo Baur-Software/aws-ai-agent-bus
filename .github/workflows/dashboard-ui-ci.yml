@@ -2,7 +2,7 @@ name: Dashboard UI CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, feature-flags-tests ]
     paths:
       - 'dashboard-ui/**'
       - '.github/workflows/dashboard-ui-ci.yml'
@@ -39,7 +39,7 @@ jobs:
         cache-dependency-path: dashboard-ui/package-lock.json
 
     - name: Install dependencies
-      run: npm ci
+      run: npm ci --include=dev
 
     - name: TypeScript type checking
       run: npm run typecheck
@@ -66,15 +66,19 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Use Node.js 20
+    - name: Use Node.js 22
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '22'
         cache: 'npm'
         cache-dependency-path: dashboard-ui/package-lock.json
 
     - name: Install dependencies
-      run: npm ci
+      run: npm ci --include=dev
+
+    - name: Sanity check dev deps
+      run: |
+        npm ls vite vite-plugin-solid || true
 
     - name: Build for production
       run: npm run build
@@ -124,7 +128,7 @@ jobs:
         cache-dependency-path: dashboard-ui/package-lock.json
 
     - name: Install dependencies
-      run: npm ci
+      run: npm ci --include=dev
 
     - name: Security audit
       run: npm audit --audit-level=high
@@ -168,7 +172,7 @@ jobs:
         cache-dependency-path: dashboard-ui/package-lock.json
 
     - name: Install dashboard-ui dependencies
-      run: npm ci
+      run: npm ci --include=dev
 
     - name: Install dashboard-server dependencies
       run: |
