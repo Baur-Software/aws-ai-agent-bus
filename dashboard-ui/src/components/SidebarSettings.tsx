@@ -119,7 +119,7 @@ if (!props.isOverlay) {
                                  (!item.requiresInfrastructure || availableInfrastructure().has(item.requiresInfrastructure));
 
                 return (
-                  <div class="flex items-center justify-between p-4 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors">
+                  <div class="flex items-center justify-between p-4 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                     <div class="flex items-center gap-4">
                       <div class="p-2 rounded-lg bg-slate-100 dark:bg-slate-700">
                         <item.icon class="w-5 h-5 text-slate-600 dark:text-slate-400" />
