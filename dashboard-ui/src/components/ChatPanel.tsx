@@ -13,7 +13,7 @@ function ChatPanel(props: ChatPanelProps) {
   const [inputText, setInputText] = createSignal('');
   const [isProcessing, setIsProcessing] = createSignal(false);
 
-  const { executeTool } = useDashboardServer();
+  const { sendMessageWithResponse } = useDashboardServer();
   const { success, error } = useNotifications();
 
   // Get context-aware initial message
@@ -86,40 +86,35 @@ function ChatPanel(props: ChatPanelProps) {
   };
 
   const processMessage = async (message) => {
-    const lower = message.toLowerCase();
-
     try {
-      // Use the agent_chat MCP tool to process the message with AI
-      const result = await executeTool('agent_chat', {
-        message: message,
-        context: {
-          currentPage: location.pathname,
-          conversationHistory: messages().slice(-5).map(m => ({
-            role: m.sender === 'user' ? 'user' : 'assistant',
-            content: m.content
-          }))
+      // Use the ChatService via WebSocket (not MCP tool)
+      const response = await sendMessageWithResponse({
+        type: 'chat.send_message',
+        data: {
+          message: message,
+          streaming: false // Set to true for token-by-token streaming
         }
       });
 
-      // Extract the response from the MCP result
-      if (result && typeof result === 'object') {
-        return result.response || result.message || JSON.stringify(result);
+      // Extract the response from ChatService
+      if (response && response.data && response.data.message) {
+        return response.data.message.content;
       }
 
-      return result || 'I processed your request but got an empty response. Please try rephrasing.';
+      return response?.message?.content || 'I processed your request but got an empty response. Please try rephrasing.';
 
-    } catch (toolError) {
-      console.error('Chat tool execution error:', toolError);
+    } catch (chatError) {
+      console.error('Chat error:', chatError);
 
-      // Fallback to basic help message when MCP server is unavailable
+      // Fallback to basic help message when chat service is unavailable
       return `I'm having trouble connecting to the AI backend right now.
 
-The MCP server may not be responding. Please check:
+The chat service may not be responding. Please check:
 • Dashboard server is running
-• MCP server is connected
+• AWS Bedrock access is configured
 • Try refreshing the page
 
-Error details: ${toolError.message}`;
+Error details: ${chatError.message}`;
     }
   };
 

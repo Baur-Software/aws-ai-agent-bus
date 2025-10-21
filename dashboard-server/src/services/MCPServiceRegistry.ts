@@ -5,6 +5,26 @@ import { JWTPayload, OrganizationMembership } from '../middleware/auth.js';
 /**
  * Registry for managing multiple MCP servers and routing tool calls
  */
+/**
+ * Tool prefix patterns mapped to server names
+ */
+const TOOL_PREFIX_ROUTING: Record<string, string[]> = {
+  aws: [
+    'use_aws',
+    'aws_',
+    'kv_',
+    'events_',
+    'artifacts_',
+    'analytics_',
+    'workflow_',
+    'agent_',
+    'integration_'
+  ],
+  github: ['github_'],
+  slack: ['slack_'],
+  stripe: ['stripe_']
+};
+
 export class MCPServiceRegistry {
   private servers = new Map<string, MCPStdioService>();
   private toolRouting = new Map<string, string>();
@@ -103,40 +123,25 @@ export class MCPServiceRegistry {
   }
 
   /**
-   * Get server name for a given tool
+   * Get server name for a given tool using exact match or prefix patterns
    */
   private getServerForTool(toolName: string): string {
-    const serverName = this.toolRouting.get(toolName);
-
-    if (!serverName) {
-      // Smart routing based on tool name patterns
-      if (
-        toolName === 'use_aws' ||
-        toolName.startsWith('aws_') ||
-        toolName.startsWith('kv_') ||
-        toolName.startsWith('events_') ||
-        toolName.startsWith('artifacts_') ||
-        toolName.startsWith('analytics_') ||
-        toolName.startsWith('workflow_') ||
-        toolName.startsWith('agent_') ||
-        toolName.startsWith('integration_')
-      ) {
-        return 'aws';
-      }
-      if (toolName.startsWith('github_')) {
-        return 'github';
-      }
-      if (toolName.startsWith('slack_')) {
-        return 'slack';
-      }
-      if (toolName.startsWith('stripe_')) {
-        return 'stripe';
-      }
-
-      throw new Error(`Unknown tool: ${toolName}`);
+    // First check exact match from tool registry
+    const exactMatch = this.toolRouting.get(toolName);
+    if (exactMatch) {
+      return exactMatch;
     }
 
-    return serverName;
+    // Fallback to prefix pattern matching
+    for (const [serverName, patterns] of Object.entries(TOOL_PREFIX_ROUTING)) {
+      for (const pattern of patterns) {
+        if (toolName === pattern || toolName.startsWith(pattern)) {
+          return serverName;
+        }
+      }
+    }
+
+    throw new Error(`Unknown tool: ${toolName}`);
   }
 
   /**

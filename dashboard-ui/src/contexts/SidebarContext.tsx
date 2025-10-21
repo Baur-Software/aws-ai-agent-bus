@@ -36,6 +36,7 @@ export interface SidebarPreferences {
 
 export interface SidebarContextValue {
   sections: () => SidebarSection[];
+  allSections: () => SidebarSection[]; // Unfiltered sections for settings page
   preferences: () => SidebarPreferences;
   connectedIntegrations: () => Set<string>;
   availableInfrastructure: () => Set<string>;
@@ -65,7 +66,7 @@ const defaultSections: SidebarSection[] = [
       { id: 'artifacts', icon: Archive, label: 'Artifacts & S3', href: '/artifacts', requiresInfrastructure: 's3' },
       { id: 'workflows', icon: PlayCircle, label: 'Workflows', href: '/workflows', requiresInfrastructure: 'workflows' },
       { id: 'events', icon: Radio, label: 'Events', href: '/events', requiresInfrastructure: 'events' },
-      { id: 'node-designer', icon: Wand2, label: 'Node Designer', href: '/node-designer', alwaysVisible: true }
+      { id: 'node-designer', icon: Wand2, label: 'Node Designer', href: '/node-designer' }
     ]
   },
   {
@@ -100,7 +101,33 @@ export function SidebarProvider(props: SidebarProviderProps) {
       const result = await kvStore.get('user-sidebar-preferences');
       if (result?.value) {
         const saved = JSON.parse(result.value);
-        setPreferences({ ...defaultPreferences, ...saved });
+
+        // Clean up: remove any alwaysVisible items from hiddenItems
+        const allAlwaysVisibleIds = defaultSections
+          .flatMap(section => section.items)
+          .filter(item => item.alwaysVisible)
+          .map(item => item.id);
+
+        const cleanedHiddenItems = (saved.hiddenItems || []).filter(
+          (id: string) => !allAlwaysVisibleIds.includes(id)
+        );
+
+        const cleanedPrefs = {
+          ...defaultPreferences,
+          ...saved,
+          hiddenItems: cleanedHiddenItems
+        };
+
+        setPreferences(cleanedPrefs);
+
+        // If we cleaned anything, save the cleaned preferences
+        if (cleanedHiddenItems.length !== (saved.hiddenItems || []).length) {
+          console.log('Cleaned alwaysVisible items from hiddenItems:', {
+            before: saved.hiddenItems,
+            after: cleanedHiddenItems
+          });
+          await kvStore.set('user-sidebar-preferences', JSON.stringify(cleanedPrefs), 24 * 7);
+        }
       }
     } catch (error) {
       console.warn('Failed to load sidebar preferences:', error);
@@ -109,13 +136,22 @@ export function SidebarProvider(props: SidebarProviderProps) {
 
   // Save preferences to KV store
   const savePreferences = async (newPrefs: SidebarPreferences) => {
-    if (!isConnected()) return;
+    if (!isConnected()) {
+      console.warn('Cannot save preferences: not connected to server');
+      return;
+    }
 
     try {
-      await kvStore.set('user-sidebar-preferences', JSON.stringify(newPrefs), 24 * 7); // 1 week TTL
+      console.log('Saving sidebar preferences:', newPrefs);
+      // Update local state immediately for instant UI feedback
       setPreferences(newPrefs);
+
+      // Then persist to KV store
+      await kvStore.set('user-sidebar-preferences', JSON.stringify(newPrefs), 24 * 7); // 1 week TTL
+      console.log('Sidebar preferences saved successfully');
     } catch (error) {
-      console.warn('Failed to save sidebar preferences:', error);
+      console.error('Failed to save sidebar preferences:', error);
+      // Could revert local state here if save fails, but for now just log
     }
   };
 
@@ -186,10 +222,10 @@ export function SidebarProvider(props: SidebarProviderProps) {
 
   // Check if an item should be visible
   const isItemVisible = (item: SidebarItem): boolean => {
-    // Always show items marked as alwaysVisible
+    // Always show items marked as alwaysVisible (cannot be hidden by user)
     if (item.alwaysVisible) return true;
 
-    // Hide if user explicitly hid it
+    // Hide if user explicitly hid it (only applies to non-alwaysVisible items)
     if (preferences().hiddenItems.includes(item.id)) return false;
 
     // Check integration requirement
@@ -205,7 +241,12 @@ export function SidebarProvider(props: SidebarProviderProps) {
     return true;
   };
 
-  // Filter sections to only show visible items
+  // Return all sections without filtering (for settings page)
+  const allSections = () => {
+    return defaultSections;
+  };
+
+  // Filter sections to only show visible items (for sidebar)
   const sections = () => {
     return defaultSections
       .map(section => ({
@@ -221,17 +262,24 @@ export function SidebarProvider(props: SidebarProviderProps) {
   };
 
   const hideItem = async (itemId: string) => {
-    const hiddenItems = [...preferences().hiddenItems, itemId];
-    await updatePreferences({ hiddenItems });
+    console.log('Hiding sidebar item:', itemId);
+    const currentPrefs = preferences();
+    const hiddenItems = [...currentPrefs.hiddenItems, itemId];
+    const updated = { ...currentPrefs, hiddenItems };
+    await savePreferences(updated);
   };
 
   const showItem = async (itemId: string) => {
-    const hiddenItems = preferences().hiddenItems.filter(id => id !== itemId);
-    await updatePreferences({ hiddenItems });
+    console.log('Showing sidebar item:', itemId);
+    const currentPrefs = preferences();
+    const hiddenItems = currentPrefs.hiddenItems.filter(id => id !== itemId);
+    const updated = { ...currentPrefs, hiddenItems };
+    await savePreferences(updated);
   };
 
   const contextValue: SidebarContextValue = {
     sections,
+    allSections,
     preferences,
     connectedIntegrations,
     availableInfrastructure,

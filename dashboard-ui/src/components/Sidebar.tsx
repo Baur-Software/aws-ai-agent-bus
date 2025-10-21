@@ -49,7 +49,8 @@ function Sidebar(props: SidebarProps) {
         </A>
         <button 
           class="lg:hidden p-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-          onClick={props.onClose}
+          onClick={() => props.onClose}
+          title="Close sidebar"
         >
           <X class="w-5 h-5" />
         </button>

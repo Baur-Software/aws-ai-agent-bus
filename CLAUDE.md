@@ -136,6 +136,17 @@ VITE_API_ENDPOINT=http://localhost:3001/api
 - Performance-optimized with async/await and tokio runtime
 - Type-safe AWS SDK integration
 
+### AI Chat System
+
+- **AWS Bedrock Integration**: Real Claude AI via Bedrock Runtime API
+- **Streaming Support**: Token-by-token responses for better UX
+- **Multi-Model**: Claude 3.5 Sonnet (default), Haiku, Opus
+- **MCP Tool Integration**: Automatic analytics and data tool usage
+- **Conversation Memory**: Full context maintained per session
+- **Cost Tracking**: Real token usage metrics from Bedrock
+
+See: [AWS Bedrock Chat Setup Guide](docs/aws-bedrock-chat-setup.md)
+
 ### Event Monitoring System
 
 - **6 MCP Tools**: send, query, analytics, create-rule, create-alert, health-check
@@ -292,6 +303,15 @@ user-demo-user-123-integration-google-analytics-personal    # Personal account
 - Use small workspaces for development, scale as needed
 - **AWS Profile Configuration**: Set `export AWS_PROFILE=baursoftware` or use `backend.hcl` files (see `infra/workspaces/small/README.md`)
 - Profile configuration centralized to avoid duplication across modules
+
+### AWS Bedrock Chat
+
+- **IAM Permissions**: Bedrock access added to dashboard-server ECS task role
+- **Required Actions**: `bedrock:InvokeModel`, `bedrock:InvokeModelWithResponseStream`
+- **Model Access**: Enable Claude models in AWS Console → Bedrock → Model access
+- **Environment**: Set `AWS_REGION` and optionally `BEDROCK_MODEL_ID`
+- **Cost Management**: Monitor CloudWatch metrics, set up budget alarms
+- See: [Bedrock IAM Documentation](infra/modules/ecs_dashboard_service/BEDROCK_IAM.md)
 
 ### Integration Multiple Connections
 
