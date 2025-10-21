@@ -363,6 +363,25 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
         });
         break;
 
+      case 'event_stream':
+        // Handle real-time events from EventBridge
+        if (message.event) {
+          activityUpdateCallbacks().forEach(callback => {
+            try {
+              // Transform EventBridge format to activity format
+              callback({
+                type: message.event.detailType || message.event['detail-type'],
+                ...message.event.detail,
+                eventId: message.event.eventId,
+                timestamp: message.event.timestamp
+              });
+            } catch (error) {
+              console.error('Error in event stream callback:', error);
+            }
+          });
+        }
+        break;
+
       case 'auth_error':
         // Handle authentication errors with user-friendly messages
         if (message.error) {
