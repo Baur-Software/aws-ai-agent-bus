@@ -110,7 +110,17 @@ export class MCPServiceRegistry {
 
     if (!serverName) {
       // Smart routing based on tool name patterns
-      if (toolName === 'use_aws' || toolName.startsWith('aws_')) {
+      if (
+        toolName === 'use_aws' ||
+        toolName.startsWith('aws_') ||
+        toolName.startsWith('kv_') ||
+        toolName.startsWith('events_') ||
+        toolName.startsWith('artifacts_') ||
+        toolName.startsWith('analytics_') ||
+        toolName.startsWith('workflow_') ||
+        toolName.startsWith('agent_') ||
+        toolName.startsWith('integration_')
+      ) {
         return 'aws';
       }
       if (toolName.startsWith('github_')) {
