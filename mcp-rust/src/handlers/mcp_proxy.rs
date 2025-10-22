@@ -2,10 +2,10 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::sync::Arc;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use crate::handlers::{Handler, HandlerError};
-use crate::registry::{MCPServerRegistry, MCPTool};
+use crate::registry::MCPServerRegistry;
 use crate::tenant::{Permission, TenantSession};
 
 pub struct MCPProxyHandler {
@@ -29,18 +29,24 @@ impl MCPProxyHandler {
         }
 
         // Search through all registered servers to find the tool
-        let servers = self.registry.list_servers(tenant_id).await
+        let servers = self
+            .registry
+            .list_servers(tenant_id)
+            .await
             .map_err(|e| HandlerError::Internal(e.to_string()))?;
 
         // For now, we'll need to enhance the registry to expose tool listings
-        // This is a simplified version
-        for server in servers {
+        // This is a simplified version - return first server if available
+        if let Some(server) = servers.first() {
             // Try to execute on this server and see if it has the tool
             // In production, we'd cache this mapping
-            return Ok(server.id);
+            return Ok(server.id.clone());
         }
 
-        Err(HandlerError::Internal(format!("No server found for tool: {}", tool_name)))
+        Err(HandlerError::Internal(format!(
+            "No server found for tool: {}",
+            tool_name
+        )))
     }
 }
 
@@ -56,14 +62,18 @@ impl Handler for MCPProxyHandler {
 
         info!(
             "Proxying MCP tool call '{}' for tenant {}",
-            args.tool_name, session.context.get_context_id()
+            args.tool_name,
+            session.context.get_context_id()
         );
 
         // Find the server that handles this tool
-        let server_id = self.find_server_for_tool(&session.context.get_context_id(), &args.tool_name).await?;
+        let server_id = self
+            .find_server_for_tool(&session.context.get_context_id(), &args.tool_name)
+            .await?;
 
         // Execute the tool on the target server
-        let result = self.registry
+        let result = self
+            .registry
             .execute_tool(
                 &session.context.get_context_id(),
                 &server_id,
@@ -126,9 +136,13 @@ impl Handler for MCPListToolsHandler {
     ) -> Result<Value, HandlerError> {
         let args: Option<MCPListToolsArgs> = serde_json::from_value(arguments).ok();
 
-        debug!("Listing MCP tools for tenant {}", session.context.get_context_id());
+        debug!(
+            "Listing MCP tools for tenant {}",
+            session.context.get_context_id()
+        );
 
-        let servers = self.registry
+        let servers = self
+            .registry
             .list_servers(&session.context.get_context_id())
             .await
             .map_err(|e| HandlerError::Internal(e.to_string()))?;
@@ -136,9 +150,7 @@ impl Handler for MCPListToolsHandler {
         // If specific server requested, filter to just that server
         let filtered_servers = if let Some(args) = args {
             if let Some(server_id) = args.server_id {
-                servers.into_iter()
-                    .filter(|s| s.id == server_id)
-                    .collect()
+                servers.into_iter().filter(|s| s.id == server_id).collect()
             } else {
                 servers
             }
@@ -151,14 +163,12 @@ impl Handler for MCPListToolsHandler {
         for server in filtered_servers {
             // For each server, we'd fetch its tools
             // This is simplified - in production we'd get actual tools from the registry
-            let tools = vec![
-                MCPToolInfo {
-                    name: format!("{}.example_tool", server.id),
-                    description: format!("Example tool from {}", server.name),
-                    server_id: server.id.clone(),
-                    server_name: server.name.clone(),
-                },
-            ];
+            let tools = vec![MCPToolInfo {
+                name: format!("{}.example_tool", server.id),
+                description: format!("Example tool from {}", server.name),
+                server_id: server.id.clone(),
+                server_name: server.name.clone(),
+            }];
 
             all_tools.extend(tools);
         }

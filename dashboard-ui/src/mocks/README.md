@@ -5,6 +5,7 @@ This directory contains centralized mock data for development and testing of the
 ## Overview
 
 The mock data system provides:
+
 - **Consistent data** across all components
 - **Environment-based switching** between mock and real APIs
 - **Testing utilities** for different scenarios
@@ -13,6 +14,7 @@ The mock data system provides:
 ## Usage
 
 ### Development Mode
+
 Mock data is automatically used in development when `VITE_USE_MOCK_DATA=true` (default).
 
 ```typescript
@@ -61,26 +63,31 @@ await MockPerformance.simulateSlowApi(2000);
 ## Mock Data Types
 
 ### Workflows
+
 - `mockWorkflows` - Sample workflow definitions
 - `mockWorkflowTemplates` - Marketplace templates
 - Includes realistic metadata, stats, and definitions
 
 ### Contexts
+
 - `mockContexts` - MCP contexts with permissions
 - User vs organization contexts
 - OAuth grant associations
 
 ### Users & Organizations
+
 - `mockUsers` - Sample user profiles
 - `mockOrganizations` - Sample organizations
 - Realistic member counts and plans
 
 ### MCP Tools
+
 - `mockMCPTools` - Available MCP tools
 - Input/output schemas
 - Categories and examples
 
 ### Events
+
 - `mockRealtimeEvents` - Sample event stream
 - Different event types and priorities
 - Realistic timestamps and metadata
@@ -88,24 +95,28 @@ await MockPerformance.simulateSlowApi(2000);
 ## Testing Scenarios
 
 ### Empty State
+
 ```typescript
 await TestScenarios.emptyDashboard();
 // Shows empty states, onboarding flows
 ```
 
 ### Loaded State
+
 ```typescript
 await TestScenarios.loadedDashboard();
 // Shows populated dashboard with sample data
 ```
 
 ### Offline Mode
+
 ```typescript
 await TestScenarios.offlineMode();
 // Simulates network failures, shows error states
 ```
 
 ### Performance Testing
+
 ```typescript
 // Simulate slow API
 await MockPerformance.simulateSlowApi(3000);
@@ -156,6 +167,7 @@ const customEvent = MockDataGenerator.generateRealtimeEvent({
 ## Integration with Components
 
 ### Context Integration
+
 ```typescript
 // DashboardContext.tsx
 async getWorkflows() {
@@ -168,6 +180,7 @@ async getWorkflows() {
 ```
 
 ### Component Usage
+
 ```typescript
 // WorkflowMarketplace.tsx
 const loadTemplates = async () => {

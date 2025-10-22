@@ -31,7 +31,6 @@ export default function ServerCatalogSkeleton() {
       <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {Array.from({ length: 9 }).map((_, index) => (
           <div
-            key={index}
             class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 animate-pulse"
           >
             {/* Header */}

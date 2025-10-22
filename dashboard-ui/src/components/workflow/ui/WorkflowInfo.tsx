@@ -1,4 +1,4 @@
-import { createSignal, Show } from 'solid-js';
+import { createSignal, Show, onMount, For } from 'solid-js';
 import {
   Edit3,
   Check,
@@ -36,6 +36,7 @@ interface WorkflowInfoProps {
     };
   };
   onRename?: (newName: string) => void;
+  onEditRef?: (editFn: () => void) => void; // Callback to expose edit function to parent
   class?: string;
 }
 
@@ -47,6 +48,11 @@ export default function WorkflowInfo(props: WorkflowInfoProps) {
     setEditName(props.currentWorkflow?.name || '');
     setIsEditing(true);
   };
+
+  // Expose edit function to parent on mount
+  onMount(() => {
+    props.onEditRef?.(handleStartEdit);
+  });
 
   const handleSaveEdit = () => {
     const newName = editName().trim();
@@ -215,13 +221,13 @@ export default function WorkflowInfo(props: WorkflowInfoProps) {
         {/* Tags */}
         <Show when={props.currentWorkflow?.metadata?.tags?.length}>
           <div class="flex flex-wrap gap-1 mt-2">
-            {props.currentWorkflow?.metadata?.tags?.slice(0, 3).map((tag) => (
+            {<For each={props.currentWorkflow?.metadata?.tags?.slice(0, 3)}>{(tag) => (
               <span
                 class="inline-block bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs px-2 py-0.5 rounded-full"
               >
                 {tag}
               </span>
-            ))}
+            )}</For>}
             <Show when={(props.currentWorkflow?.metadata?.tags?.length || 0) > 3}>
               <span class="text-xs text-gray-500 dark:text-gray-500">
                 +{(props.currentWorkflow?.metadata?.tags?.length || 0) - 3} more

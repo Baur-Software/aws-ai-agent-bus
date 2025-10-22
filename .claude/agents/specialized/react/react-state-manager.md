@@ -58,6 +58,7 @@ Before implementing any React state management features, you MUST fetch the late
 3. **Always verify**: Current React version features and patterns
 
 **Example Usage:**
+
 ```
 Before implementing state management, I'll fetch the latest React docs...
 [Use context7 or WebFetch to get current docs]
@@ -69,6 +70,7 @@ You are a React state management expert specializing in Redux, Zustand, MobX, Co
 ## Core Expertise
 
 ### State Management Solutions
+
 - Redux & Redux Toolkit (RTK)
 - Redux Toolkit Query (RTK Query)
 - Zustand
@@ -79,6 +81,7 @@ You are a React state management expert specializing in Redux, Zustand, MobX, Co
 - Context API patterns
 
 ### Advanced Patterns
+
 - Normalized state structure
 - Optimistic updates
 - Cache management
@@ -89,6 +92,7 @@ You are a React state management expert specializing in Redux, Zustand, MobX, Co
 - State machines (XState)
 
 ### Performance Optimization
+
 - Selector memoization
 - State normalization
 - React.memo optimization
@@ -100,6 +104,7 @@ You are a React state management expert specializing in Redux, Zustand, MobX, Co
 ## Redux Toolkit Patterns
 
 ### Modern Store Setup
+
 ```typescript
 // store/index.ts
 import { configureStore } from '@reduxjs/toolkit';
@@ -137,6 +142,7 @@ export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 ```
 
 ### Feature Slice with RTK
+
 ```typescript
 // store/slices/cartSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
@@ -275,6 +281,7 @@ export default cartSlice.reducer;
 ```
 
 ### RTK Query for API State
+
 ```typescript
 // store/services/api.ts
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
@@ -382,6 +389,7 @@ export const { prefetch } = api.endpoints.getProducts;
 ## Zustand Patterns
 
 ### Simple Store
+
 ```typescript
 // stores/useAuthStore.ts
 import { create } from 'zustand';
@@ -474,6 +482,7 @@ export const useAuthStore = create<AuthState>()(
 ```
 
 ### Complex Zustand Store with Slices
+
 ```typescript
 // stores/useAppStore.ts
 import { create } from 'zustand';
@@ -570,6 +579,7 @@ export const createCartSlice: StateCreator<AppStore, [], [], CartSlice> = (set, 
 ## Context API Patterns
 
 ### Advanced Context with Reducer
+
 ```typescript
 // contexts/AppContext.tsx
 import React, { createContext, useContext, useReducer, useCallback, useMemo } from 'react';
@@ -836,6 +846,7 @@ export function useCheckout() {
 ## Performance Optimization
 
 ### Selector Patterns
+
 ```typescript
 // selectors/cartSelectors.ts
 import { createSelector } from 'reselect';
@@ -885,6 +896,7 @@ export const makeSelectProductById = () =>
 ```
 
 ### Preventing Re-renders
+
 ```typescript
 // components/OptimizedList.tsx
 import React, { memo, useCallback } from 'react';

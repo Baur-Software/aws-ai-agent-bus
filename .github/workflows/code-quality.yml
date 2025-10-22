@@ -28,13 +28,16 @@ jobs:
     
     - name: Check for sensitive data in entire project
       run: |
-        # Check for hardcoded secrets (excluding git logs, terraform state, and workflow files)
+        # Check for hardcoded secrets (excluding git logs, terraform state, workflow files, and infra docs)
+        # Infrastructure documentation is allowed to mention the profile name
         if find . -type f \
           \( -name "*.js" -o -name "*.json" -o -name "*.md" \) \
           -not -path "./.git/*" \
           -not -path "./node_modules/*" \
           -not -path "./.terraform/*" \
-          -not -path "./infra/workspaces/*/terraform.tfstate" \
+          -not -path "./infra/*" \
+          -not -path "./docs/infra/*" \
+          -not -path "./CLAUDE.md" \
           -exec grep -l "baursoftware" {} + 2>/dev/null; then
           echo "❌ Found hardcoded 'baursoftware' in source files"
           exit 1
@@ -74,6 +77,18 @@ jobs:
           done
         done
         echo "✅ Documentation links checked"
+
+    - name: Lint Markdown files
+      uses: DavidAnson/markdownlint-cli2-action@v18
+      with:
+        globs: |
+          **/*.md
+          !node_modules
+          !.git
+          !docs/infra
+          !infra/**
+          !.claude/**
+          !dashboard-ui/**
 
   security-scan:
     runs-on: ubuntu-latest

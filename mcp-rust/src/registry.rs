@@ -1,16 +1,14 @@
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::process::Stdio;
 use std::sync::Arc;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command};
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 
 use crate::aws::AwsService;
-use crate::tenant::{TenantSession, ContextType};
+use crate::tenant::TenantSession;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MCPServerConfig {
@@ -43,7 +41,7 @@ pub enum DeploymentConfig {
         ports: Vec<String>,
         volumes: Vec<String>,
         network: Option<String>,
-        runtime: Option<String>,  // nvidia for GPU, etc.
+        runtime: Option<String>, // nvidia for GPU, etc.
     },
     Process {
         command: String,
@@ -59,17 +57,25 @@ pub enum DeploymentConfig {
 #[serde(rename_all = "snake_case")]
 pub enum AuthMethod {
     None,
-    ApiKey { key_field: String },
-    OAuth2 { client_id: String, client_secret: String },
-    Basic { username: String, password: String },
+    ApiKey {
+        key_field: String,
+    },
+    OAuth2 {
+        client_id: String,
+        client_secret: String,
+    },
+    Basic {
+        username: String,
+        password: String,
+    },
 }
 
 #[derive(Debug)]
 pub struct MCPServerConnection {
     pub config: MCPServerConfig,
     pub process: Option<Child>,
-    pub container_id: Option<String>,  // For Docker deployments
-    pub endpoint: Option<String>,      // For HTTP/WebSocket connections
+    pub container_id: Option<String>, // For Docker deployments
+    pub endpoint: Option<String>,     // For HTTP/WebSocket connections
     pub status: ConnectionStatus,
     pub last_health_check: std::time::Instant,
     pub tools: Vec<MCPTool>,
@@ -104,6 +110,7 @@ impl MCPServerRegistry {
     }
 
     /// Register a server with context awareness (personal or organizational)
+    #[allow(dead_code)]
     pub async fn register_server_for_context(
         &self,
         session: &TenantSession,
@@ -114,6 +121,7 @@ impl MCPServerRegistry {
     }
 
     /// Connect to a server with context awareness
+    #[allow(dead_code)]
     pub async fn connect_server_for_context(
         &self,
         session: &TenantSession,
@@ -121,10 +129,12 @@ impl MCPServerRegistry {
         credentials: Option<HashMap<String, String>>,
     ) -> Result<(), RegistryError> {
         let context_id = session.context.get_context_id();
-        self.connect_server(&context_id, server_id, credentials).await
+        self.connect_server(&context_id, server_id, credentials)
+            .await
     }
 
     /// List servers for a context
+    #[allow(dead_code)]
     pub async fn list_servers_for_context(
         &self,
         session: &TenantSession,
@@ -138,7 +148,10 @@ impl MCPServerRegistry {
         tenant_id: &str,
         config: MCPServerConfig,
     ) -> Result<(), RegistryError> {
-        info!("Registering MCP server: {} for tenant: {}", config.id, tenant_id);
+        info!(
+            "Registering MCP server: {} for tenant: {}",
+            config.id, tenant_id
+        );
 
         // Store configuration in DynamoDB
         self.store_server_config(tenant_id, &config).await?;
@@ -170,13 +183,15 @@ impl MCPServerRegistry {
         let key = format!("{}-{}", tenant_id, server_id);
 
         let mut servers = self.servers.write().await;
-        let connection = servers.get_mut(&key)
+        let connection = servers
+            .get_mut(&key)
             .ok_or_else(|| RegistryError::ServerNotFound(server_id.to_string()))?;
 
         if connection.config.server_type != MCPServerType::Stdio {
-            return Err(RegistryError::UnsupportedServerType(
-                format!("{:?}", connection.config.server_type)
-            ));
+            return Err(RegistryError::UnsupportedServerType(format!(
+                "{:?}",
+                connection.config.server_type
+            )));
         }
 
         info!("Connecting to MCP server: {}", server_id);
@@ -199,11 +214,20 @@ impl MCPServerRegistry {
                     env_vars.insert(key_field.clone(), api_key);
                 }
             }
-            AuthMethod::OAuth2 { client_id, client_secret } => {
-                if let Some(stored_client_id) = self.get_credential(tenant_id, server_id, "client_id").await? {
+            AuthMethod::OAuth2 {
+                client_id: _,
+                client_secret: _,
+            } => {
+                if let Some(stored_client_id) = self
+                    .get_credential(tenant_id, server_id, "client_id")
+                    .await?
+                {
                     env_vars.insert("CLIENT_ID".to_string(), stored_client_id);
                 }
-                if let Some(stored_client_secret) = self.get_credential(tenant_id, server_id, "client_secret").await? {
+                if let Some(stored_client_secret) = self
+                    .get_credential(tenant_id, server_id, "client_secret")
+                    .await?
+                {
                     env_vars.insert("CLIENT_SECRET".to_string(), stored_client_secret);
                 }
             }
@@ -216,16 +240,25 @@ impl MCPServerRegistry {
 
         // Start the MCP server based on deployment type
         match &connection.config.deployment {
-            DeploymentConfig::Docker { image, tag, ports, volumes, network, runtime } => {
+            DeploymentConfig::Docker {
+                image,
+                tag,
+                ports,
+                volumes,
+                network,
+                runtime,
+            } => {
                 info!("Starting Docker container for MCP server: {}", server_id);
 
                 let container_name = format!("mcp-{}-{}", tenant_id, server_id);
                 let mut docker_cmd = Command::new("docker");
 
-                docker_cmd.arg("run")
-                    .arg("-d")  // Detached mode
-                    .arg("--name").arg(&container_name)
-                    .arg("--rm");  // Remove container when stopped
+                docker_cmd
+                    .arg("run")
+                    .arg("-d") // Detached mode
+                    .arg("--name")
+                    .arg(&container_name)
+                    .arg("--rm"); // Remove container when stopped
 
                 // Add runtime if specified (e.g., nvidia for GPU)
                 if let Some(runtime) = runtime {
@@ -258,7 +291,8 @@ impl MCPServerRegistry {
                 match docker_cmd.output().await {
                     Ok(output) => {
                         if output.status.success() {
-                            let container_id = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                            let container_id =
+                                String::from_utf8_lossy(&output.stdout).trim().to_string();
                             connection.container_id = Some(container_id.clone());
                             connection.status = ConnectionStatus::Connected;
 
@@ -325,8 +359,14 @@ impl MCPServerRegistry {
                     }
                 }
             }
-            DeploymentConfig::Lambda { function_name, region } => {
-                info!("Connecting to Lambda function {} in region {}", function_name, region);
+            DeploymentConfig::Lambda {
+                function_name,
+                region,
+            } => {
+                info!(
+                    "Connecting to Lambda function {} in region {}",
+                    function_name, region
+                );
 
                 // For Lambda, we just store the endpoint
                 connection.endpoint = Some(format!("lambda://{}:{}", region, function_name));
@@ -361,7 +401,7 @@ impl MCPServerRegistry {
             }
 
             // Handle Docker container termination
-            if let Some(container_id) = &connection.container_id {
+            if let Some(_container_id) = &connection.container_id {
                 let container_name = format!("mcp-{}-{}", tenant_id, server_id);
                 let mut docker_cmd = Command::new("docker");
                 docker_cmd.arg("stop").arg(&container_name);
@@ -371,8 +411,10 @@ impl MCPServerRegistry {
                         if output.status.success() {
                             info!("Docker container {} stopped", container_name);
                         } else {
-                            warn!("Failed to stop Docker container: {}",
-                                String::from_utf8_lossy(&output.stderr));
+                            warn!(
+                                "Failed to stop Docker container: {}",
+                                String::from_utf8_lossy(&output.stderr)
+                            );
                         }
                     }
                     Err(e) => warn!("Failed to execute docker stop: {}", e),
@@ -389,10 +431,7 @@ impl MCPServerRegistry {
         Ok(())
     }
 
-    pub async fn list_servers(
-        &self,
-        tenant_id: &str,
-    ) -> Result<Vec<MCPServerInfo>, RegistryError> {
+    pub async fn list_servers(&self, tenant_id: &str) -> Result<Vec<MCPServerInfo>, RegistryError> {
         let servers = self.servers.read().await;
         let mut result = Vec::new();
 
@@ -421,7 +460,8 @@ impl MCPServerRegistry {
         let key = format!("{}-{}", tenant_id, server_id);
 
         let servers = self.servers.read().await;
-        let connection = servers.get(&key)
+        let connection = servers
+            .get(&key)
             .ok_or_else(|| RegistryError::ServerNotFound(server_id.to_string()))?;
 
         if connection.status != ConnectionStatus::Connected {
@@ -444,11 +484,12 @@ impl MCPServerRegistry {
 
     async fn initialize_mcp_connection(&self, key: &str) -> Result<(), RegistryError> {
         let servers = self.servers.read().await;
-        let connection = servers.get(key)
+        let connection = servers
+            .get(key)
             .ok_or_else(|| RegistryError::ServerNotFound(key.to_string()))?;
 
-        if let Some(process) = &connection.process {
-            let request = serde_json::json!({
+        if let Some(_process) = &connection.process {
+            let _request = serde_json::json!({
                 "jsonrpc": "2.0",
                 "id": 1,
                 "method": "initialize",
@@ -470,19 +511,20 @@ impl MCPServerRegistry {
 
     async fn fetch_server_tools(&self, key: &str) -> Result<(), RegistryError> {
         let mut servers = self.servers.write().await;
-        let connection = servers.get_mut(key)
+        let connection = servers
+            .get_mut(key)
             .ok_or_else(|| RegistryError::ServerNotFound(key.to_string()))?;
 
-        if let Some(process) = &connection.process {
-            let request = serde_json::json!({
+        if let Some(_process) = &connection.process {
+            let _request = serde_json::json!({
                 "jsonrpc": "2.0",
                 "id": 2,
                 "method": "tools/list",
                 "params": {}
             });
 
-            // Send tool list request and parse response
-            // This would be implemented with proper stdio handling
+            // TODO: Send tool list request and parse response
+            // This would be implemented with proper stdio handling per MCP spec
             debug!("Fetching tools from MCP server");
 
             // For now, return empty tools
@@ -494,11 +536,11 @@ impl MCPServerRegistry {
 
     async fn execute_stdio_tool(
         &self,
-        process: &Child,
+        _process: &Child,
         tool_name: &str,
         arguments: Value,
     ) -> Result<Value, RegistryError> {
-        let request = serde_json::json!({
+        let _request = serde_json::json!({
             "jsonrpc": "2.0",
             "id": 3,
             "method": "tools/call",
@@ -508,8 +550,8 @@ impl MCPServerRegistry {
             }
         });
 
-        // Send request via stdin and read response from stdout
-        // This would be implemented with proper stdio handling
+        // TODO: Send request via stdin and read response from stdout
+        // This would be implemented with proper stdio handling per MCP spec
         debug!("Executing tool {} via stdio", tool_name);
 
         Ok(serde_json::json!({
@@ -541,7 +583,10 @@ impl MCPServerRegistry {
         server_id: &str,
         credential_name: &str,
     ) -> Result<Option<String>, RegistryError> {
-        let key = format!("mcp-credential-{}-{}-{}", tenant_id, server_id, credential_name);
+        let key = format!(
+            "mcp-credential-{}-{}-{}",
+            tenant_id, server_id, credential_name
+        );
 
         match self.aws_service.kv_get_direct(&key).await {
             Ok(value) => Ok(value),
@@ -552,6 +597,7 @@ impl MCPServerRegistry {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn health_check(&self) {
         let mut servers = self.servers.write().await;
 
@@ -567,9 +613,8 @@ impl MCPServerRegistry {
                         match process.try_wait() {
                             Ok(Some(status)) => {
                                 warn!("MCP server {} exited with status: {}", key, status);
-                                connection.status = ConnectionStatus::Failed(
-                                    format!("Process exited: {}", status)
-                                );
+                                connection.status =
+                                    ConnectionStatus::Failed(format!("Process exited: {}", status));
                                 connection.process = None;
                             }
                             Ok(None) => {

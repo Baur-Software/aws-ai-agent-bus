@@ -1,6 +1,7 @@
 use crate::rate_limiting::{AwsOperation, AwsRateLimiter, AwsServiceLimits};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::RwLock;
@@ -14,6 +15,7 @@ pub enum TenantError {
     #[error("Unauthorized access for tenant: {0}")]
     Unauthorized(String),
     #[error("Tenant configuration error: {0}")]
+    #[allow(dead_code)]
     ConfigError(String),
 }
 
@@ -37,11 +39,13 @@ pub struct TenantContext {
 
 impl TenantContext {
     /// Returns true if this is a personal context
+    #[allow(dead_code)]
     pub fn is_personal(&self) -> bool {
         matches!(self.context_type, ContextType::Personal)
     }
 
     /// Returns true if this is an organizational context
+    #[allow(dead_code)]
     pub fn is_organizational(&self) -> bool {
         matches!(self.context_type, ContextType::Organization { .. })
     }
@@ -58,11 +62,14 @@ impl TenantContext {
     pub fn get_namespace_prefix(&self) -> String {
         match &self.context_type {
             ContextType::Personal => format!("user:{}", self.user_id),
-            ContextType::Organization { org_id, .. } => format!("org:{}:user:{}", org_id, self.user_id),
+            ContextType::Organization { org_id, .. } => {
+                format!("org:{}:user:{}", org_id, self.user_id)
+            }
         }
     }
 
     /// Get the organization ID if in organizational context
+    #[allow(dead_code)]
     pub fn get_org_id(&self) -> Option<String> {
         match &self.context_type {
             ContextType::Organization { org_id, .. } => Some(org_id.clone()),
@@ -120,10 +127,11 @@ impl Default for ResourceLimits {
 pub struct TenantSession {
     pub context: TenantContext,
     pub session_id: Uuid,
+    #[allow(dead_code)]
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub last_activity: Arc<RwLock<chrono::DateTime<chrono::Utc>>>,
-    pub request_count: Arc<RwLock<u32>>,
-    pub active_requests: Arc<RwLock<u32>>,
+    pub request_count: Arc<AtomicU32>, // Changed to atomic for lock-free increment
+    pub active_requests: Arc<AtomicU32>, // Changed to atomic for lock-free increment
 }
 
 impl TenantSession {
@@ -134,8 +142,8 @@ impl TenantSession {
             session_id: Uuid::new_v4(),
             created_at: now,
             last_activity: Arc::new(RwLock::new(now)),
-            request_count: Arc::new(RwLock::new(0)),
-            active_requests: Arc::new(RwLock::new(0)),
+            request_count: Arc::new(AtomicU32::new(0)), // Atomic initialization
+            active_requests: Arc::new(AtomicU32::new(0)), // Atomic initialization
         }
     }
 
@@ -144,28 +152,33 @@ impl TenantSession {
         *last_activity = chrono::Utc::now();
     }
 
-    pub async fn increment_request_count(&self) -> u32 {
-        let mut count = self.request_count.write().await;
-        *count += 1;
-        *count
+    pub fn increment_request_count(&self) -> u32 {
+        // Lock-free atomic increment
+        self.request_count.fetch_add(1, Ordering::SeqCst) + 1
     }
 
-    pub async fn increment_active_requests(&self) -> u32 {
-        let mut active = self.active_requests.write().await;
-        *active += 1;
-        *active
+    pub fn increment_active_requests(&self) -> u32 {
+        // Lock-free atomic increment
+        self.active_requests.fetch_add(1, Ordering::SeqCst) + 1
     }
 
-    pub async fn decrement_active_requests(&self) {
-        let mut active = self.active_requests.write().await;
-        if *active > 0 {
-            *active -= 1;
-        }
+    pub fn decrement_active_requests(&self) {
+        // Lock-free atomic decrement with saturation (never go below 0)
+        self.active_requests
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
+                if current > 0 {
+                    Some(current - 1)
+                } else {
+                    None // Don't update if already 0
+                }
+            })
+            .ok(); // Ignore result
     }
 
-    pub async fn check_rate_limit(&self) -> bool {
-        let count = *self.request_count.read().await;
-        let active = *self.active_requests.read().await;
+    pub fn check_rate_limit(&self) -> bool {
+        // Lock-free atomic reads
+        let count = self.request_count.load(Ordering::SeqCst);
+        let active = self.active_requests.load(Ordering::SeqCst);
 
         // Legacy rate limiting check
         count < self.context.resource_limits.requests_per_minute
@@ -262,21 +275,49 @@ impl TenantManager {
         Ok(session)
     }
 
+    #[allow(dead_code)]
     pub async fn get_session(&self, session_key: &str) -> Option<Arc<TenantSession>> {
         let sessions = self.sessions.read().await;
         sessions.get(session_key).cloned()
     }
 
+    pub async fn get_all_sessions(&self) -> Vec<Arc<TenantSession>> {
+        let sessions = self.sessions.read().await;
+        sessions.values().cloned().collect()
+    }
+
+    #[allow(dead_code)]
     pub async fn cleanup_expired_sessions(&self) {
-        let mut sessions = self.sessions.write().await;
         let now = chrono::Utc::now();
         let timeout = chrono::Duration::minutes(30); // 30-minute timeout
 
-        sessions.retain(|_, session| {
-            let last_activity =
-                futures::executor::block_on(async { *session.last_activity.read().await });
-            now.signed_duration_since(last_activity) < timeout
-        });
+        // CRITICAL FIX: Avoid deadlock by collecting keys first, then filtering
+        // Don't hold write lock while calling block_on on another async lock
+
+        // Step 1: Collect session keys to check (only read lock needed)
+        let session_keys: Vec<String> = {
+            let sessions = self.sessions.read().await;
+            sessions.keys().cloned().collect()
+        };
+
+        // Step 2: Check each session without holding sessions lock
+        let mut expired = Vec::new();
+        for key in session_keys {
+            if let Some(session) = self.get_session(&key).await {
+                let last_activity = *session.last_activity.read().await;
+                if now.signed_duration_since(last_activity) >= timeout {
+                    expired.push(key);
+                }
+            }
+        }
+
+        // Step 3: Remove expired sessions (write lock held briefly)
+        if !expired.is_empty() {
+            let mut sessions = self.sessions.write().await;
+            for key in &expired {
+                sessions.remove(key);
+            }
+        }
 
         // Also cleanup AWS rate limiter buckets
         self.aws_rate_limiter.cleanup_expired_buckets().await;
@@ -306,7 +347,10 @@ impl TenantManager {
 
         // Tenant doesn't exist - auto-register in dev mode (when DEFAULT_TENANT_ID is set)
         if std::env::var("DEFAULT_TENANT_ID").is_ok() {
-            info!("Auto-registering tenant '{}' for user '{}' (dev mode)", tenant_id, user_id);
+            info!(
+                "Auto-registering tenant '{}' for user '{}' (dev mode)",
+                tenant_id, user_id
+            );
             let context = TenantContext {
                 tenant_id: tenant_id.to_string(),
                 user_id: user_id.to_string(),
@@ -330,4 +374,3 @@ impl TenantManager {
         }
     }
 }
-

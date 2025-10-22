@@ -25,6 +25,7 @@ Backend Error → ErrorHandler.categorizeError() → User-Safe Message → UI No
 ## Examples
 
 ### Before (Raw AWS Error)
+
 ```json
 {
   "error": "AccessDenied: User: arn:aws:iam::123456789012:user/demo is not authorized to perform: dynamodb:DescribeTable on resource: arn:aws:dynamodb:us-west-2:123456789012:table/agent-mesh-kv"
@@ -32,7 +33,9 @@ Backend Error → ErrorHandler.categorizeError() → User-Safe Message → UI No
 ```
 
 ### After (Categorized Error)
+
 **To User:**
+
 ```json
 {
   "error": {
@@ -44,11 +47,13 @@ Backend Error → ErrorHandler.categorizeError() → User-Safe Message → UI No
 ```
 
 **In Logs:**
+
 ```
 ⚠️ WARNING [AWS_AUTH_ERROR]: AWS Auth Error: AccessDenied: User: arn:aws:iam::123456789012:user/demo is not authorized...
 ```
 
 **In EventBridge:**
+
 ```json
 {
   "detailType": "Infrastructure Error",

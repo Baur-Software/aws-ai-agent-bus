@@ -20,8 +20,10 @@ import {
   MessageCircle,
   ChevronDown,
   Building,
-  Grid3X3
+  Grid3X3,
+  Cpu
 } from 'lucide-solid';
+import { useFloatingPanelResize } from '../../../hooks/useFloatingPanelResize';
 
 // Remove lazy loading - OverlayRouter handles this now
 
@@ -52,6 +54,20 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
   const location = useLocation();
   const { user, currentOrganization, organizations, switchOrganization } = useOrganization();
 
+  // Calculate panel width for resize handler
+  const panelWidth = () => isPinned() ? 64 : (isCollapsed() ? 60 : 320);
+
+  // Use floating panel resize hook to keep pinned panel at left edge
+  useFloatingPanelResize({
+    isPinned,
+    panelWidth,
+    onPositionChange: (x, y) => {
+      setPosition({ x, y });
+      props.onPositionChange?.(x, y);
+    },
+    pinSide: 'left'
+  });
+
   // Navigation drag handling
   let navRef: HTMLDivElement | undefined;
   let dragStart = { x: 0, y: 0, panelX: 0, panelY: 0 };
@@ -74,9 +90,14 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
       panelY: pos.y
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const newX = dragStart.panelX + (e.clientX - dragStart.x);
-      const newY = dragStart.panelY + (e.clientY - dragStart.y);
+    let rafId: number | null = null;
+    let lastMouseEvent: MouseEvent | null = null;
+
+    const updatePosition = () => {
+      if (!lastMouseEvent) return;
+
+      const newX = dragStart.panelX + (lastMouseEvent.clientX - dragStart.x);
+      const newY = dragStart.panelY + (lastMouseEvent.clientY - dragStart.y);
 
       // Keep navigation within viewport bounds - increased width by 100px
       const maxX = window.innerWidth - (isCollapsed() ? 60 : 320);
@@ -89,10 +110,23 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
 
       setPosition(clampedPos);
       props.onPositionChange?.(clampedPos.x, clampedPos.y);
+
+      rafId = null;
+      lastMouseEvent = null;
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      lastMouseEvent = e;
+      if (!rafId) {
+        rafId = requestAnimationFrame(updatePosition);
+      }
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
@@ -102,7 +136,8 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
   };
 
   const navItems: NavItem[] = [
-    { id: 'workflows', label: 'Workflows', icon: Workflow, path: '/' },
+    { id: 'workflows', label: 'Workflows', icon: Workflow, path: '/workflows' },
+    { id: 'agents', label: 'Agents', icon: Cpu, path: '/agents' },
     { id: 'apps', label: 'Apps', icon: Grid3X3, path: '/apps' },
     // Dashboard will be rebuilt as configurable canvas with datavis nodes
     { id: 'kv-store', label: 'KV Store', icon: Database, path: '/kv-store' },
@@ -114,7 +149,6 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
 
   const handleNavigation = (item: NavItem) => {
     // Simply navigate to the path
-    // The OverlayRouter will intercept and open the appropriate overlay
     navigate(item.path);
   };
 
@@ -201,7 +235,9 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
           top: `${position().y}px`,
           width: isPinned() ? '64px' : (isCollapsed() ? '60px' : '320px'),
           height: isPinned() ? '100vh' : 'auto',
-          'min-height': isPinned() ? '100vh' : 'auto'
+          'min-height': isPinned() ? '100vh' : 'auto',
+          'will-change': isDragging() ? 'transform' : 'auto',
+          transform: 'translate3d(0, 0, 0)' // Force GPU acceleration
         }}
         onMouseDown={handleMouseDown}
       >
@@ -261,9 +297,9 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
 
         {/* Navigation Items */}
         <div class={isPinned() ? "flex-1 flex flex-col justify-start px-2 py-4" : "p-2"}>
-          {navItems.map((item) => (
+          <For each={navItems}>{(item) => (
             <button
-              key={item.id}
+              
               onClick={() => handleNavigation(item)}
               class={`w-full flex items-center transition-colors ${
                 isPinned()
@@ -286,7 +322,7 @@ export default function FloatingNavigation(props: FloatingNavigationProps) {
                 </Show>
               </Show>
             </button>
-          ))}
+          )}</For>
         </div>
 
         {/* User Section with Organization Switcher */}

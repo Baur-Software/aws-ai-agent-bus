@@ -94,7 +94,7 @@ export class EventsHandler {
     }
 
     try {
-      await this.mcpService.callTool('events_send', {
+      await this.mcpService.executeTool('events_send', {
         detailType: event.detailType,
         source: event.source,
         detail: event.detail,
@@ -141,7 +141,7 @@ export class EventsHandler {
 
     try {
       // Query matching rules from DynamoDB via MCP
-      const rulesResult = await this.mcpService.callTool('kv_get', {
+      const rulesResult = await this.mcpService.executeTool('kv_get', {
         key: `event-rules-${event.userId || 'system'}`
       });
 

@@ -15,8 +15,10 @@ pub enum AwsError {
     #[error("S3 error: {0}")]
     S3(String),
     #[error("EventBridge error: {0}")]
+    #[allow(dead_code)]
     EventBridge(String),
     #[error("SecretsManager error: {0}")]
+    #[allow(dead_code)]
     SecretsManager(String),
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
@@ -28,7 +30,7 @@ pub struct AwsClients {
     pub dynamodb: DynamoDbClient,
     pub s3: S3Client,
     pub eventbridge: EventBridgeClient,
-    pub secrets_manager: SecretsManagerClient,
+    pub _secrets_manager: SecretsManagerClient,
 }
 
 impl AwsClients {
@@ -39,7 +41,7 @@ impl AwsClients {
             dynamodb: DynamoDbClient::new(&config),
             s3: S3Client::new(&config),
             eventbridge: EventBridgeClient::new(&config),
-            secrets_manager: SecretsManagerClient::new(&config),
+            _secrets_manager: SecretsManagerClient::new(&config),
         })
     }
 }
@@ -55,8 +57,8 @@ impl AwsService {
     pub async fn new(region: &str) -> Result<Self, AwsError> {
         let clients = Arc::new(AwsClients::new(region).await?);
 
-        let kv_table = std::env::var("AGENT_MESH_KV_TABLE")
-            .unwrap_or_else(|_| "agent-mesh-kv".to_string());
+        let kv_table =
+            std::env::var("AGENT_MESH_KV_TABLE").unwrap_or_else(|_| "agent-mesh-kv".to_string());
         let artifacts_bucket = std::env::var("AGENT_MESH_ARTIFACTS_BUCKET")
             .unwrap_or_else(|_| "agent-mesh-artifacts".to_string());
         let event_bus = std::env::var("AGENT_MESH_EVENT_BUS")
@@ -289,7 +291,6 @@ impl AwsService {
     #[allow(clippy::too_many_arguments)]
     pub async fn query_events(
         &self,
-        session: &TenantSession,
         user_id: Option<String>,
         organization_id: Option<String>,
         source: Option<String>,
@@ -341,13 +342,17 @@ impl AwsService {
         if let (Some(start), Some(end)) = (start_time.as_ref(), end_time.as_ref()) {
             if user_id.is_some() {
                 query_builder = query_builder
-                    .key_condition_expression("#userId = :userId AND #timestamp BETWEEN :start AND :end")
+                    .key_condition_expression(
+                        "#userId = :userId AND #timestamp BETWEEN :start AND :end",
+                    )
                     .expression_attribute_names("#timestamp", "timestamp")
                     .expression_attribute_values(":start", AttributeValue::S(start.clone()))
                     .expression_attribute_values(":end", AttributeValue::S(end.clone()));
             } else if source.is_some() {
                 query_builder = query_builder
-                    .key_condition_expression("#source = :source AND #timestamp BETWEEN :start AND :end")
+                    .key_condition_expression(
+                        "#source = :source AND #timestamp BETWEEN :start AND :end",
+                    )
                     .expression_attribute_names("#timestamp", "timestamp")
                     .expression_attribute_values(":start", AttributeValue::S(start.clone()))
                     .expression_attribute_values(":end", AttributeValue::S(end.clone()));
@@ -391,8 +396,7 @@ impl AwsService {
         }
 
         if !filter_expression_parts.is_empty() {
-            query_builder = query_builder
-                .filter_expression(filter_expression_parts.join(" AND "));
+            query_builder = query_builder.filter_expression(filter_expression_parts.join(" AND "));
         }
 
         // Set limit
@@ -402,8 +406,8 @@ impl AwsService {
         query_builder = query_builder.scan_index_forward(ascending);
 
         // Add pagination cursor if provided
-        if let Some(start_key) = exclusive_start_key {
-            // Parse start key (simplified - in production would be proper DynamoDB key)
+        if let Some(_start_key) = exclusive_start_key {
+            // TODO: Parse start key (simplified - in production would be proper DynamoDB key)
             // For now, we'll skip this since it requires proper key deserialization
         }
 
@@ -461,7 +465,7 @@ impl AwsService {
         start_time: Option<String>,
         end_time: Option<String>,
         metrics: Vec<String>,
-        granularity: String
+        granularity: String,
     ) -> Result<Value, AwsError> {
         // Generate cache key
         let scope = if let Some(org_id) = &organization_id {
@@ -472,7 +476,8 @@ impl AwsService {
             format!("user-{}", session.context.user_id)
         };
 
-        let time_range = format!("{}-{}",
+        let time_range = format!(
+            "{}-{}",
             start_time.as_deref().unwrap_or("24h"),
             end_time.as_deref().unwrap_or("now")
         );
@@ -508,39 +513,56 @@ impl AwsService {
         };
 
         // Query events using timestamp-index
-        let mut query_builder = self.clients.dynamodb.query()
+        let mut query_builder = self
+            .clients
+            .dynamodb
+            .query()
             .table_name(&events_table)
             .index_name("timestamp-index")
             .key_condition_expression("#timestamp BETWEEN :start AND :end")
             .expression_attribute_names("#timestamp", "timestamp")
-            .expression_attribute_values(":start",
-                aws_sdk_dynamodb::types::AttributeValue::S(start_dt.to_rfc3339()))
-            .expression_attribute_values(":end",
-                aws_sdk_dynamodb::types::AttributeValue::S(end_dt.to_rfc3339()));
+            .expression_attribute_values(
+                ":start",
+                aws_sdk_dynamodb::types::AttributeValue::S(start_dt.to_rfc3339()),
+            )
+            .expression_attribute_values(
+                ":end",
+                aws_sdk_dynamodb::types::AttributeValue::S(end_dt.to_rfc3339()),
+            );
 
         // Add user/org filtering
         if let Some(uid) = user_id.as_ref() {
             query_builder = query_builder
                 .filter_expression("#userId = :userId")
                 .expression_attribute_names("#userId", "userId")
-                .expression_attribute_values(":userId",
-                    aws_sdk_dynamodb::types::AttributeValue::S(uid.clone()));
+                .expression_attribute_values(
+                    ":userId",
+                    aws_sdk_dynamodb::types::AttributeValue::S(uid.clone()),
+                );
         } else if let Some(org_id) = organization_id.as_ref() {
             query_builder = query_builder
                 .filter_expression("#organizationId = :organizationId")
                 .expression_attribute_names("#organizationId", "organizationId")
-                .expression_attribute_values(":organizationId",
-                    aws_sdk_dynamodb::types::AttributeValue::S(org_id.clone()));
+                .expression_attribute_values(
+                    ":organizationId",
+                    aws_sdk_dynamodb::types::AttributeValue::S(org_id.clone()),
+                );
         }
 
-        let result = query_builder.send().await
+        let result = query_builder
+            .send()
+            .await
             .map_err(|e| AwsError::DynamoDb(e.to_string()))?;
 
         // Process events for analytics
-        let mut volume_buckets: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
-        let mut source_counts: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
-        let mut priority_counts: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
-        let mut event_type_counts: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
+        let mut volume_buckets: std::collections::HashMap<String, i32> =
+            std::collections::HashMap::new();
+        let mut source_counts: std::collections::HashMap<String, i32> =
+            std::collections::HashMap::new();
+        let mut priority_counts: std::collections::HashMap<String, i32> =
+            std::collections::HashMap::new();
+        let mut event_type_counts: std::collections::HashMap<String, i32> =
+            std::collections::HashMap::new();
 
         if let Some(ref items) = result.items {
             for item in items {
@@ -585,38 +607,47 @@ impl AwsService {
         let mut analytics = serde_json::Map::new();
 
         if metrics.contains(&"volume".to_string()) {
-            let mut buckets: Vec<_> = volume_buckets.into_iter()
+            let mut buckets: Vec<_> = volume_buckets
+                .into_iter()
                 .map(|(bucket, count)| json!({ "bucket": bucket, "count": count }))
                 .collect();
             buckets.sort_by(|a, b| a["bucket"].as_str().cmp(&b["bucket"].as_str()));
-            analytics.insert("volume".to_string(), json!({
-                "granularity": granularity,
-                "buckets": buckets
-            }));
+            analytics.insert(
+                "volume".to_string(),
+                json!({
+                    "granularity": granularity,
+                    "buckets": buckets
+                }),
+            );
         }
 
         if metrics.contains(&"topSources".to_string()) {
             let mut sources: Vec<_> = source_counts.into_iter().collect();
             sources.sort_by(|a, b| b.1.cmp(&a.1)); // Descending by count
-            let top_sources: Vec<_> = sources.into_iter()
+            let top_sources: Vec<_> = sources
+                .into_iter()
                 .map(|(source, count)| json!({ "source": source, "count": count }))
                 .collect();
             analytics.insert("topSources".to_string(), json!(top_sources));
         }
 
         if metrics.contains(&"priority".to_string()) {
-            analytics.insert("priority".to_string(), json!({
-                "low": priority_counts.get("low").unwrap_or(&0),
-                "medium": priority_counts.get("medium").unwrap_or(&0),
-                "high": priority_counts.get("high").unwrap_or(&0),
-                "critical": priority_counts.get("critical").unwrap_or(&0)
-            }));
+            analytics.insert(
+                "priority".to_string(),
+                json!({
+                    "low": priority_counts.get("low").unwrap_or(&0),
+                    "medium": priority_counts.get("medium").unwrap_or(&0),
+                    "high": priority_counts.get("high").unwrap_or(&0),
+                    "critical": priority_counts.get("critical").unwrap_or(&0)
+                }),
+            );
         }
 
         if metrics.contains(&"eventTypes".to_string()) {
             let mut types: Vec<_> = event_type_counts.into_iter().collect();
             types.sort_by(|a, b| b.1.cmp(&a.1)); // Descending by count
-            let event_types: Vec<_> = types.into_iter()
+            let event_types: Vec<_> = types
+                .into_iter()
                 .map(|(event_type, count)| json!({ "eventType": event_type, "count": count }))
                 .collect();
             analytics.insert("eventTypes".to_string(), json!(event_types));
@@ -633,7 +664,10 @@ impl AwsService {
         // Cache the result (5 minute TTL = 300 seconds)
         let cache_value = serde_json::to_string(&response).unwrap();
         let ttl = (chrono::Utc::now().timestamp() + 300) as u32;
-        if let Err(e) = self.kv_set_direct(&cache_key, &cache_value, Some(ttl)).await {
+        if let Err(e) = self
+            .kv_set_direct(&cache_key, &cache_value, Some(ttl))
+            .await
+        {
             tracing::warn!("Failed to cache analytics: {}", e);
         }
 
@@ -647,7 +681,7 @@ impl AwsService {
         name: &str,
         pattern: Value,
         description: Option<String>,
-        enabled: bool
+        enabled: bool,
     ) -> Result<Value, AwsError> {
         let event_rules_table = std::env::var("AGENT_MESH_EVENT_RULES_TABLE")
             .unwrap_or_else(|_| "agent-mesh-dev-event-rules".to_string());
@@ -657,22 +691,54 @@ impl AwsService {
         let timestamp = chrono::Utc::now().to_rfc3339();
 
         // Store rule in DynamoDB
-        let mut put_item = self.clients.dynamodb.put_item()
+        let mut put_item = self
+            .clients
+            .dynamodb
+            .put_item()
             .table_name(&event_rules_table)
-            .item("ruleId", aws_sdk_dynamodb::types::AttributeValue::S(rule_id.clone()))
-            .item("userId", aws_sdk_dynamodb::types::AttributeValue::S(session.context.user_id.clone()))
-            .item("organizationId", aws_sdk_dynamodb::types::AttributeValue::S(session.context.organization_id.clone()))
-            .item("name", aws_sdk_dynamodb::types::AttributeValue::S(name.to_string()))
-            .item("pattern", aws_sdk_dynamodb::types::AttributeValue::S(serde_json::to_string(&pattern)?))
-            .item("enabled", aws_sdk_dynamodb::types::AttributeValue::Bool(enabled))
-            .item("createdAt", aws_sdk_dynamodb::types::AttributeValue::S(timestamp.clone()))
-            .item("updatedAt", aws_sdk_dynamodb::types::AttributeValue::S(timestamp.clone()));
+            .item(
+                "ruleId",
+                aws_sdk_dynamodb::types::AttributeValue::S(rule_id.clone()),
+            )
+            .item(
+                "userId",
+                aws_sdk_dynamodb::types::AttributeValue::S(session.context.user_id.clone()),
+            )
+            .item(
+                "organizationId",
+                aws_sdk_dynamodb::types::AttributeValue::S(session.context.organization_id.clone()),
+            )
+            .item(
+                "name",
+                aws_sdk_dynamodb::types::AttributeValue::S(name.to_string()),
+            )
+            .item(
+                "pattern",
+                aws_sdk_dynamodb::types::AttributeValue::S(serde_json::to_string(&pattern)?),
+            )
+            .item(
+                "enabled",
+                aws_sdk_dynamodb::types::AttributeValue::Bool(enabled),
+            )
+            .item(
+                "createdAt",
+                aws_sdk_dynamodb::types::AttributeValue::S(timestamp.clone()),
+            )
+            .item(
+                "updatedAt",
+                aws_sdk_dynamodb::types::AttributeValue::S(timestamp.clone()),
+            );
 
         if let Some(desc) = description.as_ref() {
-            put_item = put_item.item("description", aws_sdk_dynamodb::types::AttributeValue::S(desc.clone()));
+            put_item = put_item.item(
+                "description",
+                aws_sdk_dynamodb::types::AttributeValue::S(desc.clone()),
+            );
         }
 
-        put_item.send().await
+        put_item
+            .send()
+            .await
             .map_err(|e| AwsError::DynamoDb(e.to_string()))?;
 
         Ok(json!({
@@ -695,7 +761,7 @@ impl AwsService {
         notification_method: &str,
         sns_topic_arn: Option<String>,
         email_address: Option<String>,
-        enabled: bool
+        enabled: bool,
     ) -> Result<Value, AwsError> {
         let subscriptions_table = std::env::var("AGENT_MESH_SUBSCRIPTIONS_TABLE")
             .unwrap_or_else(|_| "agent-mesh-dev-subscriptions".to_string());
@@ -705,27 +771,65 @@ impl AwsService {
         let timestamp = chrono::Utc::now().to_rfc3339();
 
         // Store subscription in DynamoDB
-        let mut put_item = self.clients.dynamodb.put_item()
+        let mut put_item = self
+            .clients
+            .dynamodb
+            .put_item()
             .table_name(&subscriptions_table)
-            .item("subscriptionId", aws_sdk_dynamodb::types::AttributeValue::S(subscription_id.clone()))
-            .item("userId", aws_sdk_dynamodb::types::AttributeValue::S(session.context.user_id.clone()))
-            .item("organizationId", aws_sdk_dynamodb::types::AttributeValue::S(session.context.organization_id.clone()))
-            .item("name", aws_sdk_dynamodb::types::AttributeValue::S(name.to_string()))
-            .item("ruleId", aws_sdk_dynamodb::types::AttributeValue::S(rule_id.to_string()))
-            .item("notificationMethod", aws_sdk_dynamodb::types::AttributeValue::S(notification_method.to_string()))
-            .item("enabled", aws_sdk_dynamodb::types::AttributeValue::Bool(enabled))
-            .item("createdAt", aws_sdk_dynamodb::types::AttributeValue::S(timestamp.clone()))
-            .item("updatedAt", aws_sdk_dynamodb::types::AttributeValue::S(timestamp.clone()));
+            .item(
+                "subscriptionId",
+                aws_sdk_dynamodb::types::AttributeValue::S(subscription_id.clone()),
+            )
+            .item(
+                "userId",
+                aws_sdk_dynamodb::types::AttributeValue::S(session.context.user_id.clone()),
+            )
+            .item(
+                "organizationId",
+                aws_sdk_dynamodb::types::AttributeValue::S(session.context.organization_id.clone()),
+            )
+            .item(
+                "name",
+                aws_sdk_dynamodb::types::AttributeValue::S(name.to_string()),
+            )
+            .item(
+                "ruleId",
+                aws_sdk_dynamodb::types::AttributeValue::S(rule_id.to_string()),
+            )
+            .item(
+                "notificationMethod",
+                aws_sdk_dynamodb::types::AttributeValue::S(notification_method.to_string()),
+            )
+            .item(
+                "enabled",
+                aws_sdk_dynamodb::types::AttributeValue::Bool(enabled),
+            )
+            .item(
+                "createdAt",
+                aws_sdk_dynamodb::types::AttributeValue::S(timestamp.clone()),
+            )
+            .item(
+                "updatedAt",
+                aws_sdk_dynamodb::types::AttributeValue::S(timestamp.clone()),
+            );
 
         if let Some(arn) = sns_topic_arn.as_ref() {
-            put_item = put_item.item("snsTopicArn", aws_sdk_dynamodb::types::AttributeValue::S(arn.clone()));
+            put_item = put_item.item(
+                "snsTopicArn",
+                aws_sdk_dynamodb::types::AttributeValue::S(arn.clone()),
+            );
         }
 
         if let Some(email) = email_address.as_ref() {
-            put_item = put_item.item("emailAddress", aws_sdk_dynamodb::types::AttributeValue::S(email.clone()));
+            put_item = put_item.item(
+                "emailAddress",
+                aws_sdk_dynamodb::types::AttributeValue::S(email.clone()),
+            );
         }
 
-        put_item.send().await
+        put_item
+            .send()
+            .await
             .map_err(|e| AwsError::DynamoDb(e.to_string()))?;
 
         Ok(json!({
@@ -753,58 +857,71 @@ impl AwsService {
         let end_time = chrono::Utc::now();
         let start_time = end_time - chrono::Duration::hours(24);
 
-        let events_result = self.clients.dynamodb.query()
+        let events_result = self
+            .clients
+            .dynamodb
+            .query()
             .table_name(&events_table)
             .index_name("user-index")
             .key_condition_expression("#userId = :userId")
             .filter_expression("#timestamp BETWEEN :start AND :end")
             .expression_attribute_names("#userId", "userId")
             .expression_attribute_names("#timestamp", "timestamp")
-            .expression_attribute_values(":userId",
-                aws_sdk_dynamodb::types::AttributeValue::S(session.context.user_id.clone()))
-            .expression_attribute_values(":start",
-                aws_sdk_dynamodb::types::AttributeValue::S(start_time.to_rfc3339()))
-            .expression_attribute_values(":end",
-                aws_sdk_dynamodb::types::AttributeValue::S(end_time.to_rfc3339()))
+            .expression_attribute_values(
+                ":userId",
+                aws_sdk_dynamodb::types::AttributeValue::S(session.context.user_id.clone()),
+            )
+            .expression_attribute_values(
+                ":start",
+                aws_sdk_dynamodb::types::AttributeValue::S(start_time.to_rfc3339()),
+            )
+            .expression_attribute_values(
+                ":end",
+                aws_sdk_dynamodb::types::AttributeValue::S(end_time.to_rfc3339()),
+            )
             .select(aws_sdk_dynamodb::types::Select::Count)
             .send()
             .await;
 
-        let events_count = events_result
-            .map(|r| r.count())
-            .unwrap_or(0);
+        let events_count = events_result.map(|r| r.count()).unwrap_or(0);
 
         // Check rules table - count user's rules
-        let rules_result = self.clients.dynamodb.query()
+        let rules_result = self
+            .clients
+            .dynamodb
+            .query()
             .table_name(&rules_table)
             .index_name("user-index")
             .key_condition_expression("#userId = :userId")
             .expression_attribute_names("#userId", "userId")
-            .expression_attribute_values(":userId",
-                aws_sdk_dynamodb::types::AttributeValue::S(session.context.user_id.clone()))
+            .expression_attribute_values(
+                ":userId",
+                aws_sdk_dynamodb::types::AttributeValue::S(session.context.user_id.clone()),
+            )
             .select(aws_sdk_dynamodb::types::Select::Count)
             .send()
             .await;
 
-        let rules_count = rules_result
-            .map(|r| r.count())
-            .unwrap_or(0);
+        let rules_count = rules_result.map(|r| r.count()).unwrap_or(0);
 
         // Check subscriptions table - count user's subscriptions
-        let subscriptions_result = self.clients.dynamodb.query()
+        let subscriptions_result = self
+            .clients
+            .dynamodb
+            .query()
             .table_name(&subscriptions_table)
             .index_name("user-index")
             .key_condition_expression("#userId = :userId")
             .expression_attribute_names("#userId", "userId")
-            .expression_attribute_values(":userId",
-                aws_sdk_dynamodb::types::AttributeValue::S(session.context.user_id.clone()))
+            .expression_attribute_values(
+                ":userId",
+                aws_sdk_dynamodb::types::AttributeValue::S(session.context.user_id.clone()),
+            )
             .select(aws_sdk_dynamodb::types::Select::Count)
             .send()
             .await;
 
-        let subscriptions_count = subscriptions_result
-            .map(|r| r.count())
-            .unwrap_or(0);
+        let subscriptions_count = subscriptions_result.map(|r| r.count()).unwrap_or(0);
 
         // Determine overall health status
         let status = if events_count > 0 || rules_count > 0 || subscriptions_count > 0 {

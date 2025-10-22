@@ -1,5 +1,5 @@
 import { A } from '@solidjs/router';
-import { Show, createSignal, For } from 'solid-js';
+import { Show, createSignal, For, type JSX } from 'solid-js';
 import { useDashboardServer } from '../contexts/DashboardServerContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import ConnectionStatus from './ui/ConnectionStatus';
@@ -32,18 +32,8 @@ function Sidebar(props: SidebarProps) {
 
   const handleRefresh = async (): Promise<void> => {
     setIsRefreshing(true);
-    // Force a health check by reloading the page's MCP resources
-    try {
-      if (mcp.refresh) {
-        mcp.refresh();
-      } else {
-        console.warn('Refresh method not available');
-      }
-    } catch (error) {
-      console.warn('Manual health check failed:', error);
-    }
-    // Brief delay to show the refresh animation
-    setTimeout(() => setIsRefreshing(false), 1000);
+    // Force a page reload to refresh MCP resources
+    window.location.reload();
   };
 
   return (
@@ -59,7 +49,8 @@ function Sidebar(props: SidebarProps) {
         </A>
         <button 
           class="lg:hidden p-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-          onClick={props.onClose}
+          onClick={() => props.onClose}
+          title="Close sidebar"
         >
           <X class="w-5 h-5" />
         </button>

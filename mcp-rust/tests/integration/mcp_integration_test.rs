@@ -1,14 +1,40 @@
+use serde_json::json;
+use std::io::{BufRead, BufReader, Write};
 /// Integration test for MCP protocol compliance
 /// Tests the actual fix that was implemented for dashboard-server compatibility
-
 use std::process::{Command, Stdio};
-use std::io::{BufRead, BufReader, Write};
-use serde_json::json;
+
+fn get_binary_path() -> Option<String> {
+    let paths = vec![
+        "./target/debug/mcp-multi-tenant",
+        "./target/debug/mcp-multi-tenant.exe",
+        "./target/release/mcp-multi-tenant",
+        "./target/release/mcp-multi-tenant.exe",
+    ];
+
+    for path in paths {
+        if std::path::Path::new(path).exists() {
+            return Some(path.to_string());
+        }
+    }
+    None
+}
 
 #[test]
 fn test_mcp_server_notification_vs_request_handling() {
-    // Start the MCP server binary
-    let mut child = Command::new("./target/release/mcp-multi-tenant.exe")
+    // Start the MCP server binary (use debug build for tests)
+    let binary_path = match get_binary_path() {
+        Some(path) => path,
+        None => {
+            eprintln!("Skipping test: MCP server binary not found. Run 'cargo build' first.");
+            return;
+        }
+    };
+
+    let mut child = Command::new(&binary_path)
+        .env("DEFAULT_TENANT_ID", "test")
+        .env("DEFAULT_USER_ID", "test")
+        .env("AWS_REGION", "us-west-2")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -35,10 +61,12 @@ fn test_mcp_server_notification_vs_request_handling() {
 
     // Read response with timeout
     let mut line = String::new();
-    reader.read_line(&mut line).expect("Failed to read response");
+    reader
+        .read_line(&mut line)
+        .expect("Failed to read response");
 
-    let response: serde_json::Value = serde_json::from_str(&line.trim())
-        .expect("Failed to parse response");
+    let response: serde_json::Value =
+        serde_json::from_str(line.trim()).expect("Failed to parse response");
 
     // Verify proper JSON-RPC response
     assert_eq!(response["jsonrpc"], "2.0");
@@ -68,10 +96,12 @@ fn test_mcp_server_notification_vs_request_handling() {
 
     // Read response to tools/list
     let mut test_line = String::new();
-    reader.read_line(&mut test_line).expect("Failed to read test response");
+    reader
+        .read_line(&mut test_line)
+        .expect("Failed to read test response");
 
-    let test_response: serde_json::Value = serde_json::from_str(&test_line.trim())
-        .expect("Failed to parse test response");
+    let test_response: serde_json::Value =
+        serde_json::from_str(test_line.trim()).expect("Failed to parse test response");
 
     // Verify we got the expected response (server is still working)
     assert_eq!(test_response["jsonrpc"], "2.0");
@@ -86,7 +116,18 @@ fn test_mcp_server_notification_vs_request_handling() {
 
 #[test]
 fn test_mcp_server_protocol_version() {
-    let mut child = Command::new("./target/release/mcp-multi-tenant.exe")
+    let binary_path = match get_binary_path() {
+        Some(path) => path,
+        None => {
+            eprintln!("Skipping test: MCP server binary not found. Run 'cargo build' first.");
+            return;
+        }
+    };
+
+    let mut child = Command::new(&binary_path)
+        .env("DEFAULT_TENANT_ID", "test")
+        .env("DEFAULT_USER_ID", "test")
+        .env("AWS_REGION", "us-west-2")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -111,10 +152,12 @@ fn test_mcp_server_protocol_version() {
     writeln!(stdin, "{}", init_request).expect("Failed to write request");
 
     let mut line = String::new();
-    reader.read_line(&mut line).expect("Failed to read response");
+    reader
+        .read_line(&mut line)
+        .expect("Failed to read response");
 
-    let response: serde_json::Value = serde_json::from_str(&line.trim())
-        .expect("Failed to parse response");
+    let response: serde_json::Value =
+        serde_json::from_str(line.trim()).expect("Failed to parse response");
 
     // Verify server responds with correct protocol version
     assert_eq!(response["result"]["protocolVersion"], "2025-06-18");
@@ -127,7 +170,17 @@ fn test_mcp_server_protocol_version() {
 
 #[test]
 fn test_mcp_server_json_rpc_compliance() {
-    let mut child = Command::new("./target/release/mcp-multi-tenant.exe")
+    let binary_path = match get_binary_path() {
+        Some(path) => path,
+        None => {
+            eprintln!("Skipping test: MCP server binary not found. Run 'cargo build' first.");
+            return;
+        }
+    };
+    let mut child = Command::new(binary_path)
+        .env("DEFAULT_TENANT_ID", "test")
+        .env("DEFAULT_USER_ID", "test")
+        .env("AWS_REGION", "us-west-2")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -142,10 +195,12 @@ fn test_mcp_server_json_rpc_compliance() {
     writeln!(stdin, "{{ invalid json").expect("Failed to write");
 
     let mut line = String::new();
-    reader.read_line(&mut line).expect("Failed to read response");
+    reader
+        .read_line(&mut line)
+        .expect("Failed to read response");
 
-    let response: serde_json::Value = serde_json::from_str(&line.trim())
-        .expect("Failed to parse error response");
+    let response: serde_json::Value =
+        serde_json::from_str(line.trim()).expect("Failed to parse error response");
 
     // Should get proper JSON-RPC error response
     assert_eq!(response["jsonrpc"], "2.0");

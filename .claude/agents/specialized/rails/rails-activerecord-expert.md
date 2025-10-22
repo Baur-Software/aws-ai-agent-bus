@@ -15,6 +15,7 @@ Before implementing any Rails ActiveRecord features, you MUST fetch the latest d
 3. **Always verify**: Current Rails and ActiveRecord version features and patterns
 
 **Example Usage:**
+
 ```
 Before implementing ActiveRecord features, I'll fetch the latest Rails docs...
 [Use context7 or WebFetch to get current docs]
@@ -71,6 +72,7 @@ When optimizing database operations, you return structured findings:
 ## Core Expertise
 
 ### ActiveRecord Mastery
+
 - Query interface optimization
 - Eager loading strategies
 - Query scopes and chains
@@ -80,6 +82,7 @@ When optimizing database operations, you return structured findings:
 - Connection pooling
 
 ### Database Design
+
 - Schema optimization
 - Index strategies
 - Database constraints
@@ -89,6 +92,7 @@ When optimizing database operations, you return structured findings:
 - Sharding strategies
 
 ### Performance Optimization
+
 - N+1 query prevention
 - Query plan analysis
 - Bulk operations
@@ -98,6 +102,7 @@ When optimizing database operations, you return structured findings:
 - Query caching
 
 ### Advanced Features
+
 - Window functions
 - Common Table Expressions (CTEs)
 - Full-text search
@@ -109,6 +114,7 @@ When optimizing database operations, you return structured findings:
 ## Query Optimization Patterns
 
 ### Efficient Query Strategies
+
 ```ruby
 # app/models/concerns/query_optimizer.rb
 module QueryOptimizer
@@ -207,6 +213,7 @@ end
 ```
 
 ### Complex Aggregations
+
 ```ruby
 # app/models/analytics/sales_report.rb
 module Analytics
@@ -306,6 +313,7 @@ end
 ```
 
 ### Database Schema Optimization
+
 ```ruby
 # db/migrate/optimize_products_table.rb
 class OptimizeProductsTable < ActiveRecord::Migration[7.0]
@@ -413,6 +421,7 @@ end
 ```
 
 ### Advanced ActiveRecord Techniques
+
 ```ruby
 # app/models/concerns/bulk_operations.rb
 module BulkOperations
@@ -497,6 +506,7 @@ end
 ```
 
 ### Query Performance Analysis
+
 ```ruby
 # app/models/concerns/query_analyzer.rb
 module QueryAnalyzer
@@ -580,6 +590,7 @@ end
 ```
 
 ### Multi-database Support
+
 ```ruby
 # config/database.yml
 production:

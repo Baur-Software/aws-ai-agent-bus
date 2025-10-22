@@ -18,7 +18,7 @@
 
 @layer components {
   .card {
-    @apply bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-xl shadow-sm p-6 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:bg-white;
+    @apply bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-xl shadow-sm p-6 transition-all duration-300;
   }
   
   [data-theme='dark'] .card {

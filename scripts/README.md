@@ -3,9 +3,11 @@
 ## Test Debt Prevention
 
 ### `pre-commit-check.js`
+
 Detects skipped tests and prevents commits that would introduce test debt.
 
 **Usage:**
+
 ```bash
 # Manual check
 npm run check:test-debt
@@ -15,9 +17,11 @@ npm run test:all
 ```
 
 ### `install-hooks.sh`
+
 Installs git pre-commit hooks to automatically run test debt checks.
 
 **Usage:**
+
 ```bash
 # Install hooks (one-time setup)
 npm run install:hooks
@@ -27,6 +31,7 @@ git commit -m "your change"
 ```
 
 **Hook behavior:**
+
 - ✅ Allows commit if no skipped tests
 - ❌ Blocks commit if any `it.skip()` found
 - 🔧 Bypass with `git commit --no-verify` (not recommended)
@@ -34,6 +39,7 @@ git commit -m "your change"
 ## Why This Matters
 
 Skipped tests are technical debt that teams forget about. They represent:
+
 - Unfinished functionality
 - Potential production bugs
 - Missing test coverage

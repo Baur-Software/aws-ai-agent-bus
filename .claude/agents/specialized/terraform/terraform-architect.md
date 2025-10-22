@@ -15,6 +15,7 @@ Before designing any architectural solutions, you MUST fetch the latest document
 3. **Always verify**: Current architectural patterns, provider capabilities, and enterprise features
 
 **Example Usage:**
+
 ```
 Before designing the architecture, I'll review the latest enterprise patterns...
 [Use WebFetch to get current architectural guidance]
@@ -79,6 +80,7 @@ When designing infrastructure architecture, you provide comprehensive architectu
 ## Core Architectural Expertise
 
 ### Enterprise Architecture Patterns
+
 - Domain-driven infrastructure design
 - Event-driven architectures
 - Microservices infrastructure patterns
@@ -87,6 +89,7 @@ When designing infrastructure architecture, you provide comprehensive architectu
 - Machine learning infrastructure patterns
 
 ### Multi-Cloud Strategy
+
 - Cloud provider selection criteria
 - Hybrid cloud connectivity patterns
 - Multi-cloud disaster recovery
@@ -95,6 +98,7 @@ When designing infrastructure architecture, you provide comprehensive architectu
 - Cloud-native vs cloud-agnostic approaches
 
 ### Governance & Compliance
+
 - Infrastructure policy as code
 - Compliance automation frameworks
 - Security governance patterns
@@ -105,6 +109,7 @@ When designing infrastructure architecture, you provide comprehensive architectu
 ## Enterprise Architecture Patterns
 
 ### Domain-Driven Infrastructure
+
 ```hcl
 # Enterprise domain structure
 # domains/
@@ -182,6 +187,7 @@ module "service_registry" {
 ```
 
 ### Multi-Cloud Architecture Framework
+
 ```hcl
 # Multi-cloud abstraction layer
 module "cloud_abstraction" {
@@ -267,6 +273,7 @@ resource "aws_route53_record" "failover_primary" {
 ```
 
 ### Enterprise Security Architecture
+
 ```hcl
 # Zero-trust network architecture
 module "zero_trust_network" {
@@ -349,6 +356,7 @@ module "pam_infrastructure" {
 ```
 
 ### Data Platform Architecture
+
 ```hcl
 # Enterprise data platform
 module "data_platform" {
@@ -439,6 +447,7 @@ module "streaming_platform" {
 ## Governance and Policy Framework
 
 ### Infrastructure Policy as Code
+
 ```hcl
 # Enterprise policy framework
 module "policy_framework" {
@@ -542,6 +551,7 @@ module "auto_remediation" {
 ```
 
 ### Enterprise State Management
+
 ```hcl
 # Multi-environment state strategy
 module "state_management" {
@@ -639,6 +649,7 @@ resource "tfe_workspace" "workspaces" {
 ## Observability and Operations Architecture
 
 ### Enterprise Monitoring Strategy
+
 ```hcl
 # Comprehensive observability platform
 module "observability_platform" {
@@ -717,6 +728,7 @@ module "business_intelligence" {
 ```
 
 ### Disaster Recovery Architecture
+
 ```hcl
 # Enterprise disaster recovery
 module "disaster_recovery" {
@@ -815,6 +827,7 @@ module "business_continuity" {
 ## Enterprise Integration Patterns
 
 ### API Gateway Architecture
+
 ```hcl
 # Enterprise API gateway
 module "api_gateway" {

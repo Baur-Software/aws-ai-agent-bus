@@ -54,6 +54,7 @@ You are a versatile frontend developer with expertise across modern web technolo
 ## Core Expertise
 
 ### Technologies & Frameworks
+
 - **Vanilla JavaScript/TypeScript**: Modern ES6+, Web Components
 - **React**: Hooks, Context, Redux, Next.js
 - **Vue**: Composition API, Vuex, Nuxt
@@ -63,6 +64,7 @@ You are a versatile frontend developer with expertise across modern web technolo
 - **Build Tools**: Webpack, Vite, Rollup, Parcel
 
 ### Universal Concepts
+
 - Component architecture
 - State management patterns
 - Responsive design principles
@@ -76,6 +78,7 @@ You are a versatile frontend developer with expertise across modern web technolo
 ### Universal Component Structure
 
 **Vanilla JavaScript Class**
+
 ```javascript
 class DataTable {
   constructor(container, options = {}) {
@@ -147,6 +150,7 @@ class DataTable {
 ```
 
 **React Component**
+
 ```jsx
 const DataTable = ({ data, columns, pageSize = 10 }) => {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
@@ -232,6 +236,7 @@ const DataTable = ({ data, columns, pageSize = 10 }) => {
 ```
 
 **Vue Component**
+
 ```vue
 <template>
   <div class="data-table">
@@ -334,6 +339,7 @@ function sort(key) {
 ## State Management Patterns
 
 ### Universal State Pattern
+
 ```javascript
 // Generic state manager
 class StateManager {
@@ -389,6 +395,7 @@ function createStore(reducer, initialState) {
 ## Responsive Design
 
 ### Mobile-First CSS
+
 ```css
 /* Base styles (mobile) */
 .container {
@@ -438,6 +445,7 @@ function createStore(reducer, initialState) {
 ```
 
 ### Responsive JavaScript
+
 ```javascript
 class ResponsiveManager {
   constructor() {
@@ -497,6 +505,7 @@ class ResponsiveManager {
 ## Performance Optimization
 
 ### Lazy Loading
+
 ```javascript
 // Intersection Observer for lazy loading
 class LazyLoader {
@@ -543,6 +552,7 @@ class LazyLoader {
 ```
 
 ### Virtual Scrolling
+
 ```javascript
 class VirtualScroller {
   constructor(container, items, itemHeight) {
@@ -610,6 +620,7 @@ class VirtualScroller {
 ## Accessibility
 
 ### ARIA Implementation
+
 ```html
 <!-- Accessible modal -->
 <div 

@@ -3,13 +3,17 @@ import { useLocation } from '@solidjs/router';
 import { useDashboardServer } from '../contexts/DashboardServerContext';
 import { useNotifications } from '../contexts/NotificationContext';
 
-function ChatPanel(props) {
+interface ChatPanelProps {
+  onClose?: () => void;
+}
+
+function ChatPanel(props: ChatPanelProps) {
   const location = useLocation();
   const [messages, setMessages] = createSignal([]);
   const [inputText, setInputText] = createSignal('');
   const [isProcessing, setIsProcessing] = createSignal(false);
 
-  const { executeTool } = useDashboardServer();
+  const { sendMessageWithResponse } = useDashboardServer();
   const { success, error } = useNotifications();
 
   // Get context-aware initial message
@@ -82,64 +86,35 @@ function ChatPanel(props) {
   };
 
   const processMessage = async (message) => {
-    const lower = message.toLowerCase();
-    const currentPath = location.pathname;
-
     try {
-      // Page-specific context responses
-      if (lower.includes('page') || lower.includes('current') || lower.includes('here')) {
-        const pageHelp = {
-          '/dashboard': 'This is the dashboard page. I can help you:\n• Understand the metrics shown\n• Get detailed analytics data\n• Navigate to specific tools\n• Explain the KV store stats\n• Show artifact information',
-          '/analytics': 'This is the analytics page. I can help you:\n• Fetch latest Google Analytics data\n• Generate reports for specific date ranges\n• Explain performance metrics\n• Get top pages or user data',
-          '/kv-store': 'This is the KV store page. I can help you:\n• Get or set specific key-value pairs\n• Search for existing keys\n• Format data properly\n• Explain TTL settings',
-          '/workflows': 'This is the workflows page. I can help you:\n• Build new workflows with drag-and-drop\n• Connect workflow nodes\n• Run existing workflows\n• Explain node types and integrations',
-          '/artifacts': 'This is the artifacts page. I can help you:\n• Upload new files\n• Search existing artifacts\n• Download content\n• Manage artifact metadata',
-          '/events': 'This is the events page. I can help you:\n• Monitor system events\n• Send custom events\n• Set up event rules\n• Track event patterns',
-          '/settings': 'This is the settings page. I can help you:\n• Configure integrations\n• Set up OAuth connections\n• Manage user preferences\n• Test integration connections'
-        };
+      // Use the ChatService via WebSocket (not MCP tool)
+      const response = await sendMessageWithResponse({
+        type: 'chat.send_message',
+        data: {
+          message: message,
+          streaming: false // Set to true for token-by-token streaming
+        }
+      });
 
-        return pageHelp[currentPath] || 'I can help you with whatever page you\'re currently viewing. What specific help do you need?';
+      // Extract the response from ChatService
+      if (response && response.data && response.data.message) {
+        return response.data.message.content;
       }
 
+      return response?.message?.content || 'I processed your request but got an empty response. Please try rephrasing.';
 
-      // KV Store requests
-      if (lower.includes('store') || lower.includes('save') || lower.includes('get')) {
-        return 'I can help you with the KV store:\n• "Save data to key: mykey"\n• "Get value from key: mykey"\n• Visit the KV Store page for full management';
-      }
+    } catch (chatError) {
+      console.error('Chat error:', chatError);
 
-      // Dynamic tool requests - route to available user MCP servers
-      if (lower.includes('workflow') || lower.includes('process') || lower.includes('analytics') || lower.includes('calendar')) {
-        return 'I can help with tools based on your connected MCP servers. Check the Settings page to connect integrations that enable these features.';
-      }
+      // Fallback to basic help message when chat service is unavailable
+      return `I'm having trouble connecting to the AI backend right now.
 
-      // Help and general requests
-      if (lower.includes('help')) {
-        return `I can assist you with:
+The chat service may not be responding. Please check:
+• Dashboard server is running
+• AWS Bedrock access is configured
+• Try refreshing the page
 
-🔹 **Analytics**: Generate reports, analyze traffic, get insights
-🔹 **Content Calendar**: Create AI-powered content schedules  
-🔹 **KV Store**: Save and retrieve key-value data
-🔹 **Artifacts**: Manage files and content
-🔹 **Workflows**: Execute automated processes
-🔹 **Events**: Monitor and send system events
-
-Try asking something like "show me analytics for last 30 days" or "generate a content calendar"!`;
-      }
-
-      // Default response
-      return `I understand you're asking about "${message}". Let me help you with that! 
-
-You can:
-• Ask for specific analytics data
-• Request content calendar generation  
-• Get help with KV store operations
-• Start workflows or check their status
-
-What specifically would you like me to help you with?`;
-
-    } catch (toolError) {
-      console.error('Tool execution error:', toolError);
-      return `I tried to help with your request but encountered an issue. The error was: ${toolError.message}. Please try a different approach or check the specific tool page.`;
+Error details: ${chatError.message}`;
     }
   };
 
@@ -197,19 +172,12 @@ What specifically would you like me to help you with?`;
           <span class="font-semibold text-slate-900 dark:text-white">MCP Assistant</span>
         </div>
         <div class="flex items-center gap-1">
-          <button 
-            class="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors" 
-            onClick={clearChat} 
+          <button
+            class="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors"
+            onClick={clearChat}
             title="Clear chat"
           >
             <i class="fas fa-trash text-sm" />
-          </button>
-          <button 
-            class="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors" 
-            onClick={props.onClose} 
-            title="Close chat"
-          >
-            <i class="fas fa-times text-sm" />
           </button>
         </div>
       </div>
@@ -258,9 +226,9 @@ What specifically would you like me to help you with?`;
             <div class="max-w-[75%]">
               <div class="px-4 py-2 rounded-2xl bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700">
                 <div class="flex items-center gap-1">
-                  <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-                  <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.1s;"></div>
-                  <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.2s;"></div>
+                  <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
+                  <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{"animation-delay":"0.1s"}} />
+                  <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{"animation-delay":"0.2s"}} />
                 </div>
               </div>
             </div>
@@ -281,7 +249,7 @@ What specifically would you like me to help you with?`;
               onKeyPress={handleKeyPress}
               disabled={isProcessing()}
               rows={1}
-              style="field-sizing: content;"
+              style={{resize: "none"}}
             />
             <button 
               class="absolute right-2 bottom-2 w-8 h-8 bg-blue-500 hover:bg-blue-600 disabled:bg-slate-400 disabled:cursor-not-allowed rounded-full flex items-center justify-center text-white transition-colors"

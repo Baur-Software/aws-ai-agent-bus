@@ -1,0 +1,259 @@
+{
+  "version": "1.0",
+  "created": "2025-10-11T00:00:00Z",
+  "name": "AWS Infrastructure Manager",
+  "description": "Connect and configure AWS services visually with real-time status updates. Design your infrastructure, see live deployment progress, and manage resources directly from the canvas.",
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "trigger",
+      "x": 50,
+      "y": 200,
+      "inputs": [],
+      "outputs": ["output"],
+      "config": {
+        "name": "Infrastructure Deployment Trigger",
+        "description": "Initiate AWS infrastructure setup",
+        "data": {
+          "projectName": "my-app",
+          "environment": "production",
+          "region": "us-west-2"
+        }
+      }
+    },
+    {
+      "id": "create-dynamodb-1",
+      "type": "aws-dynamodb-create",
+      "x": 300,
+      "y": 100,
+      "inputs": ["input"],
+      "outputs": ["output", "status"],
+      "config": {
+        "tableName": "{{projectName}}-{{environment}}-data",
+        "billingMode": "PAY_PER_REQUEST",
+        "attributeDefinitions": [
+          { "attributeName": "id", "attributeType": "S" },
+          { "attributeName": "timestamp", "attributeType": "N" }
+        ],
+        "keySchema": [
+          { "attributeName": "id", "keyType": "HASH" },
+          { "attributeName": "timestamp", "keyType": "RANGE" }
+        ],
+        "tags": {
+          "Project": "{{projectName}}",
+          "Environment": "{{environment}}"
+        },
+        "liveStatusUpdate": true
+      }
+    },
+    {
+      "id": "create-s3-1",
+      "type": "aws-s3-create",
+      "x": 300,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["output", "status"],
+      "config": {
+        "bucketName": "{{projectName}}-{{environment}}-assets",
+        "region": "{{region}}",
+        "versioning": true,
+        "encryption": "AES256",
+        "publicAccess": false,
+        "lifecycleRules": [
+          {
+            "id": "DeleteOldVersions",
+            "status": "Enabled",
+            "noncurrentVersionExpiration": { "days": 30 }
+          }
+        ],
+        "tags": {
+          "Project": "{{projectName}}",
+          "Environment": "{{environment}}"
+        },
+        "liveStatusUpdate": true
+      }
+    },
+    {
+      "id": "create-eventbridge-1",
+      "type": "aws-eventbridge-create",
+      "x": 300,
+      "y": 300,
+      "inputs": ["input"],
+      "outputs": ["output", "status"],
+      "config": {
+        "eventBusName": "{{projectName}}-{{environment}}-events",
+        "tags": {
+          "Project": "{{projectName}}",
+          "Environment": "{{environment}}"
+        },
+        "liveStatusUpdate": true
+      }
+    },
+    {
+      "id": "configure-monitoring-1",
+      "type": "aws-cloudwatch-dashboard",
+      "x": 550,
+      "y": 200,
+      "inputs": ["dynamodb", "s3", "events"],
+      "outputs": ["output"],
+      "config": {
+        "dashboardName": "{{projectName}}-{{environment}}-overview",
+        "widgets": [
+          {
+            "type": "metric",
+            "properties": {
+              "metrics": [
+                ["AWS/DynamoDB", "ConsumedReadCapacityUnits", { "stat": "Sum" }],
+                ["...", "ConsumedWriteCapacityUnits", { "stat": "Sum" }]
+              ],
+              "title": "DynamoDB Usage"
+            }
+          },
+          {
+            "type": "metric",
+            "properties": {
+              "metrics": [
+                ["AWS/S3", "NumberOfObjects", { "stat": "Average" }],
+                ["...", "BucketSizeBytes", { "stat": "Average" }]
+              ],
+              "title": "S3 Storage"
+            }
+          }
+        ],
+        "liveStatusUpdate": true
+      }
+    },
+    {
+      "id": "generate-terraform-1",
+      "type": "terraform-generate",
+      "x": 800,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["output", "files"],
+      "config": {
+        "outputFormat": "hcl",
+        "includeComments": true,
+        "organizeByService": true,
+        "generateBackend": true,
+        "backendType": "s3",
+        "useAIOptimization": true,
+        "aiPrompt": "Optimize this infrastructure for cost and performance in a production environment"
+      }
+    },
+    {
+      "id": "store-terraform-1",
+      "type": "artifacts-put",
+      "x": 1050,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "key": "infrastructure/{{projectName}}/{{environment}}/terraform.tf",
+        "useContextData": true,
+        "contextKey": "terraformFiles",
+        "content_type": "text/plain"
+      }
+    },
+    {
+      "id": "send-notification-1",
+      "type": "events-send",
+      "x": 1050,
+      "y": 100,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "detailType": "Infrastructure.Deployed",
+        "detail": {
+          "project": "{{projectName}}",
+          "environment": "{{environment}}",
+          "resources": {
+            "dynamodb": "{{dynamodbArn}}",
+            "s3": "{{s3BucketArn}}",
+            "eventbridge": "{{eventBridgeArn}}"
+          },
+          "terraformGenerated": true,
+          "timestamp": "{{timestamp}}"
+        }
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "trigger-1",
+      "to": "create-dynamodb-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "trigger-1",
+      "to": "create-s3-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "trigger-1",
+      "to": "create-eventbridge-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "create-dynamodb-1",
+      "to": "configure-monitoring-1",
+      "fromOutput": "output",
+      "toInput": "dynamodb"
+    },
+    {
+      "from": "create-s3-1",
+      "to": "configure-monitoring-1",
+      "fromOutput": "output",
+      "toInput": "s3"
+    },
+    {
+      "from": "create-eventbridge-1",
+      "to": "configure-monitoring-1",
+      "fromOutput": "output",
+      "toInput": "events"
+    },
+    {
+      "from": "configure-monitoring-1",
+      "to": "generate-terraform-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "generate-terraform-1",
+      "to": "store-terraform-1",
+      "fromOutput": "files",
+      "toInput": "input"
+    },
+    {
+      "from": "generate-terraform-1",
+      "to": "send-notification-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    }
+  ],
+  "metadata": {
+    "author": "AWS AI Agent Bus",
+    "tags": ["aws", "infrastructure", "terraform", "devops", "automation"],
+    "category": "Infrastructure",
+    "requiredApps": ["aws", "terraform-ai"],
+    "estimatedDuration": "10-15 minutes",
+    "difficulty": "intermediate",
+    "isTemplate": true,
+    "features": [
+      "Real-time status updates on canvas nodes",
+      "Live deployment progress visualization",
+      "Automatic Terraform generation with AI optimization",
+      "CloudWatch dashboard creation",
+      "Event-driven notifications"
+    ],
+    "instructions": [
+      "Configure your AWS credentials in the dashboard settings",
+      "Update the trigger node with your project details",
+      "Watch live status updates as infrastructure deploys",
+      "Review generated Terraform in artifacts storage",
+      "Download Terraform for version control"
+    ]
+  }
+}

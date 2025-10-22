@@ -1,0 +1,481 @@
+{
+  "version": "1.0",
+  "created": "2025-10-11T00:00:00Z",
+  "name": "Financial Dashboard with Customer Journey",
+  "description": "Connect QuickBooks and CRM to create a complete financial dashboard. Match invoices with sales pipelines to track the full customer journey from lead to repeat client. Visualize with bar charts and time-series data.",
+  "nodes": [
+    {
+      "id": "schedule-trigger-1",
+      "type": "trigger",
+      "x": 50,
+      "y": 250,
+      "inputs": [],
+      "outputs": ["output"],
+      "config": {
+        "name": "Daily Dashboard Update",
+        "description": "Refresh dashboard data daily at 8 AM",
+        "schedule": "0 8 * * *",
+        "timezone": "America/Los_Angeles"
+      }
+    },
+    {
+      "id": "fetch-quickbooks-1",
+      "type": "quickbooks-query",
+      "x": 300,
+      "y": 150,
+      "inputs": ["input"],
+      "outputs": ["invoices", "payments", "expenses"],
+      "config": {
+        "queries": [
+          {
+            "type": "invoices",
+            "dateRange": "last30days",
+            "status": ["paid", "pending", "overdue"]
+          },
+          {
+            "type": "payments",
+            "dateRange": "last30days"
+          },
+          {
+            "type": "expenses",
+            "dateRange": "last30days",
+            "categories": ["all"]
+          }
+        ],
+        "includeCustomers": true,
+        "includeLineItems": true
+      }
+    },
+    {
+      "id": "fetch-crm-data-1",
+      "type": "salesforce-query",
+      "x": 300,
+      "y": 350,
+      "inputs": ["input"],
+      "outputs": ["leads", "opportunities", "accounts"],
+      "config": {
+        "queries": [
+          {
+            "object": "Lead",
+            "fields": ["Id", "Name", "Email", "Status", "CreatedDate", "ConvertedDate"],
+            "dateRange": "last90days"
+          },
+          {
+            "object": "Opportunity",
+            "fields": ["Id", "AccountId", "Name", "Amount", "Stage", "CloseDate"],
+            "dateRange": "last90days"
+          },
+          {
+            "object": "Account",
+            "fields": ["Id", "Name", "Industry", "AnnualRevenue", "Type"],
+            "includeContacts": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "match-customers-1",
+      "type": "data-join",
+      "x": 550,
+      "y": 250,
+      "inputs": ["invoices", "accounts"],
+      "outputs": ["matched", "unmatched"],
+      "config": {
+        "joinType": "left",
+        "leftKey": "customerEmail",
+        "rightKey": "contacts.email",
+        "includeUnmatched": true,
+        "fuzzyMatch": true,
+        "fuzzyThreshold": 0.85
+      }
+    },
+    {
+      "id": "calculate-ltv-1",
+      "type": "transform",
+      "x": 800,
+      "y": 150,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "operations": [
+          {
+            "field": "lifetimeValue",
+            "formula": "SUM(invoices.amount WHERE status='paid')"
+          },
+          {
+            "field": "avgInvoiceValue",
+            "formula": "AVG(invoices.amount)"
+          },
+          {
+            "field": "invoiceCount",
+            "formula": "COUNT(invoices)"
+          },
+          {
+            "field": "paymentCycle",
+            "formula": "AVG(DAYS_BETWEEN(invoices.dueDate, invoices.paidDate))"
+          },
+          {
+            "field": "customerSegment",
+            "formula": "CASE WHEN lifetimeValue > 50000 THEN 'enterprise' WHEN lifetimeValue > 10000 THEN 'growth' ELSE 'starter' END"
+          }
+        ]
+      }
+    },
+    {
+      "id": "calculate-pipeline-1",
+      "type": "transform",
+      "x": 800,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "operations": [
+          {
+            "field": "leadToOpportunity",
+            "formula": "COUNT(leads WHERE status='converted') / COUNT(leads) * 100"
+          },
+          {
+            "field": "opportunityToClose",
+            "formula": "COUNT(opportunities WHERE stage='closed_won') / COUNT(opportunities WHERE stage!='closed_lost') * 100"
+          },
+          {
+            "field": "avgDealSize",
+            "formula": "AVG(opportunities.amount WHERE stage='closed_won')"
+          },
+          {
+            "field": "avgSalesCycle",
+            "formula": "AVG(DAYS_BETWEEN(opportunities.createdDate, opportunities.closeDate))"
+          },
+          {
+            "field": "pipelineValue",
+            "formula": "SUM(opportunities.amount WHERE stage NOT IN ('closed_won', 'closed_lost'))"
+          }
+        ]
+      }
+    },
+    {
+      "id": "group-by-segment-1",
+      "type": "group-by",
+      "x": 800,
+      "y": 350,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "groupBy": ["customerSegment", "industry"],
+        "aggregations": [
+          { "field": "lifetimeValue", "operation": "sum", "alias": "totalRevenue" },
+          { "field": "invoiceCount", "operation": "sum", "alias": "totalInvoices" },
+          { "field": "customerId", "operation": "count", "alias": "customerCount" }
+        ],
+        "sortBy": "totalRevenue",
+        "sortOrder": "desc"
+      }
+    },
+    {
+      "id": "create-bar-chart-1",
+      "type": "chart-bar",
+      "x": 1050,
+      "y": 100,
+      "inputs": ["input"],
+      "outputs": ["output", "image"],
+      "config": {
+        "title": "Revenue by Customer Segment",
+        "xAxis": "customerSegment",
+        "yAxis": "totalRevenue",
+        "colorScheme": "business",
+        "showValues": true,
+        "showLegend": true,
+        "width": 800,
+        "height": 400
+      }
+    },
+    {
+      "id": "create-time-series-1",
+      "type": "chart-time-series",
+      "x": 1050,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["output", "image"],
+      "config": {
+        "title": "Revenue & Pipeline Trends",
+        "timeField": "date",
+        "series": [
+          { "field": "invoiceTotal", "label": "Revenue", "color": "#4CAF50" },
+          { "field": "pipelineValue", "label": "Pipeline", "color": "#2196F3" }
+        ],
+        "aggregation": "daily",
+        "showTrendLine": true,
+        "width": 800,
+        "height": 400
+      }
+    },
+    {
+      "id": "create-funnel-1",
+      "type": "chart-funnel",
+      "x": 1050,
+      "y": 300,
+      "inputs": ["input"],
+      "outputs": ["output", "image"],
+      "config": {
+        "title": "Customer Journey Funnel",
+        "stages": [
+          { "name": "Leads", "value": "{{leadCount}}", "color": "#9C27B0" },
+          { "name": "Opportunities", "value": "{{opportunityCount}}", "color": "#673AB7" },
+          { "name": "Closed Won", "value": "{{closedWonCount}}", "color": "#4CAF50" },
+          { "name": "Repeat Customers", "value": "{{repeatCount}}", "color": "#2196F3" }
+        ],
+        "showConversionRates": true,
+        "width": 800,
+        "height": 400
+      }
+    },
+    {
+      "id": "create-kpi-cards-1",
+      "type": "chart-kpi",
+      "x": 1050,
+      "y": 400,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "cards": [
+          {
+            "title": "Total Revenue",
+            "value": "{{totalRevenue}}",
+            "format": "currency",
+            "trend": "{{revenueTrend}}",
+            "icon": "dollar"
+          },
+          {
+            "title": "Active Customers",
+            "value": "{{activeCustomers}}",
+            "trend": "{{customerTrend}}",
+            "icon": "users"
+          },
+          {
+            "title": "Avg Deal Size",
+            "value": "{{avgDealSize}}",
+            "format": "currency",
+            "trend": "{{dealSizeTrend}}",
+            "icon": "trending-up"
+          },
+          {
+            "title": "Win Rate",
+            "value": "{{winRate}}",
+            "format": "percent",
+            "trend": "{{winRateTrend}}",
+            "icon": "award"
+          }
+        ]
+      }
+    },
+    {
+      "id": "store-dashboard-1",
+      "type": "kv-set",
+      "x": 1300,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "key": "dashboard-financial-{{date}}",
+        "useContextData": true,
+        "ttl_hours": 720
+      }
+    },
+    {
+      "id": "export-pdf-1",
+      "type": "pdf-generate",
+      "x": 1300,
+      "y": 350,
+      "inputs": ["charts", "kpis", "data"],
+      "outputs": ["output"],
+      "config": {
+        "template": "financial-dashboard",
+        "includeCharts": true,
+        "includeData": true,
+        "includeTimestamp": true,
+        "fileName": "financial-dashboard-{{date}}.pdf"
+      }
+    },
+    {
+      "id": "store-pdf-1",
+      "type": "artifacts-put",
+      "x": 1550,
+      "y": 350,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "key": "reports/financial/dashboard-{{date}}.pdf",
+        "useContextData": true,
+        "content_type": "application/pdf"
+      }
+    },
+    {
+      "id": "send-email-1",
+      "type": "email",
+      "x": 1550,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "to": "finance@company.com",
+        "subject": "Daily Financial Dashboard - {{date}}",
+        "body": "Hi Team,\n\nYour daily financial dashboard is ready.\n\n📊 **Key Metrics**\n- Total Revenue: {{totalRevenue}}\n- Active Customers: {{activeCustomers}}\n- Win Rate: {{winRate}}%\n- Pipeline Value: {{pipelineValue}}\n\n📈 **Highlights**\n{{highlights}}\n\n[View Full Dashboard]({{dashboardUrl}})\n[Download PDF]({{pdfUrl}})",
+        "attachments": ["{{pdfUrl}}"]
+      }
+    },
+    {
+      "id": "send-event-1",
+      "type": "events-send",
+      "x": 1550,
+      "y": 150,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "detailType": "Dashboard.Updated",
+        "detail": {
+          "dashboardType": "financial",
+          "date": "{{date}}",
+          "metrics": {
+            "totalRevenue": "{{totalRevenue}}",
+            "activeCustomers": "{{activeCustomers}}",
+            "winRate": "{{winRate}}",
+            "pipelineValue": "{{pipelineValue}}"
+          },
+          "pdfUrl": "{{pdfUrl}}",
+          "timestamp": "{{timestamp}}"
+        }
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "schedule-trigger-1",
+      "to": "fetch-quickbooks-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "schedule-trigger-1",
+      "to": "fetch-crm-data-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "fetch-quickbooks-1",
+      "to": "match-customers-1",
+      "fromOutput": "invoices",
+      "toInput": "invoices"
+    },
+    {
+      "from": "fetch-crm-data-1",
+      "to": "match-customers-1",
+      "fromOutput": "accounts",
+      "toInput": "accounts"
+    },
+    {
+      "from": "match-customers-1",
+      "to": "calculate-ltv-1",
+      "fromOutput": "matched",
+      "toInput": "input"
+    },
+    {
+      "from": "fetch-crm-data-1",
+      "to": "calculate-pipeline-1",
+      "fromOutput": "opportunities",
+      "toInput": "input"
+    },
+    {
+      "from": "calculate-ltv-1",
+      "to": "group-by-segment-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "group-by-segment-1",
+      "to": "create-bar-chart-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "calculate-ltv-1",
+      "to": "create-time-series-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "calculate-pipeline-1",
+      "to": "create-funnel-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "calculate-ltv-1",
+      "to": "create-kpi-cards-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "create-kpi-cards-1",
+      "to": "store-dashboard-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "create-bar-chart-1",
+      "to": "export-pdf-1",
+      "fromOutput": "image",
+      "toInput": "charts"
+    },
+    {
+      "from": "create-kpi-cards-1",
+      "to": "export-pdf-1",
+      "fromOutput": "output",
+      "toInput": "kpis"
+    },
+    {
+      "from": "export-pdf-1",
+      "to": "store-pdf-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "store-dashboard-1",
+      "to": "send-email-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "store-dashboard-1",
+      "to": "send-event-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    }
+  ],
+  "metadata": {
+    "author": "AWS AI Agent Bus",
+    "tags": ["quickbooks", "crm", "salesforce", "financial", "dashboard", "business-intelligence"],
+    "category": "Business Intelligence",
+    "requiredApps": ["quickbooks", "salesforce"],
+    "estimatedDuration": "15-20 minutes initial setup, 5 minutes daily execution",
+    "difficulty": "intermediate",
+    "isTemplate": true,
+    "features": [
+      "QuickBooks and CRM integration",
+      "Customer journey tracking from lead to repeat client",
+      "Revenue and pipeline visualization",
+      "Customer lifetime value calculation",
+      "Automated daily reports via email",
+      "PDF export with charts and KPIs",
+      "Time-series trend analysis"
+    ],
+    "instructions": [
+      "Connect QuickBooks in integrations settings",
+      "Connect Salesforce (or your CRM) in integrations",
+      "Configure email recipients for daily reports",
+      "Customize customer segments and KPIs",
+      "Run workflow to see live dashboard on canvas",
+      "Schedule for daily automatic updates",
+      "Access historical data in artifacts storage"
+    ]
+  }
+}

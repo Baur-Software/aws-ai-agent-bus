@@ -73,8 +73,12 @@ interface FloatingToolbarProps {
   gridMode?: 'off' | 'grid' | 'dots';
   isPanMode?: boolean;
   nodeCount?: number;
-  useMockData?: boolean;
-  onToggleMockData?: () => void;
+
+  // Auto-save
+  autoSaveEnabled?: boolean;
+  onToggleAutoSave?: () => void;
+  isSaving?: boolean;
+  lastSaved?: Date | null;
 
   // Position
   onPositionChange?: (x: number, y: number) => void;
@@ -96,6 +100,9 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
 
   // Compact mode state
   const [isCompact, setIsCompact] = createSignal(true);
+
+  // Workflow edit function ref
+  let triggerWorkflowEdit: (() => void) | null = null;
 
   // Load toolbar preferences from KV store
   const loadToolbarPreferences = async () => {
@@ -195,8 +202,8 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
 
   const getGridLabel = () => {
     const isOn = props.gridMode !== 'off';
-    const gridType = props.gridMode === 'dots' ? 'Dots' : 'Lines';
-    return isOn ? `${gridType} (On)` : 'Grid (Off)';
+    const gridType = props.gridMode === 'dots' ? 'Dots' : 'Grid';
+    return isOn ? gridType : 'Grid';
   };
 
   const handleGridClick = () => {
@@ -231,31 +238,38 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
     },
     {
       icon: props.isExecuting ? Square : Play,
-      label: props.isExecuting ? 'Stop' : (props.useMockData ? 'Dry Run' : 'Live Run'),
+      label: props.isExecuting ? 'Stop' : 'Run',
       onClick: props.onRun,
-      onContextMenu: (e: MouseEvent) => {
-        e.preventDefault();
-        if (!props.isExecuting && props.onToggleMockData) {
-          props.onToggleMockData();
-        }
-      },
       show: true,
-      variant: props.isExecuting ? 'danger' : (props.useMockData ? 'secondary' : 'primary') as const,
+      variant: props.isExecuting ? 'danger' : 'primary' as const,
       loading: false, // Don't show loading spinner, show Stop icon instead
       disabled: !props.isExecuting && (props.nodeCount === 0 || props.nodeCount === undefined),
       title: props.isExecuting
         ? 'Stop workflow execution'
-        : (props.useMockData
-          ? 'Dry Run (uses sample data) • Right-click to switch to Live Run'
-          : 'Live Run (uses real data) • Right-click to switch to Dry Run')
+        : 'Run workflow • Configure test data per node in node settings'
     },
     {
       icon: Save,
-      label: 'Save',
-      onClick: props.onSave,
+      label: props.autoSaveEnabled ? 'Auto-Save (On)' : 'Auto-Save (Off)',
+      onClick: () => {
+        if (props.autoSaveEnabled && triggerWorkflowEdit) {
+          // Auto-save is on: click to rename workflow
+          triggerWorkflowEdit();
+        } else {
+          // Auto-save is off: click to force save
+          props.onSave();
+        }
+      },
+      onContextMenu: (e: MouseEvent) => {
+        e.preventDefault();
+        props.onToggleAutoSave?.();
+      },
       show: true,
-      variant: props.hasUnsavedChanges ? 'warning' : 'secondary',
-      badge: props.hasUnsavedChanges
+      variant: props.autoSaveEnabled ? 'primary' : 'secondary',
+      loading: props.isSaving,
+      title: props.autoSaveEnabled
+        ? `Auto-save enabled${props.lastSaved ? ` • Last saved: ${props.lastSaved.toLocaleTimeString()}` : ''} • Click to rename • Right-click to disable`
+        : 'Auto-save disabled • Click to save manually • Right-click to enable'
     },
     {
       icon: Upload,
@@ -302,13 +316,6 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
       variant: 'secondary' as const
     },
     {
-      icon: Hand,
-      label: props.isPanMode ? 'Exit Pan Mode' : 'Pan Mode',
-      onClick: props.onTogglePanMode,
-      show: !!props.onTogglePanMode,
-      variant: props.isPanMode ? 'primary' : 'secondary' as const
-    },
-    {
       icon: getGridIcon(),
       label: getGridLabel(),
       onClick: handleGridClick,
@@ -319,10 +326,11 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
     },
     {
       icon: Blocks,
-      label: props.isNodesPanelVisible ? 'Hide Nodes Panel' : 'Show Nodes Panel',
+      label: 'Nodes',
       onClick: props.onToggleNodesPanel,
       show: !!props.onToggleNodesPanel,
-      variant: 'secondary' as const
+      variant: props.isNodesPanelVisible ? 'primary' : 'secondary' as const,
+      title: props.isNodesPanelVisible ? 'Hide Nodes Panel' : 'Show Nodes Panel'
     },
     {
       icon: MessageCircle,
@@ -373,8 +381,9 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
           {/* Workflow Info */}
           <Show when={props.currentWorkflow}>
             <WorkflowInfo
-              currentWorkflow={props.currentWorkflow}
+              currentWorkflow={props.currentWorkflow as any}
               onRename={props.onWorkflowRename}
+              onEditRef={(editFn) => { triggerWorkflowEdit = editFn; }}
               class="mr-3"
             />
           </Show>
@@ -385,15 +394,15 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
               .filter(action => action.show)
               .map((action, index) => (
                 <ActionButton
-                  key={index}
+                  {...{} as any}
                   icon={action.icon}
                   label={action.label}
                   onClick={action.onClick}
                   onContextMenu={action.onContextMenu}
-                  variant={action.variant}
+                  variant={action.variant as 'primary' | 'secondary' | 'danger' | 'warning'}
                   loading={action.loading}
                   disabled={action.disabled}
-                  badge={action.badge}
+                  badge={(action as any).badge}
                   title={action.title || action.label}
                   compact={isCompact()}
                 />

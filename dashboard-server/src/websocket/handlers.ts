@@ -8,10 +8,33 @@ import { MCPWebSocketHandler, MCP_MESSAGE_TYPES } from './mcpHandlers.js';
 import ErrorHandler from '../utils/ErrorHandler.js';
 import { EventsHandler } from '../handlers/events.js';
 import { mcpMarketplace } from '../services/MCPMarketplace.js';
+import { ChatService } from '../services/ChatService.js';
+import { MCPServiceRegistry } from '../services/MCPServiceRegistry.js';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { EventBridgeClient } from '@aws-sdk/client-eventbridge';
 
 interface Dependencies {
   metricsAggregator: any;
   eventSubscriber: any;
+}
+
+// Global ChatService instance
+let chatServiceInstance: ChatService | null = null;
+
+function getChatService(): ChatService {
+  if (!chatServiceInstance) {
+    const dynamodb = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-west-2' });
+    const eventBridge = new EventBridgeClient({ region: process.env.AWS_REGION || 'us-west-2' });
+    const mcpRegistry = new MCPServiceRegistry();
+
+    chatServiceInstance = new ChatService(dynamodb, eventBridge, mcpRegistry, {
+      bedrock: {
+        region: process.env.AWS_REGION || 'us-west-2',
+        modelId: process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-sonnet-20240229-v1:0'
+      }
+    });
+  }
+  return chatServiceInstance;
 }
 
 export function setupWebSocketHandlers(wss: WebSocketServer, { metricsAggregator, eventSubscriber }: Dependencies, yjsHandler?: any) {
@@ -432,6 +455,210 @@ async function handleWebSocketMessage(ws: WebSocket, message: any, { metricsAggr
         }));
         break;
 
+      case 'chat.list_sessions': {
+        const chatService = getChatService();
+        try {
+          const sessions = await chatService.listUserSessions(
+            userContext.userId,
+            userContext.organizationId
+          );
+
+          ws.send(JSON.stringify({
+            type: 'chat.sessions_listed',
+            data: { sessions }
+          }));
+        } catch (error: any) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            error: error.message || 'Failed to list chat sessions'
+          }));
+        }
+        break;
+      }
+
+      case 'chat.send_message': {
+        const { sessionId, message: userMessage, streaming } = message.data || message;
+        const chatService = getChatService();
+
+        try {
+          // Create session if needed
+          let targetSessionId = sessionId;
+          if (!targetSessionId) {
+            const session = await chatService.createSession(
+              userContext.userId,
+              'New Chat',
+              'bedrock',
+              userContext.organizationId
+            );
+            targetSessionId = session.sessionId;
+          }
+
+          // Handle streaming vs non-streaming
+          if (streaming) {
+            // Send streaming tokens as they arrive
+            const session = chatService.getSession(targetSessionId);
+            if (!session) {
+              throw new Error(`Chat session not found: ${targetSessionId}`);
+            }
+
+            // Add user message to session
+            const userMsg = {
+              id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              sessionId: targetSessionId,
+              role: 'user' as const,
+              content: userMessage,
+              timestamp: new Date().toISOString(),
+              context: {
+                userId: userContext.userId,
+                organizationId: userContext.organizationId
+              }
+            };
+            session.messages.push(userMsg);
+
+            let fullContent = '';
+            let usage: any = null;
+
+            // Stream tokens to client
+            for await (const chunk of chatService.generateBedrockStreamingResponse(session, {
+              sessionId: targetSessionId,
+              message: userMessage,
+              userId: userContext.userId,
+              organizationId: userContext.organizationId
+            })) {
+              if (chunk.type === 'token') {
+                fullContent += chunk.content || '';
+                ws.send(JSON.stringify({
+                  id: message.id,
+                  type: 'chat.message_stream',
+                  data: {
+                    sessionId: targetSessionId,
+                    content: chunk.content
+                  }
+                }));
+              } else if (chunk.type === 'done') {
+                usage = chunk.usage;
+              }
+            }
+
+            // Add assistant message to session
+            const assistantMsg = {
+              id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              sessionId: targetSessionId,
+              role: 'assistant' as const,
+              content: fullContent,
+              timestamp: new Date().toISOString(),
+              context: {
+                userId: userContext.userId,
+                organizationId: userContext.organizationId
+              },
+              metadata: { usage }
+            };
+            session.messages.push(assistantMsg);
+            session.updatedAt = new Date().toISOString();
+
+            // Send completion signal
+            ws.send(JSON.stringify({
+              id: message.id,
+              type: 'chat.message_complete',
+              data: {
+                sessionId: targetSessionId,
+                messageId: assistantMsg.id,
+                usage
+              }
+            }));
+          } else {
+            // Non-streaming response (original behavior)
+            const response = await chatService.sendMessage({
+              sessionId: targetSessionId,
+              message: userMessage,
+              userId: userContext.userId,
+              organizationId: userContext.organizationId
+            });
+
+            ws.send(JSON.stringify({
+              id: message.id,
+              type: 'chat.message_response',
+              data: {
+                sessionId: targetSessionId,
+                message: response
+              }
+            }));
+          }
+        } catch (error) {
+          console.error('Chat error:', error);
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'error',
+            error: error instanceof Error ? error.message : 'Failed to process chat message'
+          }));
+        }
+        break;
+      }
+
+      case 'chat.get_history': {
+        const { sessionId } = message.data || message;
+        const chatService = getChatService();
+
+        try {
+          const session = chatService.getSession(sessionId);
+
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'chat.history_response',
+            data: {
+              messages: session?.messages || [],
+              session: session ? {
+                sessionId: session.sessionId,
+                title: session.title,
+                backend: session.backend,
+                model: session.model
+              } : null
+            }
+          }));
+        } catch (error) {
+          console.error('Get history error:', error);
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'error',
+            error: error instanceof Error ? error.message : 'Failed to get chat history'
+          }));
+        }
+        break;
+      }
+
+      case 'chat.create_session': {
+        const { title } = message.data || message;
+        const chatService = getChatService();
+
+        try {
+          const session = await chatService.createSession(
+            userContext.userId,
+            title || 'New Chat',
+            'bedrock',
+            userContext.organizationId
+          );
+
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'chat.session_created',
+            data: {
+              sessionId: session.sessionId,
+              title: session.title,
+              backend: session.backend,
+              model: session.model
+            }
+          }));
+        } catch (error) {
+          console.error('Create session error:', error);
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'error',
+            error: error instanceof Error ? error.message : 'Failed to create chat session'
+          }));
+        }
+        break;
+      }
+
       case 'request_metrics':
         const metrics = await metricsAggregator.getAllMetrics();
         ws.send(JSON.stringify({
@@ -758,6 +985,193 @@ async function handleWebSocketMessage(ws: WebSocket, message: any, { metricsAggr
         }
         break;
 
+      case 'reshape_data': {
+        try {
+          const userContext = (ws as any).userContext as UserContext;
+          const { data, prompt, chartType } = message.data || message;
+
+          if (!data || !prompt) {
+            ws.send(JSON.stringify({
+              id: message.id,
+              type: 'reshape_data_response',
+              error: 'Data and prompt are required'
+            }));
+            break;
+          }
+
+          const chatService = getChatService();
+
+          // Create a temporary session for data reshaping
+          const session = await chatService.createSession(
+            userContext.userId,
+            `Data Reshaping for ${chartType || 'visualization'}`,
+            'bedrock',
+            userContext.organizationId
+          );
+
+          // Build the reshaping prompt with context
+          const systemPrompt = `You are a data transformation specialist. Your task is to reshape the provided data according to the user's requirements for visualization.
+
+Input data:
+${JSON.stringify(data, null, 2)}
+
+Chart type: ${chartType || 'unknown'}
+
+User requirements:
+${prompt}
+
+Please transform the data and respond with ONLY a JSON object in the following format:
+{
+  "labels": [...],  // Array of x-axis labels
+  "datasets": [     // Array of datasets
+    {
+      "label": "Dataset Name",
+      "data": [...]  // Array of values corresponding to labels
+    }
+  ]
+}
+
+Do not include any explanatory text, only the JSON object.`;
+
+          // Send the reshaping request to the AI
+          const response = await chatService.sendMessage({
+            sessionId: session.sessionId,
+            message: systemPrompt,
+            userId: userContext.userId,
+            organizationId: userContext.organizationId
+          });
+
+          // Parse the AI response
+          let reshapedData;
+          try {
+            // Try to extract JSON from the response
+            const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              reshapedData = JSON.parse(jsonMatch[0]);
+            } else {
+              throw new Error('No JSON found in response');
+            }
+          } catch (parseError) {
+            throw new Error(`Failed to parse AI response: ${response.content}`);
+          }
+
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'reshape_data_response',
+            data: {
+              reshapedData,
+              originalPrompt: prompt,
+              timestamp: new Date().toISOString()
+            }
+          }));
+        } catch (error) {
+          const reshapeError = await ErrorHandler.handleError(error, 'reshape_data');
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'reshape_data_response',
+            error: reshapeError.userMessage
+          }));
+        }
+        break;
+      }
+
+      case 'workflow.generate': {
+        try {
+          const userContext = (ws as any).userContext as UserContext;
+          const { prompt, sessionId, schema } = message.data || message;
+
+          if (!prompt) {
+            ws.send(JSON.stringify({
+              id: message.id,
+              type: 'workflow.generation_failed',
+              error: 'Workflow generation prompt is required'
+            }));
+            break;
+          }
+
+          const chatService = getChatService();
+
+          // Use existing session or create new one
+          let targetSessionId = sessionId;
+          if (!targetSessionId) {
+            const session = await chatService.createSession(
+              userContext.userId,
+              'Workflow Generation',
+              'bedrock',
+              userContext.organizationId
+            );
+            targetSessionId = session.sessionId;
+          }
+
+          // Send prompt to Claude for workflow generation
+          const response = await chatService.sendMessage({
+            sessionId: targetSessionId,
+            message: prompt,
+            userId: userContext.userId,
+            organizationId: userContext.organizationId
+          });
+
+          // Use custom schema if provided, otherwise use default workflow schema
+          const validationSchema = schema || WORKFLOW_SCHEMA;
+
+          // Try to extract JSON from response using schema hints
+          const extractedJson = extractJsonFromAIResponse(response.content, validationSchema);
+
+          if (extractedJson) {
+            // Validate JSON structure using schema
+            const validation = validateJsonStructure(extractedJson, validationSchema);
+
+            if (validation.isValid) {
+              // Return successfully generated JSON
+              ws.send(JSON.stringify({
+                id: message.id,
+                type: 'workflow.generated',
+                data: {
+                  workflow: extractedJson,
+                  sessionId: targetSessionId,
+                  rawResponse: response.content,
+                  usage: response.usage
+                }
+              }));
+            } else {
+              // JSON is malformed according to schema
+              ws.send(JSON.stringify({
+                id: message.id,
+                type: 'workflow.generation_failed',
+                error: `Generated JSON has validation errors: ${validation.errors.join(', ')}`,
+                data: {
+                  sessionId: targetSessionId,
+                  rawResponse: response.content,
+                  validationErrors: validation.errors,
+                  partialResult: extractedJson
+                }
+              }));
+            }
+          } else {
+            // No JSON found in response
+            // Claude might be asking for more info or explaining missing integrations
+            ws.send(JSON.stringify({
+              id: message.id,
+              type: 'workflow.generation_response',
+              data: {
+                message: response.content,
+                sessionId: targetSessionId,
+                usage: response.usage,
+                note: 'Claude responded but did not generate JSON matching the schema. Check if integrations need to be connected.'
+              }
+            }));
+          }
+        } catch (error) {
+          const generationError = await ErrorHandler.handleError(error, 'workflow.generate');
+          ws.send(JSON.stringify({
+            id: message.id,
+            type: 'workflow.generation_failed',
+            error: generationError.userMessage
+          }));
+        }
+        break;
+      }
+
       default:
         ws.send(JSON.stringify({
           id: message.id,
@@ -830,3 +1244,220 @@ async function disconnectMCPServer(serverId: string, userContext: UserContext) {
     timestamp: new Date().toISOString()
   };
 }
+
+// Generic JSON Extraction and Validation Utilities
+
+interface JSONSchema {
+  // Required top-level fields
+  required?: string[];
+  // Field type definitions
+  properties?: {
+    [key: string]: {
+      type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+      items?: JSONSchema; // For array validation
+      properties?: any; // For nested object validation
+      required?: string[];
+    };
+  };
+  // Array item validation
+  items?: JSONSchema;
+  // Custom validation function
+  validate?: (obj: any) => { isValid: boolean; errors: string[] };
+}
+
+/**
+ * Generic JSON extractor - works for any JSON structure
+ * Tries multiple extraction strategies in order
+ */
+function extractJsonFromAIResponse(aiResponse: string, schema?: JSONSchema): any | null {
+  const extractionStrategies = [
+    // Strategy 1: JSON in markdown code blocks
+    () => {
+      const codeBlockMatch = aiResponse.match(/```(?:json)?\n([\s\S]*?)\n```/);
+      if (codeBlockMatch) {
+        return JSON.parse(codeBlockMatch[1]);
+      }
+      return null;
+    },
+
+    // Strategy 2: JSON object with schema hints
+    () => {
+      if (schema?.required && schema.required.length > 0) {
+        // Look for JSON containing any required field
+        const requiredFieldPattern = schema.required.join('|');
+        const regex = new RegExp(`\\{[\\s\\S]*(?:${requiredFieldPattern})[\\s\\S]*\\}`, 'g');
+        const matches = aiResponse.match(regex);
+        if (matches) {
+          // Try parsing the largest match (most likely to be complete)
+          const largestMatch = matches.reduce((a, b) => a.length > b.length ? a : b);
+          return JSON.parse(largestMatch);
+        }
+      }
+      return null;
+    },
+
+    // Strategy 3: Any JSON object
+    () => {
+      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+      return null;
+    },
+
+    // Strategy 4: JSON array
+    () => {
+      const arrayMatch = aiResponse.match(/\[[\s\S]*\]/);
+      if (arrayMatch) {
+        return JSON.parse(arrayMatch[0]);
+      }
+      return null;
+    }
+  ];
+
+  for (const strategy of extractionStrategies) {
+    try {
+      const result = strategy();
+      if (result !== null) {
+        return result;
+      }
+    } catch (error) {
+      // Try next strategy
+      continue;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Generic JSON validator using schema
+ */
+function validateJsonStructure(obj: any, schema: JSONSchema): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  if (!obj) {
+    errors.push('Object is null or undefined');
+    return { isValid: false, errors };
+  }
+
+  // Validate required fields
+  if (schema.required) {
+    schema.required.forEach(field => {
+      if (!(field in obj)) {
+        errors.push(`Missing required field: ${field}`);
+      }
+    });
+  }
+
+  // Validate property types
+  if (schema.properties) {
+    Object.entries(schema.properties).forEach(([field, fieldSchema]) => {
+      if (field in obj) {
+        const value = obj[field];
+        const expectedType = fieldSchema.type;
+
+        // Type checking
+        if (expectedType === 'array' && !Array.isArray(value)) {
+          errors.push(`Field '${field}' should be array, got ${typeof value}`);
+        } else if (expectedType === 'object' && (typeof value !== 'object' || Array.isArray(value))) {
+          errors.push(`Field '${field}' should be object, got ${typeof value}`);
+        } else if (expectedType !== 'array' && expectedType !== 'object' && typeof value !== expectedType) {
+          errors.push(`Field '${field}' should be ${expectedType}, got ${typeof value}`);
+        }
+
+        // Validate array items
+        if (expectedType === 'array' && Array.isArray(value) && fieldSchema.items) {
+          value.forEach((item, index) => {
+            const itemValidation = validateJsonStructure(item, fieldSchema.items!);
+            if (!itemValidation.isValid) {
+              errors.push(`Item ${index} in '${field}': ${itemValidation.errors.join(', ')}`);
+            }
+          });
+        }
+
+        // Validate nested objects
+        if (expectedType === 'object' && fieldSchema.properties) {
+          const nestedValidation = validateJsonStructure(value, {
+            required: fieldSchema.required,
+            properties: fieldSchema.properties
+          });
+          if (!nestedValidation.isValid) {
+            errors.push(`Nested object '${field}': ${nestedValidation.errors.join(', ')}`);
+          }
+        }
+      }
+    });
+  }
+
+  // Custom validation function
+  if (schema.validate) {
+    const customValidation = schema.validate(obj);
+    if (!customValidation.isValid) {
+      errors.push(...customValidation.errors);
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+// Workflow-specific schema
+const WORKFLOW_SCHEMA: JSONSchema = {
+  required: ['nodes', 'connections'],
+  properties: {
+    name: { type: 'string' },
+    description: { type: 'string' },
+    nodes: {
+      type: 'array',
+      items: {
+        required: ['id', 'type'],
+        properties: {
+          id: { type: 'string' },
+          type: { type: 'string' },
+          x: { type: 'number' },
+          y: { type: 'number' },
+          config: { type: 'object' }
+        }
+      }
+    },
+    connections: {
+      type: 'array',
+      items: {
+        required: ['from', 'to'],
+        properties: {
+          from: { type: 'string' },
+          to: { type: 'string' },
+          fromOutput: { type: 'string' },
+          toInput: { type: 'string' }
+        }
+      }
+    },
+    metadata: { type: 'object' }
+  },
+  validate: (workflow: any) => {
+    const errors: string[] = [];
+
+    // Ensure at least one node exists
+    if (workflow.nodes && workflow.nodes.length === 0) {
+      errors.push('Workflow must have at least one node');
+    }
+
+    // Validate connection references
+    if (workflow.nodes && workflow.connections) {
+      const nodeIds = new Set(workflow.nodes.map((n: any) => n.id));
+      workflow.connections.forEach((conn: any, index: number) => {
+        if (!nodeIds.has(conn.from)) {
+          errors.push(`Connection ${index}: 'from' node '${conn.from}' does not exist`);
+        }
+        if (!nodeIds.has(conn.to)) {
+          errors.push(`Connection ${index}: 'to' node '${conn.to}' does not exist`);
+        }
+      });
+    }
+
+    return { isValid: errors.length === 0, errors };
+  }
+};

@@ -33,6 +33,9 @@ export interface Organization {
   industry?: string;
   size?: 'startup' | 'small' | 'medium' | 'large' | 'enterprise';
 
+  // Infrastructure Tier (maps to infra/workspaces/)
+  workspaceTier: 'extra-small' | 'small' | 'medium' | 'large';
+
   // Membership
   memberCount: number;
   maxMembers?: number;
@@ -270,7 +273,35 @@ export class OrganizationService {
         id: orgId,
         name: orgId, // Placeholder - actual org data should come from WebSocket response
         slug: orgId,
+        workspaceTier: 'small',
+        memberCount: 0,
+        userRole: 'member',
+        settings: {
+          allowMemberInvites: true,
+          requireApprovalForApps: false,
+          defaultMemberRole: 'member',
+          sessionTimeout: 3600,
+          enforceSSO: false,
+          requireMFA: false,
+          passwordPolicy: {
+            minLength: 8,
+            requireSpecialChars: false,
+            requireNumbers: false,
+            requireUppercase: false
+          }
+        },
+        features: {
+          maxWorkflows: 100,
+          maxAppsConnections: 50,
+          customBranding: false,
+          advancedAnalytics: false,
+          apiAccess: true,
+          ssoIntegration: false,
+          auditLogs: false,
+          prioritySupport: false
+        },
         members: [],
+        createdBy: 'system',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }

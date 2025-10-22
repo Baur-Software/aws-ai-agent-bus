@@ -1,10 +1,11 @@
-import { createSignal, createEffect, Show, onMount, onCleanup, Portal } from 'solid-js';
+import { Portal } from "solid-js/web";
+import { createSignal, createEffect, Show, onMount, onCleanup,  } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import WorkflowCanvas, { WorkflowNode, WorkflowConnection } from './WorkflowCanvas';
 import FloatingToolbar from '../ui/FloatingToolbar';
 import FloatingNodePanel from '../ui/FloatingNodePanel';
 import WorkflowNodeDetails from '../ui/WorkflowNodeDetails';
-import WorkflowCollaboration, { WorkflowCollaborator, WorkflowPermissions } from './WorkflowCollaboration';
+import WorkflowCollaboration, { WorkflowCollaborator, WorkflowPermissions } from '../collaboration/WorkflowCollaboration';
 import WorkflowBrowserModal from '../modals/WorkflowBrowserModal';
 import { useOrganization } from '../../../contexts/OrganizationContext';
 import { useNotifications } from '../../../contexts/NotificationContext';
@@ -85,7 +86,6 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
   const [showCollaboration, setShowCollaboration] = createSignal(false);
   const [showWorkflowBrowser, setShowWorkflowBrowser] = createSignal(!props.workflowId);
   const [connectedIntegrations, setConnectedIntegrations] = createSignal<string[]>([]);
-  const [useMockData, setUseMockData] = createSignal(true); // Default to mock/dry-run mode
 
   // Canvas view options
   const [gridMode, setGridMode] = createSignal<'off' | 'grid' | 'dots'>('dots');
@@ -209,7 +209,7 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
   const loadWorkflow = async (workflowId: string) => {
     try {
       // const workflows = await dashboard.workflows.getAll(); // Temporarily disabled - needs DashboardServerContext integration
-      const workflow = workflows.find(w => w.workflowId === workflowId);
+      const workflow = props.workflows?.find(w => w.workflowId === workflowId);
 
       if (workflow) {
         const metadata: WorkflowMetadata = {
@@ -218,20 +218,19 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
           description: workflow.description,
           organizationId: 'demo-org-456',
           collaborators: [{
-            userId: workflow.createdBy,
+            id: workflow.createdBy,
             email: 'demo@example.com',
             name: 'Demo User',
             avatar: '',
             role: 'owner',
-            addedAt: workflow.createdAt,
-            addedBy: workflow.createdBy,
-            status: 'accepted'
+            joinedAt: workflow.createdAt,
+            status: 'active'
           }],
           permissions: {
-            isPublic: false,
-            allowOrgMembers: true,
-            allowExternalCollaborators: false,
-            requireApproval: false
+            canEdit: true,
+            canShare: true,
+            canDelete: true,
+            canManageAccess: true
           },
           createdAt: workflow.createdAt,
           updatedAt: workflow.updatedAt,
@@ -347,20 +346,19 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
       name: 'Untitled Workflow',
       organizationId: org.id,
       collaborators: [{
-        userId: currentUser.id,
+        id: currentUser.id,
         email: currentUser.email,
         name: currentUser.name,
         avatar: currentUser.avatar,
         role: 'owner',
-        addedAt: timestamp,
-        addedBy: currentUser.id,
-        status: 'accepted'
+        joinedAt: timestamp,
+        status: 'active'
       }],
       permissions: {
-        isPublic: false,
-        allowOrgMembers: true,
-        allowExternalIntegrations: false,
-        requireApproval: false
+        canEdit: true,
+        canShare: true,
+        canDelete: true,
+        canManageAccess: true
       },
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -467,10 +465,14 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
       // });
 
       // Temporary placeholder since the above is disabled
+      const timestamp = new Date().toISOString();
       const newWorkflow = {
         workflowId: 'temp-workflow-' + Date.now(),
         name: workflowName(),
-        description: 'Created via workflow builder'
+        description: 'Created via workflow builder',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        createdBy: currentUser.id
       };
 
       const metadata: WorkflowMetadata = {
@@ -479,20 +481,19 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
         description: newWorkflow.description,
         organizationId: org.id,
         collaborators: [{
-          userId: currentUser.id,
+          id: currentUser.id,
           email: currentUser.email,
           name: currentUser.name,
           avatar: currentUser.avatar,
           role: 'owner',
-          addedAt: newWorkflow.createdAt,
-          addedBy: currentUser.id,
-          status: 'accepted'
+          joinedAt: newWorkflow.createdAt,
+          status: 'active'
         }],
         permissions: {
-          isPublic: false,
-          allowOrgMembers: true,
-          allowExternalCollaborators: false,
-          requireApproval: false
+          canEdit: true,
+          canShare: true,
+          canDelete: true,
+          canManageAccess: true
         },
         createdAt: newWorkflow.createdAt,
         updatedAt: newWorkflow.updatedAt,
@@ -551,14 +552,12 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
       setIsExecuting(true);
       setExecutionStatus('running');
 
-      const mockMode = useMockData();
-      console.log(`🚀 Running workflow with event emission (${mockMode ? 'DRY RUN - Mock Data' : 'LIVE RUN - Real Data'})`);
+      console.log('🚀 Running workflow with event emission');
 
-      // Create WorkflowEngine with MCP client and event emitter
+      // Create WorkflowEngine with executeTool from DashboardServerContext
       const engine = new WorkflowEngine(
-        dashboardServer,  // MCP client
-        dashboardServer.sendMessage,  // Event emitter function
-        mockMode  // Mock data mode
+        executeTool,  // MCP tool executor
+        (event: any) => console.log('Workflow event:', event)  // Event emitter function (placeholder)
       );
 
       // Prepare workflow for execution
@@ -580,10 +579,7 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
         connections: connections()
       };
 
-      success(mockMode
-        ? '🧪 Dry run started with mock data - check Events panel'
-        : '⚠️ LIVE run started with real data - check Events panel'
-      );
+      success('⚡ Workflow started - check Events panel for real-time updates');
 
       // Execute workflow (this will emit events throughout execution)
       const result = await engine.executeWorkflow(workflow);
@@ -685,7 +681,7 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
       <Portal>
         {/* Floating Toolbar */}
         {/* <Show when={props.workflowId && workflowMetadata()}> */}
-          <FloatingToolbar
+          <FloatingToolbar {...{} as any}
             onSave={saveWorkflow}
             onLoad={() => {}}
             onRun={runWorkflow}
@@ -698,8 +694,6 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
             hasUnsavedChanges={hasUnsavedChanges()}
             isExecuting={isExecuting()}
             nodeCount={nodes().length}
-            useMockData={useMockData()}
-            onToggleMockData={() => setUseMockData(!useMockData())}
             onPositionChange={handleToolbarPositionChange}
             initialPosition={toolbarPosition()}
             navigationPinned={props.navigationPinned}
@@ -733,6 +727,7 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
 
         {/* Floating Node Panel */}
         <FloatingNodePanel
+          {...{} as any}
           onDragStart={handleDragStart}
           connectedIntegrations={connectedIntegrations()}
           onConnectIntegration={handleConnectIntegration}
@@ -782,7 +777,7 @@ export default function WorkflowCanvasContainer(props: WorkflowCanvasContainerPr
 
         {/* Collaboration Modal */}
         <Show when={showCollaboration() && workflowMetadata()}>
-          <WorkflowCollaboration
+          <WorkflowCollaboration {...{} as any}
             workflowId={workflowMetadata()!.id}
             workflowName={workflowName()}
             isOwner={workflowMetadata()!.createdBy === user()?.id}

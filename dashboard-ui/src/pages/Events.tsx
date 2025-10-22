@@ -81,7 +81,7 @@ export default function Events() {
 
       // Query recent events via MCP events_query tool
       const result = await callMCPTool('events_query', {
-        userId: user()?.userId,
+        userId: user()?.id,
         organizationId: currentOrganization()?.id,
         limit: 100,
         sortOrder: 'desc'
@@ -107,7 +107,7 @@ export default function Events() {
     try {
       const analyticsResult = await callMCPTool('events_analytics', {
         organizationId: currentOrganization()?.id,
-        userId: user()?.userId,
+        userId: user()?.id,
         metrics: ['volume', 'topSources', 'priority', 'eventTypes'],
         granularity: 'hourly'
       });
@@ -131,7 +131,7 @@ export default function Events() {
       type: 'subscribe_events',
       eventTypes: ['*'], // Subscribe to all events
       filters: {
-        userId: user()?.userId,
+        userId: user()?.id,
         organizationId: currentOrganization()?.id
       }
     });
@@ -546,7 +546,7 @@ export default function Events() {
                   when={!isLoading()}
                   fallback={
                     <>
-                      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4"></div>
+                      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4" />
                       <p class="text-gray-600 dark:text-gray-400">Loading analytics...</p>
                     </>
                   }

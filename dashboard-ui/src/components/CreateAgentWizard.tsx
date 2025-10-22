@@ -73,7 +73,26 @@ export function CreateAgentWizard(props: CreateAgentWizardProps) {
       if (app.icon) icons.add(app.icon);
     });
 
-    ['🤖', '🎯', '💻', '⚡', '🔧', '🎨', '📊', '🔍'].forEach(icon => icons.add(icon));
+    // Common AI & Agent icons
+    const baseIcons = [
+      '🤖', '🎯', '💻', '⚡', '🔧', '🎨', '📊', '🔍',
+      // More AI/Tech icons
+      '🧠', '💡', '🔮', '✨', '⭐', '🚀', '🛠️', '⚙️',
+      // Workflow icons
+      '📋', '📝', '📌', '🎭', '🔬', '🧪', '🔭', '🎪',
+      // Communication icons
+      '💬', '📢', '📡', '📮', '📬', '💌', '📨', '📩',
+      // Data icons
+      '💾', '💿', '📀', '🗂️', '📁', '📂', '🗃️', '🗄️',
+      // Cloud/Network icons
+      '☁️', '🌐', '🔗', '🔌', '📶', '📡', '🛰️',
+      // Security icons
+      '🔒', '🔓', '🔐', '🛡️', '🔑', '🗝️',
+      // Other useful icons
+      '🎓', '📚', '🏆', '🎖️', '👤', '👥', '🏢', '🏭'
+    ];
+
+    baseIcons.forEach(icon => icons.add(icon));
 
     return Array.from(icons);
   });
@@ -138,7 +157,7 @@ Generate a complete, professional agent markdown file following the template str
         }, 1000);
       });
 
-      const markdown = response?.markdown || '';
+      const markdown = (response as any)?.markdown || '';
 
       if (!markdown) {
         throw new Error('Failed to generate agent definition');
@@ -266,24 +285,7 @@ Generate a complete, professional agent markdown file following the template str
                     class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:border-blue-500"
                   >
                     <Show when={props.availableModels && props.availableModels.length > 0} fallback={
-                      <>
-                        <optgroup label="Hosted (Bedrock)">
-                          <option value="bedrock:anthropic.claude-3-5-sonnet-20241022-v2:0">Claude 3.5 Sonnet v2 (Default)</option>
-                          <option value="bedrock:anthropic.claude-3-5-sonnet-20240620-v1:0">Claude 3.5 Sonnet</option>
-                          <option value="bedrock:anthropic.claude-3-opus-20240229-v1:0">Claude 3 Opus</option>
-                          <option value="bedrock:anthropic.claude-3-haiku-20240307-v1:0">Claude 3 Haiku</option>
-                        </optgroup>
-                        <optgroup label="Self-Hosted (Ollama)">
-                          <option value="ollama:llama3.2">Llama 3.2</option>
-                          <option value="ollama:mistral">Mistral</option>
-                          <option value="ollama:codellama">CodeLlama</option>
-                        </optgroup>
-                        <optgroup label="Bring Your Own">
-                          <option value="byom:anthropic">Anthropic API (via MCP)</option>
-                          <option value="byom:openai">OpenAI (via MCP)</option>
-                          <option value="byom:custom">Custom MCP Server</option>
-                        </optgroup>
-                      </>
+                      <option value="" disabled>No models available - check MCP server connection</option>
                     }>
                       <For each={props.availableModels}>
                         {(modelOption) => (
@@ -356,9 +358,6 @@ Generate a complete, professional agent markdown file following the template str
               <div class="animate-spin text-6xl mb-4">🪄</div>
               <div class="text-lg font-medium text-white mb-2">
                 Generating your agent...
-              </div>
-              <div class="text-sm text-gray-400">
-                Using Claude to create a professional agent definition
               </div>
               <div class="mt-6 w-full max-w-md bg-gray-800 rounded-full h-2">
                 <div class="bg-blue-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }} />

@@ -1,4 +1,4 @@
-import { createSignal, createEffect, Show } from 'solid-js';
+import { createSignal, createEffect, Show, For } from 'solid-js';
 import { useOrganization } from '../../../contexts/OrganizationContext';
 import { useNotifications } from '../../../contexts/NotificationContext';
 import { UpdateOrganizationRequest } from '../../../services/OrganizationService';
@@ -231,9 +231,9 @@ export default function GeneralSettings() {
                 value={formData().industry || ''}
                 onChange={(e) => handleInputChange('industry', e.currentTarget.value)}
               >
-                {industryOptions.map(option => (
+                <For each={industryOptions}>{option => (
                   <option value={option.value}>{option.label}</option>
-                ))}
+                )}</For>
               </select>
             </Show>
           </div>
@@ -259,9 +259,9 @@ export default function GeneralSettings() {
                 value={formData().size || ''}
                 onChange={(e) => handleInputChange('size', e.currentTarget.value as any)}
               >
-                {sizeOptions.map(option => (
+                <For each={sizeOptions}>{option => (
                   <option value={option.value}>{option.label}</option>
-                ))}
+                )}</For>
               </select>
             </Show>
           </div>

@@ -2,18 +2,15 @@ import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
 
-// Mock dependencies - declare before import
-const mockBcrypt = vi.hoisted(() => ({
-  compare: vi.fn(),
-  hash: vi.fn()
-}));
-
+// Mock bcrypt
 vi.mock('bcrypt', () => ({
-  default: mockBcrypt
+  default: {
+    compare: vi.fn(),
+    hash: vi.fn()
+  }
 }));
 
-import bcrypt from 'bcrypt';
-
+// Mock jsonwebtoken
 vi.mock('jsonwebtoken', () => ({
   default: {
     sign: vi.fn(),
@@ -22,28 +19,30 @@ vi.mock('jsonwebtoken', () => ({
 }));
 
 // Mock AWS SDK clients
-const mockDynamoDBClient = {
-  send: vi.fn()
-};
-
-const mockEventBridgeClient = {
-  send: vi.fn()
-};
-
 vi.mock('@aws-sdk/client-dynamodb', () => ({
-  DynamoDBClient: vi.fn(() => mockDynamoDBClient)
+  DynamoDBClient: vi.fn(() => ({
+    send: vi.fn()
+  }))
 }));
 
 vi.mock('@aws-sdk/client-eventbridge', () => ({
-  EventBridgeClient: vi.fn(() => mockEventBridgeClient)
+  EventBridgeClient: vi.fn(() => ({
+    send: vi.fn()
+  }))
 }));
 
 describe('Auth Routes', () => {
   let app;
   let setupAuthRoutes;
   let AuthService;
+  let bcrypt;
+  let jwt;
 
   beforeAll(async () => {
+    // Import mocked modules
+    bcrypt = (await import('bcrypt')).default;
+    jwt = (await import('jsonwebtoken')).default;
+
     // Import modules after mocking
     const authModule = await import('../../src/routes/authRoutes');
     setupAuthRoutes = authModule.setupAuthRoutes;
@@ -52,6 +51,8 @@ describe('Auth Routes', () => {
     // Setup Express app
     app = express();
     app.use(express.json());
+    const mockDynamoDBClient = { send: vi.fn() };
+    const mockEventBridgeClient = { send: vi.fn() };
     app.use('/api/auth', setupAuthRoutes({
       dynamodb: mockDynamoDBClient,
       eventBridge: mockEventBridgeClient
@@ -83,8 +84,7 @@ describe('Auth Routes', () => {
       vi.spyOn(AuthService, 'getOrganization').mockResolvedValue(null);
 
       // Mock JWT generation
-      const jwt = await import('jsonwebtoken');
-      jwt.default.sign.mockReturnValue('mock-jwt-token');
+      jwt.sign.mockReturnValue('mock-jwt-token');
 
       const response = await request(app)
         .post('/api/auth/login')
@@ -142,8 +142,7 @@ describe('Auth Routes', () => {
       vi.spyOn(AuthService, 'getOrganization').mockResolvedValue(null);
 
       // Mock JWT generation
-      const jwt = await import('jsonwebtoken');
-      jwt.default.sign.mockReturnValue('mock-jwt-token');
+      jwt.sign.mockReturnValue('mock-jwt-token');
 
       const response = await request(app)
         .post('/api/auth/register')
@@ -217,17 +216,17 @@ describe('Auth Routes', () => {
   describe('AuthService', () => {
     describe('authenticateUser', () => {
       it('should authenticate user with correct password', async () => {
-        mockBcrypt.compare.mockResolvedValue(true);
+        bcrypt.compare.mockResolvedValue(true);
 
         const result = await AuthService.authenticateUser('demo@example.com', 'password');
 
         expect(result).toBeDefined();
         expect(result.email).toBe('demo@example.com');
-        expect(mockBcrypt.compare).toHaveBeenCalledWith('password', expect.any(String));
+        expect(bcrypt.compare).toHaveBeenCalledWith('password', expect.any(String));
       });
 
       it('should return null for incorrect password', async () => {
-        mockBcrypt.compare.mockResolvedValue(false);
+        bcrypt.compare.mockResolvedValue(false);
 
         const result = await AuthService.authenticateUser('demo@example.com', 'wrongpassword');
 
@@ -244,7 +243,7 @@ describe('Auth Routes', () => {
     describe('createUser', () => {
       it('should create new user with hashed password', async () => {
         const hashedPassword = 'hashed-password-123';
-        mockBcrypt.hash.mockResolvedValue(hashedPassword);
+        bcrypt.hash.mockResolvedValue(hashedPassword);
 
         const user = await AuthService.createUser('newuser@example.com', 'password123', 'New User');
 
@@ -253,7 +252,7 @@ describe('Auth Routes', () => {
         expect(user.name).toBe('New User');
         expect(user.passwordHash).toBe(hashedPassword);
         expect(user.organizations).toHaveLength(1);
-        expect(mockBcrypt.hash).toHaveBeenCalledWith('password123', 10);
+        expect(bcrypt.hash).toHaveBeenCalledWith('password123', 10);
       });
 
       it('should throw error for duplicate email', async () => {

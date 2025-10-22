@@ -15,6 +15,7 @@ Before implementing any DynamoDB features, you MUST fetch the latest documentati
 3. **Always verify**: Current DynamoDB features, capacity modes, and data modeling patterns
 
 **Example Usage:**
+
 ```
 Before implementing DynamoDB tables, I'll fetch the latest DynamoDB docs...
 [Use WebFetch to get current docs from AWS DynamoDB documentation]
@@ -71,6 +72,7 @@ When designing DynamoDB solutions, you return structured findings:
 ## Core Expertise
 
 ### Table Design and Data Modeling
+
 - Single-table design patterns
 - Partition key and sort key strategies
 - Access pattern analysis
@@ -79,6 +81,7 @@ When designing DynamoDB solutions, you return structured findings:
 - Data hierarchy modeling
 
 ### Performance Optimization
+
 - Hot key identification and mitigation
 - Read/write capacity optimization
 - Auto-scaling configuration
@@ -87,6 +90,7 @@ When designing DynamoDB solutions, you return structured findings:
 - Connection pooling strategies
 
 ### Scalability and Operations
+
 - Capacity planning strategies
 - Global table replication
 - Backup and recovery planning
@@ -97,6 +101,7 @@ When designing DynamoDB solutions, you return structured findings:
 ## DynamoDB Configuration Patterns
 
 ### Single-Table Design Implementation
+
 ```yaml
 # DynamoDB table with optimized design
 resource "aws_dynamodb_table" "main" {
@@ -184,6 +189,7 @@ resource "aws_kms_alias" "dynamodb" {
 ```
 
 ### Auto-Scaling Configuration
+
 ```yaml
 # Auto-scaling for provisioned capacity mode
 resource "aws_dynamodb_table" "provisioned" {
@@ -270,6 +276,7 @@ resource "aws_appautoscaling_policy" "write_policy" {
 ```
 
 ### Data Access Patterns
+
 ```python
 # Python SDK examples for optimal DynamoDB access
 import boto3
@@ -435,6 +442,7 @@ if __name__ == "__main__":
 ```
 
 ### DynamoDB Streams Integration
+
 ```python
 # Lambda function for DynamoDB Streams processing
 import json
@@ -547,6 +555,7 @@ def process_delete(old_image, sns, cloudwatch):
 ```
 
 ### DAX Caching Integration
+
 ```yaml
 # DAX cluster for caching
 resource "aws_dax_cluster" "main" {
@@ -637,6 +646,7 @@ resource "aws_iam_role_policy_attachment" "dax" {
 ## Monitoring and Alerting
 
 ### CloudWatch Metrics and Alarms
+
 ```yaml
 # DynamoDB monitoring alarms
 resource "aws_cloudwatch_metric_alarm" "read_throttled_requests" {
@@ -699,6 +709,7 @@ resource "aws_cloudwatch_metric_alarm" "high_latency" {
 ```
 
 ### Cost Optimization Strategies
+
 ```yaml
 # Variables for cost optimization
 variable "table_class" {

@@ -116,6 +116,19 @@ data "aws_iam_policy_document" "task_role_policy" {
     resources = [var.event_bus_arn]
   }
 
+  # Bedrock Runtime access for AI chat
+  statement {
+    sid    = "BedrockRuntimeAccess"
+    effect = "Allow"
+    actions = [
+      "bedrock:InvokeModel",
+      "bedrock:InvokeModelWithResponseStream"
+    ]
+    resources = [
+      "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:foundation-model/anthropic.claude-*"
+    ]
+  }
+
   # Secrets Manager access
   statement {
     sid    = "SecretsManagerAccess"

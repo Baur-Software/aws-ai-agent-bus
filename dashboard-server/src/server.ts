@@ -22,6 +22,7 @@ import { createMCPTestRoutes } from './routes/mcpTestRoutes.js';
 import workflowRoutes from './routes/workflowRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import kvRoutes from './routes/kvRoutes.js';
+import artifactsRoutes from './routes/artifactsRoutes.js';
 import { setupAuthRoutes } from './routes/authRoutes.js';
 import { setupWebhookRoutes } from './routes/webhookRoutes.js';
 import { profile } from 'console';
@@ -112,6 +113,9 @@ app.use('/api/mcp-test', createMCPTestRoutes(mcpRegistry));
 
 // Setup KV routes
 app.use('/api/kv', kvRoutes);
+
+// Setup artifacts routes
+app.use('/api/artifacts', artifactsRoutes);
 
 // Setup workflow routes
 app.use('/api/workflows', workflowRoutes);

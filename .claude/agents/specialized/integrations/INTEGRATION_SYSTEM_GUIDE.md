@@ -9,11 +9,13 @@ The AWS AI Agent Bus integration system supports multiple user connections per s
 ### App Configuration vs User Connections
 
 **App Configurations** (`integration-<service>` keys):
+
 - Shared templates containing OAuth2 metadata, UI field definitions, and workflow capabilities
 - Stored once per service, used by all users
 - Contains public configuration like OAuth URLs, scopes, field schemas
 
 **User Connections** (`user-{userId}-integration-{service}-{connectionId}` keys):
+
 - Individual user credentials and settings
 - Encrypted and isolated per user
 - Supports multiple named connections per service
@@ -36,6 +38,7 @@ user-demo-user-123-integration-slack-personal
 ## Data Structures
 
 ### App Configuration Structure
+
 ```javascript
 {
   id: 'google-analytics',
@@ -62,6 +65,7 @@ user-demo-user-123-integration-slack-personal
 ```
 
 ### User Connection Structure
+
 ```javascript
 {
   user_id: 'demo-user-123',
@@ -90,6 +94,7 @@ user-demo-user-123-integration-slack-personal
 **File**: `dashboard-ui/src/components/IntegrationsSettings.tsx`
 
 **Key Features**:
+
 - Multiple connections per service support
 - Connection naming and management
 - Individual test/disconnect actions
@@ -97,6 +102,7 @@ user-demo-user-123-integration-slack-personal
 - Expandable connection cards
 
 **Usage Patterns**:
+
 ```tsx
 // Component shows multiple connections per service
 const connections = userConnections().get(integrationId) || [];
@@ -114,6 +120,7 @@ onTest(integrationId, connectionId)
 **File**: `dashboard-ui/src/components/WorkflowBuilder.tsx`
 
 **Connection Detection**:
+
 - Checks both legacy and new connection patterns
 - Workflow nodes become available when ANY connection exists
 - Supports automatic migration during detection
@@ -148,18 +155,21 @@ const newConnections = await Promise.all(
 ### Common Agent Tasks
 
 **Adding New Integration Support**:
+
 1. Add service to `APP_CONFIGS` in IntegrationsSettings
-2. Add workflow node mappings to `NODE_INTEGRATION_MAPPING` 
+2. Add workflow node mappings to `NODE_INTEGRATION_MAPPING`
 3. Update WorkflowBuilder integration detection logic
 4. Create MCP tool handlers for service API calls
 
 **Debugging Connection Issues**:
+
 1. Check KV store for both legacy and new connection patterns
 2. Verify app configuration exists in `integration-<service>` key
 3. Validate user connection structure and credentials
 4. Test workflow node availability logic
 
 **UI/UX Improvements**:
+
 1. Enhance connection management interface
 2. Add better error states and loading indicators
 3. Improve connection naming and organization
@@ -179,6 +189,7 @@ Legacy connections (`user-{userId}-integration-{service}`) are automatically mig
 ### Backward Compatibility
 
 The system maintains backward compatibility by:
+
 - Checking legacy patterns first during connection detection
 - Migrating legacy connections on-demand
 - Supporting both connection formats in workflow detection

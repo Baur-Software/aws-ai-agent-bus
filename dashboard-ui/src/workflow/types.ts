@@ -33,34 +33,59 @@ export interface ValidationResult {
   warnings?: string[];
 }
 
+export interface SchemaObject {
+  type: string;
+  properties?: Record<string, SchemaProperty>;
+  required?: string[];
+  additionalProperties?: any;
+  items?: SchemaProperty;
+  examples?: any[];
+  description?: string;
+}
+
 export interface TaskConfigSchema {
-  type: 'object';
-  properties: Record<string, SchemaProperty>;
-  required: string[];
-  title: string;
-  description: string;
+  input?: SchemaObject;
+  output?: SchemaObject;
+  type?: string;  // Legacy support
+  properties?: Record<string, SchemaProperty>;  // Legacy support
+  required?: string[];  // Legacy support
+  title?: string;
+  description?: string;
   examples?: any[];
 }
 
 export interface SchemaProperty {
-  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
-  title: string;
-  description: string;
+  type?: string;  // Accept any JSON Schema type string (optional for oneOf/anyOf)
+  title?: string;
+  description?: string;
+  placeholder?: string;
+  pattern?: string;
   default?: any;
   enum?: any[];
   format?: string;
   minimum?: number;
   maximum?: number;
-  items?: SchemaProperty;
+  minLength?: number;
+  maxLength?: number;
+  minItems?: number;
+  maxItems?: number;
+  items?: SchemaProperty | { type: string };
   properties?: Record<string, SchemaProperty>;
+  required?: string[];
+  additionalProperties?: SchemaProperty | { type: string } | any;
+  examples?: any[];
+  oneOf?: SchemaProperty[];  // JSON Schema oneOf support
+  anyOf?: SchemaProperty[];  // JSON Schema anyOf support
+  allOf?: SchemaProperty[];  // JSON Schema allOf support
 }
 
 export interface TaskDisplayInfo {
   category: string;
-  label: string;
-  icon: string;
-  color: string;
-  description: string;
+  name?: string;  // Used by tasks
+  label?: string;  // Legacy support
+  icon?: string;
+  color?: string;
+  description?: string;
   tags?: string[];
   integrationRequired?: string;
 }

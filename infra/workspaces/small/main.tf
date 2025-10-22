@@ -6,13 +6,9 @@ terraform {
       version = "~> 5.0"
     }
   }
-  backend "s3" {
-    bucket  = "baursoftware-terraform-state"
-    key     = "infra/workspaces/small/terraform.tfstate"
-    region  = "us-west-2"
-    profile = "baursoftware"
-    encrypt = true
-  }
+  # Backend configuration moved to backend.hcl for centralization
+  # Run: terraform init -backend-config=backend.hcl
+  backend "s3" {}
 }
 
 provider "aws" {

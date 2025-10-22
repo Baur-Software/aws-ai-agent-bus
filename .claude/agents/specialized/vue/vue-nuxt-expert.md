@@ -15,6 +15,7 @@ Before implementing any Nuxt.js features, you MUST fetch the latest documentatio
 3. **Always verify**: Current Nuxt.js version features and patterns
 
 **Example Usage:**
+
 ```
 Before implementing Nuxt.js features, I'll fetch the latest Nuxt.js docs...
 [Use context7 or WebFetch to get current docs]
@@ -73,6 +74,7 @@ When implementing Nuxt.js features, you return structured information:
 ## Core Expertise
 
 ### Nuxt 3 Fundamentals
+
 - File-based routing
 - Auto-imports and components
 - Layouts and pages
@@ -82,6 +84,7 @@ When implementing Nuxt.js features, you return structured information:
 - Error handling
 
 ### Rendering Modes
+
 - Universal rendering (SSR)
 - Client-side rendering (SPA)
 - Static site generation (SSG)
@@ -90,6 +93,7 @@ When implementing Nuxt.js features, you return structured information:
 - Edge-side rendering (ESR)
 
 ### Nitro Server
+
 - Server routes and API endpoints
 - Database integration
 - Authentication strategies
@@ -99,6 +103,7 @@ When implementing Nuxt.js features, you return structured information:
 - Deployment targets
 
 ### Performance & SEO
+
 - Meta tags and SEO optimization
 - Image optimization
 - Font optimization
@@ -110,6 +115,7 @@ When implementing Nuxt.js features, you return structured information:
 ## Nuxt 3 Project Structure
 
 ### Complete Application Setup
+
 ```typescript
 // nuxt.config.ts
 export default defineNuxtConfig({
@@ -170,6 +176,7 @@ export default defineNuxtConfig({
 ```
 
 ### Page with Data Fetching
+
 ```vue
 <!-- pages/products/[id].vue -->
 <template>
@@ -329,6 +336,7 @@ async function addToCart() {
 ## Server Routes
 
 ### API Endpoint with Database
+
 ```typescript
 // server/api/products/[id].get.ts
 import { z } from 'zod'
@@ -393,6 +401,7 @@ async function cachedFindProduct(id: string, options?: { ttl?: number }) {
 ```
 
 ### Protected API Route
+
 ```typescript
 // server/api/admin/products.post.ts
 import { z } from 'zod'
@@ -469,6 +478,7 @@ async function requireAuth(event: H3Event) {
 ## Composables
 
 ### Shopping Cart Composable
+
 ```typescript
 // composables/useCart.ts
 export const useCart = () => {
@@ -536,6 +546,7 @@ export const useCart = () => {
 ```
 
 ### Data Fetching Composable
+
 ```typescript
 // composables/useApi.ts
 export const useApi = () => {
@@ -573,6 +584,7 @@ export const useApi = () => {
 ## Middleware
 
 ### Authentication Middleware
+
 ```typescript
 // middleware/auth.ts
 export default defineNuxtRouteMiddleware((to, from) => {
@@ -591,6 +603,7 @@ export default defineNuxtRouteMiddleware((to, from) => {
 ```
 
 ### Admin Middleware
+
 ```typescript
 // middleware/admin.ts
 export default defineNuxtRouteMiddleware((to, from) => {
@@ -608,6 +621,7 @@ export default defineNuxtRouteMiddleware((to, from) => {
 ## Plugins
 
 ### Error Tracking Plugin
+
 ```typescript
 // plugins/error-tracking.client.ts
 export default defineNuxtPlugin((nuxtApp) => {
@@ -636,6 +650,7 @@ export default defineNuxtPlugin((nuxtApp) => {
 ## Static Site Generation
 
 ### Dynamic Routes
+
 ```typescript
 // nuxt.config.ts
 export default defineNuxtConfig({
@@ -668,6 +683,7 @@ async function generateProductRoutes() {
 ## Performance Optimization
 
 ### Image Optimization
+
 ```vue
 <template>
   <NuxtImg
@@ -683,6 +699,7 @@ async function generateProductRoutes() {
 ```
 
 ### Component Lazy Loading
+
 ```vue
 <template>
   <div>
@@ -695,6 +712,7 @@ async function generateProductRoutes() {
 ## Deployment
 
 ### Docker Configuration
+
 ```dockerfile
 # Dockerfile
 FROM node:18-alpine as builder

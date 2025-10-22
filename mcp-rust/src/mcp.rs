@@ -3,7 +3,8 @@ use serde_json::Value;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tracing::{debug, error, info};
+use tokio::sync::RwLock;
+use tracing::{debug, error};
 
 use crate::handlers::HandlerRegistry;
 use crate::rate_limiting::AwsOperation;
@@ -20,6 +21,7 @@ pub enum MCPError {
     #[error("Handler error: {0}")]
     HandlerError(String),
     #[error("Permission denied: {0}")]
+    #[allow(dead_code)]
     PermissionDenied(String),
     #[error("Rate limit exceeded")]
     RateLimitExceeded,
@@ -83,6 +85,7 @@ impl From<MCPError> for MCPErrorResponse {
 pub struct MCPServer {
     tenant_manager: Arc<TenantManager>,
     handler_registry: HandlerRegistry,
+    shutdown_flag: Arc<RwLock<bool>>,
 }
 
 impl MCPServer {
@@ -95,6 +98,7 @@ impl MCPServer {
         Ok(Self {
             tenant_manager,
             handler_registry,
+            shutdown_flag: Arc::new(RwLock::new(false)),
         })
     }
 
@@ -112,10 +116,18 @@ impl MCPServer {
             line.clear();
             match reader.read_line(&mut line).await {
                 Ok(0) => {
-                    // EOF reached, shutting down quietly
+                    // EOF reached - initiate graceful shutdown
+                    eprintln!("[MCP Server] EOF detected on stdin, initiating shutdown");
+                    self.initiate_shutdown().await;
                     break;
                 }
                 Ok(_) => {
+                    // Check if shutdown was initiated
+                    if *self.shutdown_flag.read().await {
+                        eprintln!("[MCP Server] Shutdown in progress, ignoring new requests");
+                        break;
+                    }
+
                     if let Some(response) = self.handle_request(line.trim()).await {
                         let response_json = serde_json::to_string(&response)?;
 
@@ -128,12 +140,59 @@ impl MCPServer {
                 Err(e) => {
                     // Log errors to stderr, not stdout
                     eprintln!("[MCP Server] Error reading from stdin: {}", e);
+                    self.initiate_shutdown().await;
                     break;
                 }
             }
         }
 
+        // Wait for active requests to complete
+        self.wait_for_active_requests().await;
+
+        eprintln!("[MCP Server] All requests completed, exiting");
         Ok(())
+    }
+
+    async fn initiate_shutdown(&self) {
+        let mut shutdown = self.shutdown_flag.write().await;
+        *shutdown = true;
+    }
+
+    async fn wait_for_active_requests(&self) {
+        // Wait up to 5 seconds for active requests to complete
+        let max_wait = std::time::Duration::from_secs(5);
+        let start = std::time::Instant::now();
+        let check_interval = std::time::Duration::from_millis(50);
+
+        eprintln!("[MCP Server] Waiting for active requests to complete...");
+
+        while start.elapsed() < max_wait {
+            let active_count = self.get_total_active_requests().await;
+
+            if active_count == 0 {
+                eprintln!("[MCP Server] No active requests remaining");
+                return;
+            }
+
+            eprintln!("[MCP Server] {} active request(s) remaining", active_count);
+            tokio::time::sleep(check_interval).await;
+        }
+
+        eprintln!("[MCP Server] Timeout waiting for active requests, forcing shutdown");
+    }
+
+    async fn get_total_active_requests(&self) -> u32 {
+        // Count active requests across all sessions (now lock-free with atomics)
+        let sessions = self.tenant_manager.get_all_sessions().await;
+        let mut total = 0;
+
+        for session in sessions {
+            total += session
+                .active_requests
+                .load(std::sync::atomic::Ordering::SeqCst);
+        }
+
+        total
     }
 
     pub async fn handle_request(&self, request_line: &str) -> Option<MCPResponse> {
@@ -176,15 +235,14 @@ impl MCPServer {
         }
     }
 
-
     async fn process_request(&self, request: MCPRequest) -> Result<Value, MCPError> {
         debug!("Processing request: {}", request.method);
 
         // Create or get tenant session
         let session = self.get_or_create_session(&request).await?;
 
-        // Check legacy rate limiting first
-        if !session.check_rate_limit().await {
+        // Check legacy rate limiting first (now synchronous with atomics)
+        if !session.check_rate_limit() {
             return Err(MCPError::RateLimitExceeded);
         }
 
@@ -205,9 +263,9 @@ impl MCPServer {
             }
         }
 
-        // Increment request counters
-        session.increment_request_count().await;
-        let _active_count = session.increment_active_requests().await;
+        // Increment request counters (now synchronous with atomics)
+        session.increment_request_count();
+        let _active_count = session.increment_active_requests();
 
         // Track request for cleanup
         let _guard = RequestGuard::new(session.clone());
@@ -232,14 +290,21 @@ impl MCPServer {
         // Use environment defaults if not provided in request (for local dev)
         let tenant_id = match &request.tenant_id {
             Some(id) => id.clone(),
-            None => std::env::var("DEFAULT_TENANT_ID")
-                .map_err(|_| MCPError::InvalidRequest("tenant_id is required (set DEFAULT_TENANT_ID env var for local dev)".to_string()))?,
+            None => std::env::var("DEFAULT_TENANT_ID").map_err(|_| {
+                MCPError::InvalidRequest(
+                    "tenant_id is required (set DEFAULT_TENANT_ID env var for local dev)"
+                        .to_string(),
+                )
+            })?,
         };
 
         let user_id = match &request.user_id {
             Some(id) => id.clone(),
-            None => std::env::var("DEFAULT_USER_ID")
-                .map_err(|_| MCPError::InvalidRequest("user_id is required (set DEFAULT_USER_ID env var for local dev)".to_string()))?,
+            None => std::env::var("DEFAULT_USER_ID").map_err(|_| {
+                MCPError::InvalidRequest(
+                    "user_id is required (set DEFAULT_USER_ID env var for local dev)".to_string(),
+                )
+            })?,
         };
 
         // Validate tenant access
@@ -330,9 +395,8 @@ impl RequestGuard {
 
 impl Drop for RequestGuard {
     fn drop(&mut self) {
-        let session = self.session.clone();
-        tokio::spawn(async move {
-            session.decrement_active_requests().await;
-        });
+        // CRITICAL FIX: Use lock-free atomic decrement (no async needed)
+        // This is safe to call from any context, including Drop
+        self.session.decrement_active_requests();
     }
 }

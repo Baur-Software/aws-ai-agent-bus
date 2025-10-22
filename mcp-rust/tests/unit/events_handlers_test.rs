@@ -5,9 +5,14 @@ use serde_json::json;
 use std::sync::Arc;
 
 // Import test utilities
-use mcp_rust::handlers::{EventsQueryHandler, EventsAnalyticsHandler, EventsCreateRuleHandler, EventsCreateAlertHandler, EventsHealthCheckHandler, Handler, HandlerError};
-use mcp_rust::tenant::{TenantSession, TenantContext, ContextType, UserRole, Permission, ResourceLimits};
 use mcp_rust::aws::AwsService;
+use mcp_rust::handlers::{
+    EventsCreateAlertHandler, EventsCreateRuleHandler, EventsHealthCheckHandler,
+    EventsQueryHandler, Handler, HandlerError,
+};
+use mcp_rust::tenant::{
+    ContextType, Permission, ResourceLimits, TenantContext, TenantSession, UserRole,
+};
 
 // Helper function to create test tenant session
 fn create_test_session() -> TenantSession {
@@ -64,8 +69,14 @@ mod events_query_handler_tests {
         assert!(result.is_ok(), "Handler should succeed with userId filter");
 
         let response = result.unwrap();
-        assert!(response.get("events").is_some(), "Response should contain events array");
-        assert!(response.get("count").is_some(), "Response should contain count");
+        assert!(
+            response.get("events").is_some(),
+            "Response should contain events array"
+        );
+        assert!(
+            response.get("count").is_some(),
+            "Response should contain count"
+        );
     }
 
     #[tokio::test]
@@ -90,11 +101,16 @@ mod events_query_handler_tests {
         let result = handler.handle(&session, arguments).await;
 
         // Should fail with error about requiring filter
-        assert!(result.is_err(), "Query without userId or source should fail");
+        assert!(
+            result.is_err(),
+            "Query without userId or source should fail"
+        );
 
         if let Err(HandlerError::Aws(err)) = result {
-            assert!(err.to_string().contains("requires userId or source"),
-                "Error should mention required filter");
+            assert!(
+                err.to_string().contains("requires userId or source"),
+                "Error should mention required filter"
+            );
         } else {
             panic!("Expected AwsError about required filter");
         }
@@ -164,8 +180,10 @@ mod events_query_handler_tests {
         for event in events {
             if let Some(timestamp) = event.get("timestamp") {
                 let ts = timestamp.as_str().unwrap();
-                assert!(ts >= start_time && ts <= end_time,
-                    "Event timestamp should be within range");
+                assert!(
+                    ts >= start_time && ts <= end_time,
+                    "Event timestamp should be within range"
+                );
             }
         }
     }
@@ -260,7 +278,11 @@ mod events_query_handler_tests {
 
         // Should return at most 5 events
         assert!(count <= 5, "Should respect limit parameter");
-        assert_eq!(events.len() as u64, count, "Events array length should match count");
+        assert_eq!(
+            events.len() as u64,
+            count,
+            "Events array length should match count"
+        );
 
         // Check if there's a pagination cursor
         let last_evaluated_key = response.get("lastEvaluatedKey");
@@ -311,7 +333,7 @@ mod events_query_handler_tests {
         let mut session = create_test_session();
         session.context.permissions = vec![Permission::ReadKV]; // Missing SendEvents
 
-        let arguments = json!({
+        let _arguments = json!({
             "userId": "test-user-123",
             "limit": 10
         });
@@ -376,8 +398,14 @@ mod events_query_handler_tests {
         let schema = handler.tool_schema();
 
         // Verify schema structure
-        assert!(schema.get("description").is_some(), "Schema should have description");
-        assert!(schema.get("inputSchema").is_some(), "Schema should have inputSchema");
+        assert!(
+            schema.get("description").is_some(),
+            "Schema should have description"
+        );
+        assert!(
+            schema.get("inputSchema").is_some(),
+            "Schema should have inputSchema"
+        );
 
         let input_schema = schema.get("inputSchema").unwrap();
         let properties = input_schema.get("properties").unwrap();
@@ -421,11 +449,16 @@ mod events_analytics_handler_tests {
 
         let result = handler.handle(&session, arguments).await;
 
-        assert!(result.is_err(), "Analytics without userId or organizationId should fail");
+        assert!(
+            result.is_err(),
+            "Analytics without userId or organizationId should fail"
+        );
 
         if let Err(HandlerError::InvalidArguments(msg)) = result {
-            assert!(msg.contains("userId") || msg.contains("organizationId"),
-                "Error should mention required filter");
+            assert!(
+                msg.contains("userId") || msg.contains("organizationId"),
+                "Error should mention required filter"
+            );
         }
     }
 
@@ -451,7 +484,10 @@ mod events_analytics_handler_tests {
         assert!(result.is_ok(), "Hourly analytics should succeed");
 
         let response = result.unwrap();
-        assert!(response.get("eventVolume").is_some(), "Should contain eventVolume");
+        assert!(
+            response.get("eventVolume").is_some(),
+            "Should contain eventVolume"
+        );
 
         let volume = response.get("eventVolume").unwrap().as_array().unwrap();
 
@@ -484,7 +520,10 @@ mod events_analytics_handler_tests {
         assert!(result.is_ok());
 
         let response = result.unwrap();
-        assert!(response.get("topSources").is_some(), "Should contain topSources");
+        assert!(
+            response.get("topSources").is_some(),
+            "Should contain topSources"
+        );
 
         let sources = response.get("topSources").unwrap().as_array().unwrap();
 
@@ -586,12 +625,16 @@ mod events_analytics_handler_tests {
 
         let result = handler.handle(&session, arguments).await;
 
-        assert!(result.is_ok(), "Organization-scoped analytics should succeed");
+        assert!(
+            result.is_ok(),
+            "Organization-scoped analytics should succeed"
+        );
 
         let response = result.unwrap();
-        assert!(response.get("eventVolume").is_some() ||
-                response.get("topSources").is_some(),
-                "Should contain analytics data");
+        assert!(
+            response.get("eventVolume").is_some() || response.get("topSources").is_some(),
+            "Should contain analytics data"
+        );
     }
 
     #[tokio::test]
@@ -736,7 +779,10 @@ mod events_create_rule_handler_tests {
         });
 
         let result = handler.handle(&session, arguments).await;
-        assert!(result.is_ok(), "Create rule with complex pattern should succeed");
+        assert!(
+            result.is_ok(),
+            "Create rule with complex pattern should succeed"
+        );
 
         let response = result.unwrap();
         assert_eq!(response["name"], "complex-filter");

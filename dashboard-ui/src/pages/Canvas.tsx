@@ -7,6 +7,7 @@ import { YjsWorkflowProvider } from '../contexts/YjsWorkflowContext';
 import { useAuth } from '../contexts/AuthContext';
 import WorkflowCanvasManager from '../components/workflow/core/WorkflowCanvasManager';
 import FloatingNavigation from '../components/workflow/ui/FloatingNavigation';
+import FloatingChatPanel from '../components/FloatingChatPanel';
 import WorkflowBrowser from './WorkflowBrowser';
 
 // Lazy load overlay components
@@ -15,7 +16,8 @@ const Artifacts = lazy(() => import('./Artifacts'));
 const Events = lazy(() => import('./Events'));
 const Settings = lazy(() => import('./Settings'));
 const AppsTab = lazy(() => import('../components/apps/AppsTab'));
-const ChatPanel = lazy(() => import('../components/ChatPanel'));
+const NodeDesigner = lazy(() => import('./NodeDesigner'));
+const Agents = lazy(() => import('./Agents'));
 
 export default function Canvas() {
   const params = useParams();
@@ -27,6 +29,15 @@ export default function Canvas() {
   // Floating navigation state
   const [navigationPinned, setNavigationPinned] = createSignal(true);
   const [navigationPosition, setNavigationPosition] = createSignal({ x: 0, y: 0 });
+
+  // Floating chat panel state
+  const [chatPinned, setChatPinned] = createSignal(false);
+  // Position chat to the right of the navigation panel (64px wide when pinned, 320px when expanded)
+  const getChatInitialPosition = () => {
+    const navWidth = navigationPinned() ? 64 : 320;
+    return { x: navWidth + 20, y: 100 };
+  };
+  const [chatPosition, setChatPosition] = createSignal(getChatInitialPosition());
 
   // Set page header based on whether we have a workflow ID
   const headerTitle = () => params.id ? 'Workflow Canvas' : 'Process Library';
@@ -65,6 +76,32 @@ export default function Canvas() {
   // Define overlay routes
   const overlayRoutes = {
     // Dashboard removed - will be rebuilt as configurable canvas with datavis nodes
+    '/workflows': {
+      id: 'workflow-browser',
+      component: () => (
+        <WorkflowBrowser
+          {...{} as any}
+          overlayMode={true}
+          onWorkflowSelect={(workflowId) => {
+            closeOverlay('workflow-browser');
+            if (workflowId === '__marketplace__') {
+              navigate('/workflows/marketplace');
+            } else {
+              navigate(`/workflows/${workflowId}`);
+            }
+          }}
+          onClose={() => closeOverlay('workflow-browser')}
+        />
+      ),
+      title: 'Workflow Browser',
+      size: 'large' as const
+    },
+    '/agents': {
+      id: 'agents',
+      component: () => <Agents isOverlay={true} />,
+      title: 'AI Agents',
+      size: 'fullscreen' as const
+    },
     '/apps': {
       id: 'apps',
       component: AppsTab,
@@ -95,11 +132,11 @@ export default function Canvas() {
       title: 'Settings',
       size: 'medium' as const
     },
-    '/chat': {
-      id: 'chat',
-      component: ChatPanel,
-      title: 'AI Assistant',
-      size: 'medium' as const
+    '/node-designer': {
+      id: 'node-designer',
+      component: NodeDesigner,
+      title: 'Node Designer',
+      size: 'fullscreen' as const
     }
   };
 
@@ -172,6 +209,14 @@ export default function Canvas() {
         onPinnedChange={setNavigationPinned}
         initialPosition={navigationPosition()}
         initialPinned={navigationPinned()}
+      />
+
+      {/* Floating Chat Panel */}
+      <FloatingChatPanel
+        onPositionChange={(x, y) => setChatPosition({ x, y })}
+        onPinnedChange={setChatPinned}
+        initialPosition={chatPosition()}
+        initialPinned={chatPinned()}
       />
 
       {/* Workflow Canvas */}

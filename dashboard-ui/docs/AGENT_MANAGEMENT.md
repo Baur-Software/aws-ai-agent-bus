@@ -98,6 +98,7 @@ You are an event-driven architecture expert...
 ```
 
 ## Required Integrations
+
 ```yaml
 - eventbridge (optional)
 ```
@@ -105,9 +106,11 @@ You are an event-driven architecture expert...
 ## Core Expertise
 
 ### Event-Driven Patterns
+
 - Event sourcing and CQRS
 - Pub/sub messaging patterns
 ...
+
 ```
 
 ## Service API
@@ -280,6 +283,7 @@ const sampleOutput = sampleDataGenerator.generateFromSchema(agentNode.outputSche
 ### Migration from Hardcoded Samples
 
 **Before** (hardcoded):
+
 ```typescript
 defaultSampleOutput: {
   key: 'user-preferences',
@@ -290,6 +294,7 @@ defaultSampleOutput: {
 ```
 
 **After** (schema-based):
+
 ```typescript
 outputSchema: {
   type: 'object',
@@ -327,6 +332,7 @@ The [sampleDataGenerator.ts](../src/utils/sampleDataGenerator.ts) generates real
 - **Organizational agents**: Accessible by org members with proper roles
 
 Enforced through:
+
 1. **ArtifactService**: Automatically applies tenant context
 2. **MCP Rust Backend**: Validates tenant context on all operations
 3. **KV Store**: Scoped keys prevent cross-tenant access
@@ -399,23 +405,27 @@ const [showCreateWizard, setShowCreateWizard] = createSignal(false);
 **3-Step Flow:**
 
 **Step 1: Input**
+
 - Agent name, category (custom/orchestrators/core/etc), icon
 - Natural language description: "What should this agent do?"
 - Tips and examples provided inline
 - Validation: name and description required
 
 **Step 2: Generating** (animated spinner)
+
 - Calls LLM via MCP to generate professional markdown
 - Uses Claude 3.5 Sonnet with agent generation prompt
 - Shows progress indicator
 
 **Step 3: Review**
+
 - Displays generated markdown in editable textarea
 - User can edit directly before creating
 - "Back" button to modify description and regenerate
 - "Create Agent" saves to S3 + KV cache
 
 **Features:**
+
 - 🪄 AI-powered generation from natural language
 - ✏️ Editable before finalizing
 - 📝 Inline tips and examples
@@ -443,6 +453,7 @@ const [editingAgentId, setEditingAgentId] = createSignal<string>('');
 ```
 
 **Features:**
+
 - 📝 Full markdown editor with monospace font
 - 👁️ Preview toggle (Edit ⟷ Preview)
 - 🔒 Read-only for system agents
@@ -479,6 +490,7 @@ const [editingAgentId, setEditingAgentId] = createSignal<string>('');
 ```
 
 **Features:**
+
 - 📋 Grouped dropdown (System Agents / My Agents / Team Agents)
 - 💳 Agent info card showing:
   - Icon, name, description

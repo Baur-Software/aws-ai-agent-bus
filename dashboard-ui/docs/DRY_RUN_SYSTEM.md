@@ -1,5 +1,4 @@
 
-
 # Dry Run / Live Run System
 
 Zapier-style test data system for safe workflow testing without touching production data.
@@ -19,6 +18,7 @@ The workflow engine supports two execution modes:
 **Right-click**: Toggle between Dry Run ↔ Live Run
 
 The button shows the current mode:
+
 - **Dry Run** (secondary/gray button)
 - **Live Run** (primary/blue button)
 
@@ -81,6 +81,7 @@ All common node types have realistic default sample outputs defined:
 ### Storage Nodes
 
 **kv-get**:
+
 ```json
 {
   "key": "sample-key",
@@ -90,6 +91,7 @@ All common node types have realistic default sample outputs defined:
 ```
 
 **kv-set**:
+
 ```json
 {
   "success": true,
@@ -99,6 +101,7 @@ All common node types have realistic default sample outputs defined:
 ```
 
 **artifacts-list**:
+
 ```json
 {
   "artifacts": ["file1.json", "file2.pdf"],
@@ -109,6 +112,7 @@ All common node types have realistic default sample outputs defined:
 ### HTTP Nodes
 
 **http-get**:
+
 ```json
 {
   "status": 200,
@@ -120,6 +124,7 @@ All common node types have realistic default sample outputs defined:
 ```
 
 **http-post**:
+
 ```json
 {
   "status": 201,
@@ -133,6 +138,7 @@ All common node types have realistic default sample outputs defined:
 ### Analytics Nodes
 
 **ga-top-pages**:
+
 ```json
 {
   "pages": [
@@ -146,6 +152,7 @@ All common node types have realistic default sample outputs defined:
 ### Trigger Nodes
 
 **webhook**:
+
 ```json
 {
   "method": "POST",
@@ -157,6 +164,7 @@ All common node types have realistic default sample outputs defined:
 ```
 
 **schedule**:
+
 ```json
 {
   "scheduledTime": "2025-09-30T10:30:00Z",
@@ -173,6 +181,7 @@ Trigger (sample) → HTTP GET (sample) → Filter (sample) → Output (sample)
 ```
 
 Each node receives the previous node's sample output as input, allowing you to test:
+
 - Data transformations
 - Conditional branching
 - Error handling
@@ -217,6 +226,7 @@ Workflow events include `mockMode: true/false` so you can distinguish dry runs i
 ### 1. Development & Testing
 
 Test workflow logic without:
+
 - Calling production APIs
 - Consuming API rate limits
 - Incurring costs (e.g., SMS, payments)
@@ -225,6 +235,7 @@ Test workflow logic without:
 ### 2. Training & Demos
 
 Show workflow functionality with realistic sample data without needing:
+
 - API credentials
 - Connected services
 - Live data sources
@@ -232,6 +243,7 @@ Show workflow functionality with realistic sample data without needing:
 ### 3. Debugging
 
 Isolate workflow logic issues by:
+
 - Using known sample inputs
 - Comparing expected vs actual outputs
 - Testing edge cases with custom sample data
@@ -239,6 +251,7 @@ Isolate workflow logic issues by:
 ### 4. Iterative Development
 
 Rapidly iterate on workflow design:
+
 - Test node configurations quickly
 - Verify data transformations
 - Check conditional logic
@@ -249,6 +262,7 @@ Rapidly iterate on workflow design:
 ### 1. Configure Realistic Sample Data
 
 Bad:
+
 ```json
 {
   "data": "test"
@@ -256,6 +270,7 @@ Bad:
 ```
 
 Good:
+
 ```json
 {
   "users": [
@@ -271,6 +286,7 @@ Good:
 ### 2. Match Production Data Structure
 
 Sample data should match your actual API responses exactly:
+
 - Same field names
 - Same data types
 - Same nesting structure
@@ -279,6 +295,7 @@ Sample data should match your actual API responses exactly:
 ### 3. Test Edge Cases
 
 Configure multiple sample outputs for testing:
+
 - Empty arrays: `{ users: [] }`
 - Error states: `{ status: 404, error: "Not found" }`
 - Large datasets: `{ items: [...1000 items] }`
@@ -287,6 +304,7 @@ Configure multiple sample outputs for testing:
 ### 4. Document Sample Data Source
 
 Add comments in custom sample outputs:
+
 ```json
 {
   "_note": "Sample from production 2025-09-30, anonymized",
@@ -298,6 +316,7 @@ Add comments in custom sample outputs:
 ### 5. Test Before Going Live
 
 Always run in Dry Run mode first:
+
 1. Configure sample data
 2. Run workflow in Dry Run mode
 3. Verify data flows correctly
@@ -307,11 +326,13 @@ Always run in Dry Run mode first:
 ## Switching Modes
 
 ### Via UI
+
 - Right-click the Run button
 - Tooltip shows current mode
 - Button color changes
 
 ### Programmatically
+
 ```typescript
 setUseMockData(true);  // Enable dry run
 setUseMockData(false); // Enable live run
@@ -405,6 +426,7 @@ To add a new node type with default sample output:
 ## Support
 
 For questions or issues with the Dry Run system:
+
 - Check workflow execution logs in console
 - Verify sample data structure matches node expectations
 - Check Events panel for execution details

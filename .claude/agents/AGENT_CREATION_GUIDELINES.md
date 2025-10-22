@@ -7,18 +7,21 @@ This guide establishes standards for creating effective specialist agents that w
 ## Core Principles
 
 ### 1. Token Economy Optimization
+
 - **Front-matter first**: Encode key behaviors in structured YAML front-matter
 - **Concise content**: Follow token economy principles - favor compact, reusable patterns
 - **Reference over repetition**: Link to shared resources rather than duplicating content
 - **Artifact focus**: Generate only requested artifacts, avoid unnecessary explanations
 
 ### 2. Specialization Focus
+
 - **Clear domain boundaries**: Each agent should have well-defined expertise areas
 - **Deep not broad**: Better to excel in narrow domains than be mediocre across many
 - **Context awareness**: Agents should understand their role in larger workflows
 - **Handoff protocols**: Clear patterns for delegating to other specialists
 
 ### 3. Integration-First Design
+
 - **Delegation patterns**: Define clear triggers and handoff protocols to other agents
 - **Communication standards**: Use structured handoff messages for seamless workflows
 - **Dependency awareness**: Understand which agents complement your expertise
@@ -94,12 +97,14 @@ description: |
 ### Examples and Documentation
 
 #### Example Quality Standards
+
 - **Real-world relevance**: Use actual project scenarios, not toy examples
 - **Complete implementations**: Show full working code, not fragments
 - **Context included**: Explain why this approach was chosen
 - **Integration ready**: Examples should be easily adaptable to real projects
 
 #### Documentation Integration
+
 ```
 ## IMPORTANT: Always Use Latest Documentation
 
@@ -111,21 +116,25 @@ Before implementing any [TECHNOLOGY] features, you MUST fetch the latest documen
 
 **Example Usage:**
 ```
+
 Before implementing this component, I'll fetch the latest docs...
 [Use WebFetch to get current patterns and API docs]
 Now implementing with current best practices...
+
 ```
 ```
 
 ### Delegation Patterns
 
 #### Recognition Triggers
+
 - **Technology keywords**: Specific frameworks, tools, or platforms
 - **Complexity indicators**: Advanced patterns requiring specialized knowledge
 - **Integration needs**: Backend, frontend, infrastructure coordination
 - **Review requirements**: Security, performance, accessibility audits
 
 #### Handoff Message Format
+
 ```
 ## [DOMAIN] Implementation Completed
 
@@ -152,12 +161,14 @@ Now implementing with current best practices...
 ### Testing and Validation
 
 #### Agent Testing Protocol
+
 1. **Capability verification**: Test core expertise areas
 2. **Integration testing**: Verify handoff protocols work
 3. **Documentation testing**: Ensure examples are current and functional
 4. **Performance validation**: Confirm quality standards are met
 
 #### Quality Metrics
+
 - Response accuracy for domain-specific queries
 - Successful delegation to appropriate agents
 - Code quality and best practice compliance
@@ -166,21 +177,25 @@ Now implementing with current best practices...
 ## Agent Categories
 
 ### Core Agents (Universal capabilities)
+
 - **Purpose**: Fundamental development tasks across all projects
 - **Examples**: code-reviewer, documentation-specialist, performance-optimizer
 - **Characteristics**: Framework-agnostic, broad applicability
 
 ### Specialized Agents (Technology-specific)
+
 - **Purpose**: Deep expertise in specific technologies or frameworks
 - **Examples**: solidjs-specialist, django-backend-expert, terraform-architect
 - **Characteristics**: Deep domain knowledge, current with latest versions
 
 ### Universal Agents (Cross-cutting concerns)
+
 - **Purpose**: Common development needs across technologies
 - **Examples**: tailwind-css-expert, api-architect, backend-developer
 - **Characteristics**: Adaptable patterns, integration-focused
 
 ### Service Agents (Platform-specific)
+
 - **Purpose**: Cloud services and external platform integration
 - **Examples**: aws-s3-expert, stripe-expert, github-expert
 - **Characteristics**: API-focused, service-specific best practices
@@ -188,12 +203,14 @@ Now implementing with current best practices...
 ## Creation Workflow
 
 ### 1. Planning Phase
+
 - [ ] Define agent domain and boundaries
 - [ ] Identify complementary agents for delegation
 - [ ] Research current best practices and documentation
 - [ ] Plan example scenarios and use cases
 
 ### 2. Implementation Phase
+
 - [ ] Create front-matter with examples and delegations
 - [ ] Write core expertise sections
 - [ ] Develop comprehensive code examples
@@ -201,12 +218,14 @@ Now implementing with current best practices...
 - [ ] Document delegation protocols
 
 ### 3. Validation Phase
+
 - [ ] Test examples with current framework versions
 - [ ] Validate delegation patterns with existing agents
 - [ ] Review against token economy principles
 - [ ] Ensure integration with project conventions
 
 ### 4. Integration Phase
+
 - [ ] Update related agents' delegation patterns
 - [ ] Add to agent discovery documentation
 - [ ] Test in real project scenarios
@@ -215,25 +234,30 @@ Now implementing with current best practices...
 ## Common Patterns
 
 ### Documentation Fetching
+
 All agents should prioritize getting current documentation:
+
 - Use WebFetch for official documentation
 - Check for breaking changes and new features
 - Adapt examples to current API versions
 - Reference specific version requirements
 
 ### Error Handling
+
 - Graceful degradation when services are unavailable
 - Clear error messages with next steps
 - Fallback to alternative approaches when possible
 - Proper logging and debugging information
 
 ### Performance Considerations
+
 - Include performance optimization patterns
 - Monitor for common performance pitfalls
 - Provide benchmarking approaches
 - Consider scalability implications
 
 ### Security Awareness
+
 - Include security best practices
 - Validate input handling approaches
 - Consider authentication and authorization
@@ -242,18 +266,21 @@ All agents should prioritize getting current documentation:
 ## Maintenance
 
 ### Version Updates
+
 - Regular review of framework/technology updates
 - Update examples for new API versions
 - Refresh delegation patterns as system evolves
 - Performance and security audit cycles
 
 ### Quality Assurance
+
 - Periodic testing of examples and patterns
 - Validation of delegation handoffs
 - Review of integration effectiveness
 - User feedback incorporation
 
 ### Evolution
+
 - Monitor for new capabilities to add
 - Identify redundancies to consolidate
 - Adapt to changing development practices

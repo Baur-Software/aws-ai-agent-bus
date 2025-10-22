@@ -107,8 +107,9 @@ interface WorkflowContextType {
   // Actions
   loadWorkflow: (id: string) => Promise<void>;
   saveWorkflow: (message?: string) => Promise<void>;
-  createNewWorkflow: () => Promise<void>;
+  createNewWorkflow: () => Promise<string>;
   importWorkflow: () => Promise<void>;
+  loadWorkflowFromJSON: (workflowJson: any) => Promise<void>;
 
   // Version control
   undo: () => void;
@@ -161,7 +162,7 @@ export const WorkflowProvider: ParentComponent = (props) => {
   // Initialize versioning service
   let versioningService: WorkflowVersioningService | null = null;
   createEffect(() => {
-    const userId = user()?.userId;
+    const userId = user()?.id;
     const orgId = currentOrganization()?.id;
     if (userId) {
       versioningService = new WorkflowVersioningService(kvStore, userId, orgId);
@@ -194,6 +195,7 @@ export const WorkflowProvider: ParentComponent = (props) => {
       'workflow_deleted',
       'workflow_shared',
       'workflow_forked',
+      'workflow.ai_generated',
       'node_added',
       'node_updated',
       'node_deleted',
@@ -211,6 +213,14 @@ export const WorkflowProvider: ParentComponent = (props) => {
       // Reload workflows list if needed
       if (data.type === 'workflow_created' || data.type === 'workflow_deleted') {
         loadWorkflows();
+      }
+
+      // Handle AI-generated workflow
+      if (data.type === 'workflow.ai_generated' && data.workflow) {
+        loadWorkflowFromJSON(data.workflow).catch(err => {
+          console.error('Failed to load AI-generated workflow:', err);
+        });
+        return;
       }
 
       // Update current workflow if it matches
@@ -299,12 +309,17 @@ export const WorkflowProvider: ParentComponent = (props) => {
           let workflowData = savedWorkflows;
 
           // If it's an object with a 'value' property, extract it
-          if (typeof savedWorkflows === 'object' && !Array.isArray(savedWorkflows) && savedWorkflows.value) {
+          if (typeof savedWorkflows === 'object' && !Array.isArray(savedWorkflows) && 'value' in savedWorkflows) {
             workflowData = savedWorkflows.value;
           }
 
+          // Check if workflowData is null or undefined
+          if (workflowData === null || workflowData === undefined) {
+            console.log('No workflows found - KV key exists but value is null/undefined');
+            workflowSummaries = [];
+          }
           // Now handle the actual workflow data
-          if (typeof workflowData === 'string') {
+          else if (typeof workflowData === 'string') {
             try {
               workflowSummaries = JSON.parse(workflowData);
             } catch (parseErr) {
@@ -352,63 +367,15 @@ export const WorkflowProvider: ParentComponent = (props) => {
           }
         }
 
-        // If no workflows found, add sample workflows for demonstration
+        // If no workflows found, return empty array
         if (workflowSummaries.length === 0) {
-          console.log('No workflows found, adding sample workflows for demonstration');
-          throw new Error('No workflows found - will use samples');
+          console.log('No workflows found - KV store returned empty');
+          workflowSummaries = [];
         }
       } catch (apiErr) {
-        console.warn('Real data loading failed, using sample workflows:', apiErr);
-
-        // Fallback to sample workflows
-        workflowSummaries = [
-          {
-            id: 'sample-workflow-1',
-            name: 'Customer Onboarding Flow',
-            description: 'Automated workflow for onboarding new customers with email sequences and task assignments',
-            context: 'user',
-            isPublic: false,
-            version: '1.2.0',
-            stats: {
-              starCount: 12,
-              forkCount: 3,
-              usageCount: 45,
-              lastUsed: new Date().toISOString()
-            },
-            metadata: {
-              createdAt: '2024-01-15T10:00:00Z',
-              updatedAt: new Date().toISOString(),
-              createdBy: user()?.id || 'demo-user',
-              nodeCount: 8,
-              tags: ['automation', 'onboarding', 'customer']
-            },
-            collaborators: [],
-            forkedFrom: undefined
-          },
-          {
-            id: 'sample-workflow-2',
-            name: 'Data Analysis Pipeline',
-            description: 'Automated data processing and analysis workflow with reporting features',
-            context: 'shared',
-            isPublic: true,
-            version: '2.1.0',
-            stats: {
-              starCount: 28,
-              forkCount: 7,
-              usageCount: 156,
-              lastUsed: '2024-01-20T14:30:00Z'
-            },
-            metadata: {
-              createdAt: '2023-12-10T09:00:00Z',
-              updatedAt: '2024-01-20T14:30:00Z',
-              createdBy: 'org-admin',
-              nodeCount: 15,
-              tags: ['data', 'analytics', 'reporting', 'template']
-            },
-            collaborators: [],
-            forkedFrom: undefined
-          }
-        ];
+        console.error('Failed to load workflows from KV store:', apiErr);
+        // Return empty array - UI should show "create your first workflow" state
+        workflowSummaries = [];
       }
 
       setWorkflows(workflowSummaries);
@@ -433,6 +400,12 @@ export const WorkflowProvider: ParentComponent = (props) => {
           name: 'Untitled Workflow',
           description: 'A new workflow ready to be built',
           organizationId: currentOrganization()?.id || 'demo-org',
+          createdBy: user()?.id || 'demo-user',
+          isPublic: false,
+          context: 'user',
+          stats: { forkCount: 0, starCount: 0, usageCount: 0 },
+          versionHistory: [],
+          topics: [],
           collaborators: [{
             userId: user()?.id || 'demo-user',
             email: user()?.email || 'demo@example.com',
@@ -500,7 +473,7 @@ export const WorkflowProvider: ParentComponent = (props) => {
         versionHistory: [],
         tags: workflow.metadata.tags,
         topics: [],
-        forkedFrom: workflow.forkedFrom
+        forkedFrom: workflow.forkedFrom ? { ...workflow.forkedFrom, version: workflow.version } : undefined
       };
 
       setCurrentWorkflow(metadata);
@@ -532,42 +505,45 @@ export const WorkflowProvider: ParentComponent = (props) => {
         } else {
           // No saved workflow found - this is a new workflow, use sample nodes
           console.log('📝 New workflow - initializing with sample nodes');
-          const sampleNodes = [
+          const sampleNodes: WorkflowNode[] = [
             {
               id: 'sample-trigger-1',
               type: 'trigger',
-              x: 100,
-              y: 100,
-              inputs: [],
-              outputs: ['output'],
-              config: { triggerType: 'manual' },
-              title: 'Start Process',
-              description: 'Manual trigger to start the workflow',
-              enabled: true
+              position: { x: 100, y: 100 },
+              data: {
+                inputs: [],
+                outputs: ['output'],
+                config: { triggerType: 'manual' },
+                title: 'Start Process',
+                description: 'Manual trigger to start the workflow',
+                enabled: true
+              }
             },
             {
               id: 'sample-process-1',
               type: 'lead-qualification',
-              x: 300,
-              y: 100,
-              inputs: ['input'],
-              outputs: ['qualified', 'unqualified'],
-              config: { criteria: 'basic qualification' },
-              title: 'Qualify Lead',
-              description: 'Evaluate and qualify incoming leads',
-              enabled: true
+              position: { x: 300, y: 100 },
+              data: {
+                inputs: ['input'],
+                outputs: ['qualified', 'unqualified'],
+                config: { criteria: 'basic qualification' },
+                title: 'Qualify Lead',
+                description: 'Evaluate and qualify incoming leads',
+                enabled: true
+              }
             },
             {
               id: 'sample-action-1',
               type: 'email',
-              x: 500,
-              y: 50,
-              inputs: ['input'],
-              outputs: ['sent', 'failed'],
-              config: { template: 'welcome-email' },
-              title: 'Send Welcome Email',
-              description: 'Send welcome email to qualified leads',
-              enabled: true
+              position: { x: 500, y: 50 },
+              data: {
+                inputs: ['input'],
+                outputs: ['sent', 'failed'],
+                config: { template: 'welcome-email' },
+                title: 'Send Welcome Email',
+                description: 'Send welcome email to qualified leads',
+                enabled: true
+              }
             }
           ];
 
@@ -834,6 +810,83 @@ export const WorkflowProvider: ParentComponent = (props) => {
     });
   };
 
+  /**
+   * Load workflow from JSON (AI-generated or programmatic)
+   * Creates a new workflow with the provided data
+   */
+  const loadWorkflowFromJSON = async (workflowJson: any): Promise<void> => {
+    try {
+      const currentUser = auth.user();
+      const currentOrg = sidebar.currentOrganization();
+
+      if (!currentUser || !currentOrg) {
+        error('User or organization not found');
+        return;
+      }
+
+      // Generate a new workflow ID
+      const newWorkflowId = `workflow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Create workflow metadata
+      const metadata: WorkflowMetadata = {
+        id: newWorkflowId,
+        name: workflowJson.name || 'AI Generated Workflow',
+        description: workflowJson.description || 'Generated by AI',
+        organizationId: currentOrg.id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: currentUser.id,
+        version: '1.0.0',
+        status: 'draft',
+        visibility: 'private',
+        category: workflowJson.category || 'general',
+        collaborators: [{
+          userId: currentUser.id,
+          email: currentUser.email,
+          name: currentUser.name,
+          avatar: currentUser.avatar || '',
+          role: 'owner',
+          addedAt: new Date().toISOString(),
+          addedBy: currentUser.id,
+          status: 'accepted'
+        }],
+        permissions: {
+          canView: [currentUser.id],
+          canEdit: [currentUser.id],
+          canDelete: [currentUser.id],
+          canShare: [currentUser.id]
+        },
+        metadata: {
+          aiGenerated: true,
+          generatedAt: new Date().toISOString(),
+          triggerCount: 0,
+          successRate: 0,
+          avgExecutionTime: 0,
+          lastExecutedAt: undefined,
+          forkCount: 0,
+          starCount: 0,
+          usageCount: 0
+        },
+        versionHistory: [],
+        tags: workflowJson.tags || [],
+        topics: workflowJson.topics || []
+      };
+
+      // Set the workflow and its data
+      setCurrentWorkflow(metadata);
+      setCurrentNodes(workflowJson.nodes || []);
+      setCurrentConnections(workflowJson.connections || []);
+      setHasUnsavedChanges(true);
+
+      success(`AI-generated workflow loaded: ${metadata.name}`);
+      console.log('✨ Loaded AI-generated workflow:', { metadata, nodes: workflowJson.nodes, connections: workflowJson.connections });
+    } catch (err: any) {
+      console.error('Failed to load workflow from JSON:', err);
+      error(`Failed to load workflow: ${err.message || 'Invalid workflow data'}`);
+      throw err;
+    }
+  };
+
   // Undo/Redo operations
   const undo = () => {
     const workflow = currentWorkflow();
@@ -948,6 +1001,7 @@ export const WorkflowProvider: ParentComponent = (props) => {
     saveWorkflow,
     createNewWorkflow,
     importWorkflow,
+    loadWorkflowFromJSON,
     undo,
     redo,
     canUndo,

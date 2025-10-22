@@ -7,13 +7,16 @@ The Events panel now supports **context-aware notifications** that automatically
 ## 🔄 How Context Switching Works
 
 ### 1. User Switches Context
+
 User selects organization from dropdown or switches to personal context:
+
 ```typescript
 // OrganizationContext updates currentOrganization()
 setCurrentOrganization(selectedOrg); // or null for personal
 ```
 
 ### 2. Events.tsx Reacts Automatically
+
 ```typescript
 // Re-subscribe when context changes (personal ↔ organizational)
 createEffect(() => {
@@ -34,6 +37,7 @@ createEffect(() => {
 ```
 
 ### 3. Backend Filters Events by Context
+
 ```typescript
 // EventsHandler.matchesSubscription() in dashboard-server
 private static matchesSubscription(event: EventMessage, subscription: EventSubscription): boolean {
@@ -52,6 +56,7 @@ private static matchesSubscription(event: EventMessage, subscription: EventSubsc
 ```
 
 ### 4. WebSocket Subscription with Context
+
 ```typescript
 sendMessage({
   type: 'subscribe_events',
@@ -81,10 +86,12 @@ The Events panel now displays the current context at the top:
 ```
 
 **Personal Context**:
+
 - Badge shows: `Personal (Your personal events)`
 - Filters: `organizationId = null`
 
 **Organizational Context**:
+
 - Badge shows: `[Org Name] (Organization events)`
 - Filters: `organizationId = 'org-id'`
 
@@ -125,12 +132,14 @@ if (subscription.organizationId) {
 ## 📋 Event Types by Context
 
 ### Personal Context Events
+
 - `user.workflow.started`
 - `user.integration.connected`
 - `user.mcp.tool.executed`
 - `user.agent.task.completed`
 
 ### Organizational Context Events
+
 - `org.workflow.started`
 - `org.integration.connected`
 - `org.team.member.added`
@@ -140,18 +149,21 @@ if (subscription.organizationId) {
 ## 🎨 UI/UX Features
 
 ### Auto-Refresh on Context Switch
+
 - ✅ Historical events reload
 - ✅ Analytics dashboard updates
 - ✅ WebSocket re-subscribes with new filters
 - ✅ Event count badges update
 
 ### Visual Feedback
+
 - ✅ Context badge shows current context
 - ✅ Loading spinner during context switch
 - ✅ Toast notification: "Switched to [Context]"
 - ✅ Event list smoothly updates
 
 ### Filter Persistence
+
 - ❌ Search query clears on context switch
 - ❌ Priority/source filters clear on context switch
 - 💡 **Future**: Persist filters per context in localStorage
@@ -206,6 +218,7 @@ if (subscription.organizationId) {
 ## 🚀 Usage Examples
 
 ### Example 1: Developer Workflow
+
 ```
 1. User in Personal context
    - Sees: personal workflow executions, dev tool usage
@@ -218,6 +231,7 @@ if (subscription.organizationId) {
 ```
 
 ### Example 2: Admin Monitoring
+
 ```
 1. Admin in "Acme Corp" context
    - Sees: all org events (admin role = full access)
@@ -227,6 +241,7 @@ if (subscription.organizationId) {
 ```
 
 ### Example 3: Multi-Org User
+
 ```
 1. User belongs to: Personal, Acme Corp, Beta Inc
    - Switch between 3 contexts seamlessly

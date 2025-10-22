@@ -1,65 +1,19 @@
 // Service Layer Index
 // Centralized exports for all service clients
 
+// Import factories and services for use in createServiceContainer
+import { HTTPService, createHTTPService } from './HTTPService';
+import { MCPService, createMCPService } from './MCPService';
+import { WorkflowStorageService, createWorkflowStorageService } from './WorkflowStorageService';
+import { GoogleAnalyticsService, createGoogleAnalyticsService } from './GoogleAnalyticsService';
+import { TrelloService, createTrelloService } from './TrelloService';
+
 // Core service exports
-export { GoogleAnalyticsService, GoogleAnalyticsError, createGoogleAnalyticsService } from './GoogleAnalyticsService';
-export { TrelloService, TrelloError, createTrelloService } from './TrelloService';
-export { MCPService, MCPError, createMCPService } from './MCPService';
 export { HTTPService, APIClient, HTTPError, createHTTPService } from './HTTPService';
 export { WorkflowStorageService, createWorkflowStorageService } from './WorkflowStorageService';
-
-// Type exports for Google Analytics
-export type {
-  GATopPagesParams,
-  GATopPagesResult,
-  GAPageRow,
-  GATotal,
-  GADateRange,
-  GASearchParams,
-  GASearchResult,
-  GASearchRow,
-  GAOpportunityParams,
-  GAOpportunityResult,
-  ContentOpportunity,
-  PerformanceInsight,
-  GACalendarParams,
-  GACalendarResult,
-  ContentSuggestion,
-  KeywordTarget,
-  PublishingSchedule
-} from './GoogleAnalyticsService';
-
-// Type exports for Trello
-export type {
-  TrelloCardParams,
-  TrelloCard,
-  TrelloLabel,
-  TrelloMember,
-  TrelloBoardParams,
-  TrelloBoard,
-  BoardPrefs,
-  TrelloListParams,
-  TrelloList,
-  TrelloListAddParams,
-  TrelloListResult
-} from './TrelloService';
-
-// Type exports for MCP
-export type {
-  KVGetResult,
-  KVSetParams,
-  KVSetResult,
-  Artifact,
-  ArtifactListResult,
-  ArtifactPutParams,
-  ArtifactPutResult,
-  EventSendParams,
-  EventSendResult,
-  WorkflowStartParams,
-  WorkflowResult,
-  WorkflowStatusParams,
-  WorkflowStatusResult
-} from './MCPService';
+export { MCPService, createMCPService } from './MCPService';
+export { GoogleAnalyticsService, createGoogleAnalyticsService } from './GoogleAnalyticsService';
+export { TrelloService, createTrelloService } from './TrelloService';
 
 // Type exports for HTTP
 export type {
@@ -79,39 +33,56 @@ export type {
   WorkflowImportResult
 } from './WorkflowStorageService';
 
+// Type exports for MCP Client
+export type { MCPClient } from './MCPService';
+
+// Type exports for Google Analytics
+export type {
+  GATopPagesParams,
+  GASearchConsoleParams,
+  GAContentOpportunitiesParams,
+  GAContentCalendarParams
+} from './GoogleAnalyticsService';
+
+// Type exports for Trello
+export type {
+  TrelloCreateCardParams,
+  TrelloCreateBoardParams,
+  TrelloCreateListParams
+} from './TrelloService';
+
 // Service factory functions for easy dependency injection
 export interface ServiceContainer {
-  googleAnalytics: GoogleAnalyticsService;
-  trello: TrelloService;
-  mcp: MCPService;
   http: HTTPService;
   workflowStorage: WorkflowStorageService;
+  mcp: MCPService;
+  googleAnalytics: GoogleAnalyticsService;
+  trello: TrelloService;
 }
 
 export interface ServiceConfig {
   mcpClient?: any;
-  trelloApiKey?: string;
-  trelloToken?: string;
+  httpClient?: any;
   httpTimeout?: number;
   httpRetries?: number;
   userId?: string;
 }
 
-export function createServiceContainer(config: ServiceConfig): ServiceContainer {
-  const mcpService = createMCPService(config.mcpClient);
-  
+export function createServiceContainer(config: ServiceConfig = {}): ServiceContainer {
+  const httpService = config.httpClient || createHTTPService({
+    timeout: config.httpTimeout,
+    retries: config.httpRetries
+  });
+
+  const mcpClient = config.mcpClient;
+  const mcpService = createMCPService(mcpClient);
+
   return {
-    googleAnalytics: createGoogleAnalyticsService(config.mcpClient),
-    trello: createTrelloService({ 
-      apiKey: config.trelloApiKey, 
-      token: config.trelloToken 
-    }),
+    http: httpService,
+    workflowStorage: createWorkflowStorageService(mcpService, config.userId),
     mcp: mcpService,
-    http: createHTTPService({ 
-      timeout: config.httpTimeout, 
-      retries: config.httpRetries 
-    }),
-    workflowStorage: createWorkflowStorageService(mcpService, config.userId)
+    googleAnalytics: createGoogleAnalyticsService(mcpClient),
+    trello: createTrelloService(mcpClient)
   };
 }
 
@@ -142,10 +113,7 @@ export class ServiceRegistry {
   // Setup method for common service registration
   setupDefaultServices(config: ServiceConfig): void {
     const container = createServiceContainer(config);
-    
-    this.register('googleAnalytics', container.googleAnalytics);
-    this.register('trello', container.trello);
-    this.register('mcp', container.mcp);
+
     this.register('http', container.http);
     this.register('workflowStorage', container.workflowStorage);
   }

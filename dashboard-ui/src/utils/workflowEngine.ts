@@ -3,11 +3,15 @@ import { sampleDataGenerator } from './sampleDataGenerator.js';
 
 // Simple workflow execution engine for MCP tools
 export class WorkflowEngine {
-  constructor(mcpClient, eventEmitter = null, useMockData = false, nodeRegistry = null) {
+  private mcpClient: any;
+  private executionHistory: any[];
+  private eventEmitter: ((event: any) => void) | null;
+  private nodeRegistry: any;
+
+  constructor(mcpClient: any, eventEmitter: ((event: any) => void) | null = null, nodeRegistry: any = null) {
     this.mcpClient = mcpClient;
     this.executionHistory = [];
     this.eventEmitter = eventEmitter; // Dashboard server sendMessage function
-    this.useMockData = useMockData; // Mock/dry-run mode flag
     this.nodeRegistry = nodeRegistry; // Registry with node schemas/definitions
   }
 
@@ -149,11 +153,15 @@ export class WorkflowEngine {
 
   // Get node schema from registry
   getNodeSchema(nodeType) {
-    // First check static node definitions
-    const { getNodeOutputSchema } = require('../config/nodeDefinitions');
-    const staticSchema = getNodeOutputSchema(nodeType);
-    if (staticSchema) {
-      return { outputSchema: staticSchema };
+    // First check centralized NodeRegistry
+    const { getNodeDefinition } = require('../../lib/workflow-nodes');
+    const registryNode = getNodeDefinition(nodeType);
+
+    if (registryNode) {
+      return {
+        outputSchema: registryNode.outputSchema,
+        sampleOutput: registryNode.sampleOutput
+      };
     }
 
     // If nodeRegistry provided (contains MCP tool definitions, custom nodes, etc)
@@ -165,15 +173,13 @@ export class WorkflowEngine {
       }
     }
 
-    // TODO: Also check centralized node definitions
-    // const NODE_DEFINITIONS = await import('./config/nodeDefinitions.ts');
-    // return NODE_DEFINITIONS.getNodeDefinition(nodeType);
-
     return null;
   }
 
   async executeNode(node, allNodes, context) {
-    const modeLabel = this.useMockData ? '🧪 DRY RUN' : '⚡ LIVE';
+    // Check if node is configured to use sample data (test mode)
+    const useSampleOutput = node.config?.useSampleData === true;
+    const modeLabel = useSampleOutput ? '🧪 TEST MODE' : '⚡ LIVE';
     console.log(`🔄 ${modeLabel} Executing node: ${node.type} (${node.id})`);
 
     // Emit node.state_changed → 'executing'
@@ -183,7 +189,7 @@ export class WorkflowEngine {
       nodeType: node.type,
       previousState: 'pending',
       currentState: 'executing',
-      mockMode: this.useMockData,
+      useSampleData: useSampleOutput,
       timestamp: new Date().toISOString()
     });
 
@@ -192,8 +198,8 @@ export class WorkflowEngine {
     try {
       let result;
 
-      // If dry-run mode, use sample data from node config (Zapier-style)
-      if (this.useMockData && node.type !== 'trigger') {
+      // If node configured for sample data, use sample output (Zapier-style test mode)
+      if (useSampleOutput && node.type !== 'trigger') {
         await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300)); // Simulate processing
         result = this.useSampleData(node);
       } else {
@@ -383,22 +389,6 @@ export class WorkflowEngine {
           break;
 
         // Task Management nodes
-        case 'trello-create-card':
-          result = await this.createTrelloCard(node.config, context);
-          break;
-
-        case 'trello-create-board':
-          result = await this.createTrelloBoard(node.config, context);
-          break;
-
-        case 'trello-add-to-list':
-          result = await this.addToTrelloList(node.config, context);
-          break;
-
-        case 'trello-get-boards':
-          result = await this.getTrelloBoards(node.config, context);
-          break;
-
         case 'task-scheduler':
           result = this.scheduleTask(node.config, context);
           break;
@@ -527,10 +517,10 @@ export class WorkflowEngine {
     }
   }
 
-  filterData(data, filterExpression) {
+  filterData(data: any, filterExpression: string) {
     try {
       if (Array.isArray(data)) {
-        const func = new Function('item', 'index', `return ${filterExpression};`);
+        const func = new Function('item', 'index', `return ${filterExpression};`) as (item: any, index: number) => boolean;
         return data.filter(func);
       }
       return data;
@@ -569,7 +559,7 @@ export class WorkflowEngine {
         ...context.data?.headers
       };
       
-      const requestOptions = {
+      const requestOptions: RequestInit = {
         method,
         headers
       };
@@ -737,90 +727,6 @@ export class WorkflowEngine {
   }
 
   // Task Management helper methods
-  async createTrelloCard(config, context) {
-    try {
-      const cardData = {
-        name: config?.title || context.data?.title || 'New Card',
-        desc: config?.description || context.data?.description || '',
-        due: config?.dueDate || context.data?.dueDate,
-        idList: config?.listId || context.data?.listId
-      };
-
-      console.log(`📋 Creating Trello card: ${cardData.name}`);
-      
-      // In a real implementation, this would call Trello API
-      return {
-        id: `card_${Date.now()}`,
-        name: cardData.name,
-        desc: cardData.desc,
-        due: cardData.due,
-        url: `https://trello.com/c/simulated_${Date.now()}`,
-        status: 'created'
-      };
-    } catch (error) {
-      console.error('❌ Trello card creation failed:', error);
-      return { error: error.message, status: 'failed' };
-    }
-  }
-
-  async createTrelloBoard(config, context) {
-    try {
-      const boardName = config?.name || context.data?.boardName || 'New Board';
-      
-      console.log(`📊 Creating Trello board: ${boardName}`);
-      
-      return {
-        id: `board_${Date.now()}`,
-        name: boardName,
-        url: `https://trello.com/b/simulated_${Date.now()}`,
-        lists: ['To Do', 'Doing', 'Done'],
-        status: 'created'
-      };
-    } catch (error) {
-      console.error('❌ Trello board creation failed:', error);
-      return { error: error.message, status: 'failed' };
-    }
-  }
-
-  async addToTrelloList(config, context) {
-    try {
-      const listId = config?.listId || context.data?.listId || 'default_list';
-      const cardData = context.data?.card || { name: 'New Task' };
-      
-      console.log(`➕ Adding to Trello list: ${listId}`);
-      
-      return {
-        listId,
-        cardId: `card_${Date.now()}`,
-        position: 'top',
-        status: 'added'
-      };
-    } catch (error) {
-      console.error('❌ Add to Trello list failed:', error);
-      return { error: error.message, status: 'failed' };
-    }
-  }
-
-  async getTrelloBoards(config, context) {
-    try {
-      console.log('📋 Fetching Trello boards');
-      
-      // Simulated boards data
-      return {
-        boards: [
-          { id: 'board_1', name: 'Content Calendar', url: 'https://trello.com/b/example1' },
-          { id: 'board_2', name: 'Marketing Tasks', url: 'https://trello.com/b/example2' },
-          { id: 'board_3', name: 'SEO Strategy', url: 'https://trello.com/b/example3' }
-        ],
-        status: 'success',
-        count: 3
-      };
-    } catch (error) {
-      console.error('❌ Fetch Trello boards failed:', error);
-      return { error: error.message, status: 'failed' };
-    }
-  }
-
   scheduleTask(config, context) {
     try {
       const task = config?.task || context.data?.task || 'Scheduled task';

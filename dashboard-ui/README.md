@@ -59,6 +59,7 @@ To prevent z-index conflicts, we follow a consistent layering system:
 ```
 
 **Usage Guidelines:**
+
 - Use CSS custom properties: `z-index: var(--z-floating-panels)`
 - Increment by 1 when stacking within same category: `z-index: calc(var(--z-floating-panels) + 1)`
 - Never exceed 1000 except for true emergencies
@@ -74,6 +75,7 @@ To prevent z-index conflicts, we follow a consistent layering system:
 ## MCP Integration
 
 The dashboard communicates with the MCP server via:
+
 - REST API endpoints (`/mcp`, `/api`, `/info`, `/health`)
 - WebSocket connections (planned)
 - Real-time status updates
@@ -81,6 +83,7 @@ The dashboard communicates with the MCP server via:
 ## Building
 
 The build process creates optimized static files that can be:
+
 - Served by the MCP HTTP server
 - Deployed to any static hosting service
 - Integrated into existing applications

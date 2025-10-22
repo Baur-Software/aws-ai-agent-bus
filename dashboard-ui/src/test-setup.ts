@@ -158,41 +158,47 @@ vi.mock('./contexts/KVStoreContext', () => ({
   KVStoreProvider: ({ children }: { children: any }) => children
 }));
 
-vi.mock('./contexts/OrganizationContext', () => ({
-  useOrganization: () => ({
-    user: () => ({
-      id: 'test-user',
-      email: 'test@example.com',
-      name: 'Test User',
-      organizations: [],
-      currentOrganizationId: 'test-org'
+vi.mock('./contexts/OrganizationContext', () => {
+  const { createContext } = require('solid-js');
+  const MockOrganizationContext = createContext();
+
+  return {
+    default: MockOrganizationContext,
+    useOrganization: () => ({
+      user: () => ({
+        id: 'test-user',
+        email: 'test@example.com',
+        name: 'Test User',
+        organizations: [],
+        currentOrganizationId: 'test-org'
+      }),
+      currentOrganization: () => ({
+        id: 'test-org',
+        name: 'Test Org',
+        slug: 'test-org',
+        workspaceType: 'medium',
+        description: 'Test organization',
+        memberCount: 1,
+        role: 'owner' as const,
+        createdAt: new Date().toISOString()
+      }),
+      organizations: () => [],
+      switchOrganization: () => {},
+      createOrganization: vi.fn().mockResolvedValue({
+        id: 'new-org',
+        name: 'New Org',
+        slug: 'new-org',
+        memberCount: 1,
+        role: 'owner' as const,
+        createdAt: new Date().toISOString()
+      }),
+      updateOrganization: vi.fn().mockResolvedValue(undefined),
+      loading: () => false,
+      error: () => null
     }),
-    currentOrganization: () => ({
-      id: 'test-org',
-      name: 'Test Org',
-      slug: 'test-org',
-      workspaceType: 'medium',
-      description: 'Test organization',
-      memberCount: 1,
-      role: 'owner' as const,
-      createdAt: new Date().toISOString()
-    }),
-    organizations: () => [],
-    switchOrganization: () => {},
-    createOrganization: vi.fn().mockResolvedValue({
-      id: 'new-org',
-      name: 'New Org',
-      slug: 'new-org',
-      memberCount: 1,
-      role: 'owner' as const,
-      createdAt: new Date().toISOString()
-    }),
-    updateOrganization: vi.fn().mockResolvedValue(undefined),
-    loading: () => false,
-    error: () => null
-  }),
-  OrganizationProvider: ({ children }: { children: any }) => children
-}));
+    OrganizationProvider: ({ children }: { children: any }) => children
+  };
+});
 
 vi.mock('./contexts/NotificationContext', () => ({
   useNotifications: () => ({

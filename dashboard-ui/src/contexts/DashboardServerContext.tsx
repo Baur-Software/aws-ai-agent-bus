@@ -40,6 +40,9 @@ interface DashboardServerContextValue {
     send: (detailType: string, detail: Record<string, any>, source?: string) => Promise<any>;
   };
 
+  // AI Data Reshaping
+  reshapeData: (data: any, prompt: string, chartType?: string) => Promise<any>;
+
   // Event handlers
   onOrganizationSwitched: (callback: (data: any) => void) => () => void;
   onMetricsUpdate: (callback: (data: any) => void) => () => void;
@@ -265,7 +268,7 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
       const timeout = setTimeout(() => {
         pendingRequests.delete(messageId);
         reject(new Error(`Request '${message.type}' timed out`));
-      }, 15000); // 15 second timeout
+      }, 15000) as unknown as number; // 15 second timeout (cast for browser compat)
 
       // Store the pending request
       pendingRequests.set(messageId, {
@@ -358,6 +361,25 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
             console.error('Error in activity update callback:', error);
           }
         });
+        break;
+
+      case 'event_stream':
+        // Handle real-time events from EventBridge
+        if (message.event) {
+          activityUpdateCallbacks().forEach(callback => {
+            try {
+              // Transform EventBridge format to activity format
+              callback({
+                type: message.event.detailType || message.event['detail-type'],
+                ...message.event.detail,
+                eventId: message.event.eventId,
+                timestamp: message.event.timestamp
+              });
+            } catch (error) {
+              console.error('Error in event stream callback:', error);
+            }
+          });
+        }
         break;
 
       case 'auth_error':
@@ -487,11 +509,11 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
     return new Promise((resolve, reject) => {
       const messageId = `mcp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // Set up timeout (30 seconds for MCP tools to handle slow operations)
+      // Set up timeout (5 seconds for quick feedback, critical calls can retry)
       const timeout = setTimeout(() => {
         pendingRequests.delete(messageId);
-        reject(new Error(`MCP tool call '${tool}' timed out after 30s`));
-      }, 30000);
+        reject(new Error(`MCP tool call '${tool}' timed out after 5s - check MCP server connection`));
+      }, 5000) as unknown as number;
 
       // Store the pending request
       pendingRequests.set(messageId, { resolve, reject, timeout });
@@ -561,6 +583,22 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
     send: (detailType: string, detail: Record<string, any>, source: string = 'dashboard') => executeToolSafely('events_send', { detailType, detail, source }),
   };
 
+  // AI Data Reshaping
+  const reshapeData = async (data: any, prompt: string, chartType?: string): Promise<any> => {
+    return sendMessageWithResponse({
+      type: 'reshape_data',
+      data: {
+        data,
+        prompt,
+        chartType
+      }
+    }).then(response => {
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    });
+  };
 
   // Event subscription methods
   const onOrganizationSwitched = (callback: (data: any) => void) => {
@@ -646,6 +684,9 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
     kvStore,
     artifacts,
     events,
+
+    // AI Data Reshaping
+    reshapeData,
 
     // Event handlers
     onOrganizationSwitched,

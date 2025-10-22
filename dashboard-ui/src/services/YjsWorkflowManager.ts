@@ -47,7 +47,7 @@ export interface AgentExecutionTask {
 export class YjsWorkflowManager {
   private ydoc: Y.Doc;
   private indexeddbProvider?: IndexeddbPersistence;
-  private wsProvider?: WebsocketProvider;
+  public wsProvider?: WebsocketProvider; // Public for external cleanup
 
   // Shared data structures
   public nodes: Y.Map<WorkflowNode>;

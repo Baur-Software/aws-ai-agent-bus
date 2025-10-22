@@ -1,0 +1,313 @@
+{
+  "version": "1.0",
+  "created": "2025-10-11T00:00:00Z",
+  "name": "CI/CD Pipeline Visualizer",
+  "description": "Connect to GitHub and visualize your pipeline as a live execution diagram. Watch builds, tests, and deployments in real-time on the canvas. Execute pipelines on demand.",
+  "nodes": [
+    {
+      "id": "github-webhook-1",
+      "type": "webhook",
+      "x": 50,
+      "y": 200,
+      "inputs": [],
+      "outputs": ["push", "pr", "release"],
+      "config": {
+        "name": "GitHub Webhook Receiver",
+        "description": "Receives GitHub events",
+        "webhookUrl": "/webhooks/github",
+        "secret": "{{GITHUB_WEBHOOK_SECRET}}",
+        "events": ["push", "pull_request", "release"]
+      }
+    },
+    {
+      "id": "parse-event-1",
+      "type": "json-parse",
+      "x": 250,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "extractFields": [
+          "repository.name",
+          "repository.full_name",
+          "ref",
+          "commits",
+          "pull_request",
+          "release"
+        ]
+      }
+    },
+    {
+      "id": "determine-action-1",
+      "type": "switch",
+      "x": 450,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["build", "test", "deploy"],
+      "config": {
+        "variable": "eventType",
+        "cases": [
+          {
+            "value": "push",
+            "output": "build",
+            "condition": "ref.includes('main') || ref.includes('master')"
+          },
+          {
+            "value": "pull_request",
+            "output": "test",
+            "condition": "pull_request.state === 'open'"
+          },
+          {
+            "value": "release",
+            "output": "deploy",
+            "condition": "release.prerelease === false"
+          }
+        ]
+      }
+    },
+    {
+      "id": "build-app-1",
+      "type": "github-action-run",
+      "x": 650,
+      "y": 100,
+      "inputs": ["input"],
+      "outputs": ["success", "failure"],
+      "config": {
+        "workflow": "build.yml",
+        "liveStatusUpdate": true,
+        "showLogs": true,
+        "displayOnCanvas": {
+          "showProgress": true,
+          "showLogs": true,
+          "showArtifacts": true
+        }
+      }
+    },
+    {
+      "id": "run-tests-1",
+      "type": "github-action-run",
+      "x": 650,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["success", "failure"],
+      "config": {
+        "workflow": "test.yml",
+        "liveStatusUpdate": true,
+        "showLogs": true,
+        "displayOnCanvas": {
+          "showProgress": true,
+          "showTestResults": true,
+          "showCoverage": true
+        }
+      }
+    },
+    {
+      "id": "deploy-app-1",
+      "type": "github-action-run",
+      "x": 650,
+      "y": 300,
+      "inputs": ["input"],
+      "outputs": ["success", "failure"],
+      "config": {
+        "workflow": "deploy.yml",
+        "liveStatusUpdate": true,
+        "showLogs": true,
+        "displayOnCanvas": {
+          "showProgress": true,
+          "showDeploymentUrl": true,
+          "showHealthChecks": true
+        }
+      }
+    },
+    {
+      "id": "create-status-1",
+      "type": "github-create-status",
+      "x": 850,
+      "y": 100,
+      "inputs": ["build-success"],
+      "outputs": ["output"],
+      "config": {
+        "state": "success",
+        "context": "continuous-integration/build",
+        "description": "Build completed successfully",
+        "targetUrl": "{{buildUrl}}"
+      }
+    },
+    {
+      "id": "create-pr-comment-1",
+      "type": "github-create-comment",
+      "x": 850,
+      "y": 200,
+      "inputs": ["test-success"],
+      "outputs": ["output"],
+      "config": {
+        "body": "✅ All tests passed!\\n\\n**Coverage**: {{coverage}}%\\n**Duration**: {{duration}}\\n\\n[View detailed results]({{testReportUrl}})"
+      }
+    },
+    {
+      "id": "create-deployment-1",
+      "type": "github-create-deployment",
+      "x": 850,
+      "y": 300,
+      "inputs": ["deploy-success"],
+      "outputs": ["output"],
+      "config": {
+        "environment": "production",
+        "description": "Automated deployment from release",
+        "autoMerge": false,
+        "requiredContexts": ["continuous-integration/build", "continuous-integration/test"]
+      }
+    },
+    {
+      "id": "send-slack-notification-1",
+      "type": "slack-message",
+      "x": 1050,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "channel": "#deployments",
+        "message": "🚀 **Deployment Complete**\\n\\nRepository: {{repository}}\\nEnvironment: production\\nCommit: {{commitSha}}\\nDeployment URL: {{deploymentUrl}}\\n\\nTriggered by: {{actor}}"
+      }
+    },
+    {
+      "id": "update-dashboard-1",
+      "type": "events-send",
+      "x": 1050,
+      "y": 100,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "detailType": "Pipeline.Completed",
+        "detail": {
+          "repository": "{{repository}}",
+          "ref": "{{ref}}",
+          "commitSha": "{{commitSha}}",
+          "buildStatus": "{{buildStatus}}",
+          "testStatus": "{{testStatus}}",
+          "deploymentStatus": "{{deploymentStatus}}",
+          "duration": "{{totalDuration}}",
+          "timestamp": "{{timestamp}}"
+        }
+      }
+    },
+    {
+      "id": "store-pipeline-metrics-1",
+      "type": "kv-set",
+      "x": 1050,
+      "y": 300,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "key": "pipeline-metrics-{{repository}}-{{date}}",
+        "useContextData": true,
+        "ttl_hours": 2160
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "github-webhook-1",
+      "to": "parse-event-1",
+      "fromOutput": "push",
+      "toInput": "input"
+    },
+    {
+      "from": "github-webhook-1",
+      "to": "parse-event-1",
+      "fromOutput": "pr",
+      "toInput": "input"
+    },
+    {
+      "from": "github-webhook-1",
+      "to": "parse-event-1",
+      "fromOutput": "release",
+      "toInput": "input"
+    },
+    {
+      "from": "parse-event-1",
+      "to": "determine-action-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "determine-action-1",
+      "to": "build-app-1",
+      "fromOutput": "build",
+      "toInput": "input"
+    },
+    {
+      "from": "determine-action-1",
+      "to": "run-tests-1",
+      "fromOutput": "test",
+      "toInput": "input"
+    },
+    {
+      "from": "determine-action-1",
+      "to": "deploy-app-1",
+      "fromOutput": "deploy",
+      "toInput": "input"
+    },
+    {
+      "from": "build-app-1",
+      "to": "create-status-1",
+      "fromOutput": "success",
+      "toInput": "build-success"
+    },
+    {
+      "from": "run-tests-1",
+      "to": "create-pr-comment-1",
+      "fromOutput": "success",
+      "toInput": "test-success"
+    },
+    {
+      "from": "deploy-app-1",
+      "to": "create-deployment-1",
+      "fromOutput": "success",
+      "toInput": "deploy-success"
+    },
+    {
+      "from": "create-deployment-1",
+      "to": "send-slack-notification-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "create-deployment-1",
+      "to": "update-dashboard-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "create-deployment-1",
+      "to": "store-pipeline-metrics-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    }
+  ],
+  "metadata": {
+    "author": "AWS AI Agent Bus",
+    "tags": ["github", "cicd", "devops", "automation", "visualization"],
+    "category": "Infrastructure",
+    "requiredApps": ["github", "slack"],
+    "estimatedDuration": "5 minutes setup, real-time execution",
+    "difficulty": "intermediate",
+    "isTemplate": true,
+    "features": [
+      "Live pipeline execution visualization on canvas",
+      "Real-time build/test/deploy progress",
+      "Interactive logs display on nodes",
+      "GitHub status updates",
+      "Slack notifications",
+      "Pipeline metrics storage"
+    ],
+    "instructions": [
+      "Connect your GitHub account in integrations settings",
+      "Configure webhook in your GitHub repository settings",
+      "Add webhook URL: https://your-domain.com/webhooks/github",
+      "Set webhook secret in node configuration",
+      "Connect Slack for deployment notifications",
+      "Watch the canvas light up as pipeline executes!"
+    ]
+  }
+}

@@ -2,6 +2,7 @@ import { createSignal, createEffect, Show, onMount, onCleanup, JSX } from 'solid
 import { DragDropProvider, useDragDrop, useDropZone } from '../../../contexts/DragDropContext';
 import { useWorkflow } from '../../../contexts/WorkflowContext';
 import { WorkflowUIProvider, useWorkflowUI } from '../../../contexts/WorkflowUIContext';
+import { useAutoSave } from '../../../hooks/useAutoSave';
 import WorkflowCanvas from './WorkflowCanvas';
 import FloatingToolbar from '../ui/FloatingToolbar';
 import FloatingNodePanel from '../ui/FloatingNodePanel';
@@ -30,11 +31,24 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
   const setShowWorkflowBrowser = (show: boolean) => props.onSetShowWorkflowBrowser?.(show);
   const [connectedIntegrations, setConnectedIntegrations] = createSignal<string[]>([]);
   const [isPanMode, setIsPanMode] = createSignal(false);
+  const [autoSaveEnabled, setAutoSaveEnabled] = createSignal(true); // TODO: Load from user preferences
 
   // Context hooks
   const workflow = useWorkflow();
   const dragDrop = useDragDrop();
   const workflowUI = useWorkflowUI();
+
+  // Auto-save hook - watches for changes and saves automatically
+  const autoSave = useAutoSave(
+    () => ({ nodes: workflow.currentNodes(), connections: workflow.currentConnections() }),
+    {
+      enabled: autoSaveEnabled(),
+      debounceMs: 2000, // 2 second debounce
+      onSave: async () => {
+        await workflow.saveWorkflow();
+      }
+    }
+  );
 
   // Update canvas transform in drag context when canvas moves
   createEffect(() => {
@@ -72,11 +86,11 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
 
       // Add to workflow
       const currentNodes = workflow.currentNodes();
-      workflow.setNodes([...currentNodes, newNode]);
+      workflow.setNodes([...currentNodes, newNode as any]);
       workflow.setHasUnsavedChanges(true);
 
       // Select the new node
-      workflowUI.setSelectedNode(newNode);
+      workflowUI.setSelectedNode(newNode as any);
 
       return true;
     }
@@ -209,7 +223,7 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
 
   // Canvas view controls
   const handleToggleGrid = () => {
-    workflowUI.setGridMode(current => {
+    workflowUI.setGridMode((current: 'grid' | 'off' | 'dots') => {
       switch (current) {
         case 'off': return 'grid';
         case 'grid': return 'dots';
@@ -220,7 +234,7 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
   };
 
   const handleToggleGridOff = () => {
-    workflowUI.setGridMode(current => current === 'off' ? 'grid' : 'off');
+    workflowUI.setGridMode((current: 'grid' | 'off' | 'dots') => current === 'off' ? 'grid' : 'off');
   };
 
 
@@ -243,16 +257,16 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
       >
         {/* Canvas component for nodes and connections */}
         <WorkflowCanvas
-          nodes={workflow.currentNodes()}
-          setNodes={workflow.setNodes}
-          connections={workflow.currentConnections()}
-          setConnections={workflow.setConnections}
+          nodes={workflow.currentNodes() as any}
+          setNodes={workflow.setNodes as any}
+          connections={workflow.currentConnections() as any}
+          setConnections={workflow.setConnections as any}
           selectedNode={workflowUI.selectedNode()}
           setSelectedNode={workflowUI.setSelectedNode}
           showWelcome={false}
           onCreateNew={async () => {
             const newId = await workflow.createNewWorkflow();
-            props.onCreateNewWorkflow?.();
+            (props as any).onCreateNewWorkflow?.();
           }}
           onBrowseWorkflows={() => setShowWorkflowBrowser(true)}
           gridMode={workflowUI.gridMode()}
@@ -271,8 +285,12 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
         {/* Floating Toolbar */}
         <div class="pointer-events-auto">
             <FloatingToolbar
-              onSave={workflow.saveWorkflow}
+              onSave={autoSave.forceSave}
               onLoad={workflow.importWorkflow}
+              autoSaveEnabled={autoSaveEnabled()}
+              onToggleAutoSave={() => setAutoSaveEnabled(!autoSaveEnabled())}
+              isSaving={autoSave.isSaving()}
+              lastSaved={autoSave.lastSaved()}
               onRun={() => {
                 // TODO: Implement workflow execution
                 console.log('Running workflow...');
@@ -301,24 +319,8 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
               initialPosition={workflowUI.toolbarPosition()}
               navigationPinned={props.navigationPinned}
               currentWorkflow={workflow.currentWorkflow() ? {
-                id: workflow.currentWorkflow()!.id,
-                name: workflow.currentWorkflow()!.name,
-                description: workflow.currentWorkflow()!.description,
-                version: workflow.currentWorkflow()!.version,
-                stats: workflow.currentWorkflow()!.stats || {
-                  starCount: 0,
-                  forkCount: 0,
-                  usageCount: 0
-                },
-                metadata: {
-                  createdAt: workflow.currentWorkflow()!.createdAt,
-                  updatedAt: workflow.currentWorkflow()!.updatedAt,
-                  createdBy: workflow.currentWorkflow()!.createdBy,
-                  nodeCount: workflow.currentNodes().length,
-                  tags: workflow.currentWorkflow()!.tags || []
-                },
-                forkedFrom: workflow.currentWorkflow()!.forkedFrom
-              } : undefined}
+                ...workflow.currentWorkflow()!
+              } as any : undefined}
               onWorkflowRename={props.onWorkflowRename}
             />
         </div>
@@ -331,8 +333,8 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
                 console.log('Node drag started:', nodeType);
                 // The actual drag is handled by the DragDropContext
               }}
-              connectedIntegrations={connectedIntegrations()}
-              onConnectIntegration={(integration) => {
+              connectedApps={connectedIntegrations()}
+              onConnectApp={(integration) => {
                 window.location.href = `/settings?connect=${integration}`;
               }}
               onPositionChange={(x, y) => workflowUI.setNodePanelPosition({ x, y })}
@@ -341,9 +343,9 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
               onNodeUpdate={(updatedNode) => {
                 const currentNodes = workflow.currentNodes();
                 workflow.setNodes(
-                  currentNodes.map(n => n.id === updatedNode.id ? updatedNode : n)
+                  currentNodes.map(n => n.id === updatedNode.id ? { ...n, ...updatedNode } : n)
                 );
-                workflowUI.setSelectedNode(updatedNode);
+                workflowUI.setSelectedNode(null); // Clear selection after save
                 workflow.setHasUnsavedChanges(true);
               }}
               availableModels={['claude-3-sonnet', 'claude-3-haiku', 'gpt-4', 'gpt-3.5-turbo']}

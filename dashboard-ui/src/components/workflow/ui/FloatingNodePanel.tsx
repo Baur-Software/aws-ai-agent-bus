@@ -1,12 +1,25 @@
 import { createSignal, createEffect, Show, For, onMount } from 'solid-js';
 import { Search, GripVertical, X, Pin, PinOff, Plus, Sparkles, ArrowLeft, ChartColumn, Globe, CreditCard, Shield, Users, Building, Square, Circle, Triangle, ArrowRight, Diamond, Hexagon, Star, Heart, Settings, RefreshCw } from 'lucide-solid';
+// Data visualization nodes
+import {
+  ChartNodeConfig,
+  DEFAULT_CHART_CONFIG,
+  TableNodeConfig,
+  DEFAULT_TABLE_CONFIG,
+  MetricsNodeConfig,
+  DEFAULT_METRICS_CONFIG,
+  isDataVisNode,
+  type ChartConfig,
+  type TableConfig,
+  type MetricsConfig
+} from '@ai-agent-bus/datavis-nodes';
 import { useDashboardServer } from '../../../contexts/DashboardServerContext';
 import { useDragDrop, useDragSource } from '../../../contexts/DragDropContext';
 import { useIntegrations } from '../../../contexts/IntegrationsContext';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useNotifications } from '../../../contexts/NotificationContext';
 import { useArtifactService } from '../../../services/ArtifactService';
 import { useAgentDefinitionService } from '../../../services/AgentDefinitionService';
-import { listAgents } from '../../../api/agents'; // new API import
 import IntegrationsGrid from '../../IntegrationsGrid';
 import { mcpRegistry } from '../../../services/MCPCapabilityRegistry';
 import { agentRegistryInitializer } from '../../../services/AgentRegistryInitializer';
@@ -15,8 +28,14 @@ import { CreateAgentWizard } from '../../CreateAgentWizard';
 import { Agent } from 'http';
 import { WorkflowNode } from './WorkflowNodeDetails';
 import { useNavigate } from '@solidjs/router';
-import { NODE_DEFINITIONS } from '../../../config/nodeDefinitions';
 import NodeConfigRenderer from './NodeConfigRenderer';
+import { useFloatingPanelResize } from '../../../hooks/useFloatingPanelResize';
+import {
+  getAllNodes,
+  getNodesByCategory,
+  getNodeDefinition as getRegistryNodeDefinition,
+  type NodeDefinition as RegistryNodeDefinition
+} from '@ai-agent-bus/workflow-nodes';
 
 interface FloatingNodePanelProps {
   onDragStart: (nodeType: string, e: DragEvent) => void;
@@ -47,6 +66,18 @@ interface NodeCategory {
   }[];
 }
 
+interface GroupCustomization {
+  displayName?: string; // Custom display name for the group
+  icon?: string; // Custom emoji icon for the group
+}
+
+interface PanelSettings {
+  agentGroupOrder: string[]; // Array of group names in desired order
+  collapsedGroups: string[]; // Array of collapsed group names
+  hiddenGroups: string[]; // Array of hidden group names
+  groupCustomizations: Record<string, GroupCustomization>; // Custom names and icons per group
+}
+
 export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   // Calculate initial position that avoids toolbar collision
   const getSafeInitialPosition = () => {
@@ -64,7 +95,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   const [isResizing, setIsResizing] = createSignal(false);
   const [panelWidth, setPanelWidth] = createSignal(320);
   const [panelHeight, setPanelHeight] = createSignal(400);
-  const [activeCategory, setActiveCategory] = createSignal('ai-agents');
+  const [activeCategory, setActiveCategory] = createSignal('all');
   const [searchQuery, setSearchQuery] = createSignal('');
   const [isVisible, setIsVisible] = createSignal(true);
   const [isPinned, setIsPinned] = createSignal(props.initialPinned ?? true);
@@ -78,51 +109,39 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   const [agentSpecialty, setAgentSpecialty] = createSignal('');
   const [showConnectedApps, setShowConnectedApps] = createSignal(false);
   const [currentView, setCurrentView] = createSignal<'nodes' | 'details'>('nodes');
+  const [showPanelSettings, setShowPanelSettings] = createSignal(false);
+  const [panelSettings, setPanelSettings] = createSignal<PanelSettings>({
+    agentGroupOrder: [],
+    collapsedGroups: [],
+    hiddenGroups: [],
+    groupCustomizations: {}
+  });
+
+  // Show details if there's a selected node OR user manually navigated to details
+  const showingDetails = () => (props.selectedNode !== null && props.selectedNode !== undefined) || currentView() === 'details';
   const [agents, setAgents] = createSignal<Agent[]>([]);
   const [mcpServerTools, setMcpServerTools] = createSignal<MCPServerTools[]>([]);
   const [loadingMcpTools, setLoadingMcpTools] = createSignal(false);
   const [availableModels, setAvailableModels] = createSignal<Array<{ id: string; name: string }>>([]);
   const navigate = useNavigate();
 
-  // Auto-switch to details view when a node is selected
-  createEffect(() => {
-    if (props.selectedNode) {
-      setCurrentView('details');
-    }
-  });
-
   // Get contexts
   const { user } = useAuth();
   const dashboardServer = useDashboardServer();
   const { callMCPTool } = dashboardServer;
   const integrations = useIntegrations();
+  const notifications = useNotifications();
   const artifactService = useArtifactService();
   const agentService = useAgentDefinitionService(artifactService, { callMCPTool });
-
-  // Fetch agents for current org/user
-  createEffect(async () => {
-    const currentUser = user();
-    if (!currentUser) return;
-
-    const ownerType = 'user'; // Start with user agents
-    const ownerId = currentUser.userId;
-    const agentList = await listAgents(ownerType, ownerId);
-    setAgents(agentList);
-  });
 
   // Generate dynamic app nodes based on connected integrations and MCP tools
   const generateDynamicAppNodes = () => {
     const connectedApps = integrations.getAllConnections();
     const dynamicNodes = [];
 
-    // TODO: Load integration configs dynamically from KV store (integration-{serviceId})
-    // For now, no dynamic nodes from integrations until we have real connections
-    // Object.entries(connectedApps).forEach(([appId, connections]) => {
-    //   if (connections.length > 0) {
-    //     // Would need to: await callMCPTool('kv_get', { key: `integration-${appId}` })
-    //     // to get workflow_capabilities, name, icon, color
-    //   }
-    // });
+    // Note: Integration configs are loaded by IntegrationsContext on startup
+    // Workflow capabilities from integrations are registered via mcpRegistry
+    // when connections are established, so we use the registry as source of truth
 
     // Add MCP app nodes from the registry
     const mcpNodes = mcpRegistry.getNodes();
@@ -184,19 +203,22 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
           'mcp-apps': organizedAgents['mcp-apps'] || []
         };
 
-        // Add any MCP app agents from the registry
+        // Add MCP app agents from the registry, grouped by app
         const mcpAgents = mcpRegistry.getAgents();
-        if (mcpAgents.length > 0 && !agentGroups['mcp-apps']) {
-          agentGroups['mcp-apps'] = [];
-        }
         mcpAgents.forEach(agent => {
-          agentGroups['mcp-apps'].push({
+          // Group by the app name (extracted from serverId)
+          const groupKey = `mcp-app-${agent.serverId}`;
+          if (!agentGroups[groupKey]) {
+            agentGroups[groupKey] = [];
+          }
+          agentGroups[groupKey].push({
             type: agent.id,
             name: agent.name,
             description: agent.description,
             icon: agent.icon,
             color: agent.color,
-            group: 'mcp-apps'
+            group: groupKey,
+            serverId: agent.serverId
           });
         });
 
@@ -274,23 +296,24 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
           }
         });
 
-        // Add MCP app agents to the groups
+        // Add MCP app agents to the groups, organized by app
         const mcpAgents = mcpRegistry.getAgents();
-        if (mcpAgents.length > 0) {
-          if (!agentGroups['mcp-apps']) {
-            agentGroups['mcp-apps'] = [];
+        mcpAgents.forEach(agent => {
+          // Group by the app name (extracted from serverId)
+          const groupKey = `mcp-app-${agent.serverId}`;
+          if (!agentGroups[groupKey]) {
+            agentGroups[groupKey] = [];
           }
-          mcpAgents.forEach(agent => {
-            agentGroups['mcp-apps'].push({
-              type: agent.id,
-              name: agent.name,
-              description: agent.description,
-              icon: agent.icon,
-              color: agent.color,
-              group: 'mcp-apps'
-            });
+          agentGroups[groupKey].push({
+            type: agent.id,
+            name: agent.name,
+            description: agent.description,
+            icon: agent.icon,
+            color: agent.color,
+            group: groupKey,
+            serverId: agent.serverId
           });
-        }
+        });
 
         setAgentNodes(agentGroups);
       } else {
@@ -323,25 +346,77 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
         'other': []
       };
 
-      // Add MCP app agents even in fallback
+      // Add MCP app agents even in fallback, grouped by app
       const mcpAgents = mcpRegistry.getAgents();
-      if (mcpAgents.length > 0) {
-        mcpAgents.forEach(agent => {
-          fallbackGroups['mcp-apps'].push({
-            type: agent.id,
-            name: agent.name,
-            description: agent.description,
-            icon: agent.icon,
-            color: agent.color,
-            group: 'mcp-apps'
-          });
+      mcpAgents.forEach(agent => {
+        // Group by the app name (extracted from serverId)
+        const groupKey = `mcp-app-${agent.serverId}`;
+        if (!fallbackGroups[groupKey]) {
+          fallbackGroups[groupKey] = [];
+        }
+        fallbackGroups[groupKey].push({
+          type: agent.id,
+          name: agent.name,
+          description: agent.description,
+          icon: agent.icon,
+          color: agent.color,
+          group: groupKey,
+          serverId: agent.serverId
         });
-      }
+      });
 
       setAgentNodes(fallbackGroups);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper to get a friendly app name from groupName (with custom name support)
+  const getAppDisplayName = (groupName: string) => {
+    // Check if there's a custom display name
+    const customization = panelSettings().groupCustomizations[groupName];
+    if (customization?.displayName) {
+      return customization.displayName;
+    }
+
+    // Default name logic
+    if (groupName.startsWith('mcp-app-')) {
+      const serverId = groupName.replace('mcp-app-', '');
+      // Try to get the actual app name from the MCP registry
+      const agents = mcpRegistry.getAgents();
+      const agent = agents.find(a => a.serverId === serverId);
+      if (agent) {
+        // Extract app name from agent name (e.g., "Google Analytics Agent" -> "Google Analytics")
+        return agent.name.replace(' Agent', '').trim();
+      }
+      // Fallback: format the serverId nicely
+      return serverId
+        .replace(/^(integration|mcp)-/, '')
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+    return groupName.replace(/-/g, ' ').replace('specialized ', 'Specialized: ');
+  };
+
+  // Helper to get group icon (with custom icon support)
+  const getGroupIcon = (groupName: string) => {
+    // Check if there's a custom icon
+    const customization = panelSettings().groupCustomizations[groupName];
+    if (customization?.icon) {
+      return customization.icon;
+    }
+
+    // Default icons based on group type
+    if (groupName.startsWith('mcp-app-')) return '🔌';
+    if (groupName.includes('orchestrators')) return '🎯';
+    if (groupName.includes('core')) return '⚙️';
+    if (groupName.includes('aws')) return '☁️';
+    if (groupName.includes('frameworks')) return '🏗️';
+    if (groupName.includes('devops')) return '🚀';
+    if (groupName.includes('integrations')) return '🔗';
+    if (groupName.includes('universal')) return '🌐';
+    return '🤖';
   };
 
   const determineAgentGroup = (agent: string) => {
@@ -400,7 +475,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
       // Use the agent delegation system to create a new agent via WebSocket
       const messageId = `create_agent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      const result = await new Promise((resolve, reject) => {
+      const result = await new Promise<{ success: boolean; agent?: any }>((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Agent creation request timed out'));
         }, 30000);
@@ -474,31 +549,9 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     }
   };
 
-  // Handle scroll events to prevent canvas scroll when over panel
-  const handlePanelWheel = (e: WheelEvent) => {
-    // Stop the scroll event from propagating to the canvas
-    e.stopPropagation();
-
-    // Find the scrollable content area
-    const target = e.currentTarget as HTMLElement;
-    const scrollableContent = target.querySelector('.overflow-y-auto');
-
-    if (scrollableContent) {
-      const { scrollTop, scrollHeight, clientHeight } = scrollableContent;
-      const isScrollingUp = e.deltaY < 0;
-      const isScrollingDown = e.deltaY > 0;
-
-      // Check if we can scroll in the intended direction
-      const canScrollUp = scrollTop > 0;
-      const canScrollDown = scrollTop < scrollHeight - clientHeight;
-
-      // Only prevent default if we can actually scroll in that direction
-      if ((isScrollingUp && canScrollUp) || (isScrollingDown && canScrollDown)) {
-        e.preventDefault();
-        scrollableContent.scrollTop += e.deltaY;
-      }
-    }
-  };
+  // Note: No custom wheel handler needed!
+  // The WorkflowCanvas already checks for .floating-panel and .overflow-y-auto in its wheel handler
+  // and returns early without zooming. This allows native browser scrolling to work correctly.
 
   // Load MCP tools from connected servers
   const loadMcpTools = async () => {
@@ -513,34 +566,98 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     }
   };
 
+  // Default models for fallback when KV store is unavailable
+  // Using same models as Agents.tsx for consistency
+  const DEFAULT_MODELS: Array<{ id: string; name: string }> = [
+    { id: 'bedrock:anthropic.claude-3-5-sonnet-20241022-v2:0', name: 'Claude 3.5 Sonnet' },
+    { id: 'bedrock:anthropic.claude-3-haiku-20240307-v1:0', name: 'Claude 3 Haiku' }
+  ];
+
   // Load available models from system configuration
   const loadAvailableModels = async () => {
     try {
       const result = await callMCPTool('kv_get', { key: 'system-available-models' });
       if (result?.value) {
         const models = JSON.parse(result.value);
-        setAvailableModels(models);
+        // If models is an array of strings, convert to objects
+        if (Array.isArray(models) && models.length > 0 && typeof models[0] === 'string') {
+          setAvailableModels(models.map((m: string) => ({ id: m, name: m.split(':').pop() || m })));
+        } else {
+          setAvailableModels(models);
+        }
       } else {
-        // Fallback: Default hosted models + common alternatives
-        setAvailableModels([
-          // Hosted Bedrock (default execution path)
-          { id: 'bedrock:anthropic.claude-3-5-sonnet-20241022-v2:0', name: 'Claude 3.5 Sonnet v2 (Default)' },
-          { id: 'bedrock:anthropic.claude-3-5-sonnet-20240620-v1:0', name: 'Claude 3.5 Sonnet' },
-          { id: 'bedrock:anthropic.claude-3-opus-20240229-v1:0', name: 'Claude 3 Opus' },
-          { id: 'bedrock:anthropic.claude-3-haiku-20240307-v1:0', name: 'Claude 3 Haiku' }
-        ]);
+        // No models in KV store, use defaults
+        setAvailableModels(DEFAULT_MODELS);
       }
     } catch (error) {
-      console.warn('Failed to load available models:', error);
-      // Use same fallback
-      setAvailableModels([
-        { id: 'bedrock:anthropic.claude-3-5-sonnet-20241022-v2:0', name: 'Claude 3.5 Sonnet v2 (Default)' },
-        { id: 'bedrock:anthropic.claude-3-5-sonnet-20240620-v1:0', name: 'Claude 3.5 Sonnet' },
-        { id: 'bedrock:anthropic.claude-3-opus-20240229-v1:0', name: 'Claude 3 Opus' },
-        { id: 'bedrock:anthropic.claude-3-haiku-20240307-v1:0', name: 'Claude 3 Haiku' }
-      ]);
+      console.error('Failed to load available models from KV store:', error);
+      // Use default models when KV store is unavailable (e.g., AWS credentials expired)
+      setAvailableModels(DEFAULT_MODELS);
+
+      // Show warning notification to user
+      notifications?.warning('Using default AI models - AWS credentials may be expired', {
+        title: 'Models Loading Failed',
+        duration: 6000
+      });
     }
   };
+
+  // Load panel settings from KV store
+  const loadPanelSettings = async () => {
+    const currentUser = user();
+    if (!currentUser?.userId) return;
+
+    try {
+      const result = await callMCPTool('kv_get', {
+        key: `user-${currentUser.userId}-workflow-panel-settings`
+      });
+
+      if (result?.value) {
+        const settings = JSON.parse(result.value) as PanelSettings;
+        setPanelSettings(settings);
+
+        // Apply collapsed groups from settings
+        setCollapsedGroups(new Set(settings.collapsedGroups || []));
+      }
+    } catch (error) {
+      console.log('No saved panel settings found, using defaults');
+    }
+  };
+
+  // Save panel settings to KV store
+  const savePanelSettings = async (settings: PanelSettings) => {
+    const currentUser = user();
+    if (!currentUser?.userId) return;
+
+    try {
+      await callMCPTool('kv_set', {
+        key: `user-${currentUser.userId}-workflow-panel-settings`,
+        value: JSON.stringify(settings),
+        ttl_hours: 8760 // 1 year
+      });
+
+      setPanelSettings(settings);
+
+      notifications?.success('Panel settings saved', {
+        duration: 2000
+      });
+    } catch (error) {
+      console.error('Failed to save panel settings:', error);
+      notifications?.error('Failed to save panel settings', {
+        duration: 3000
+      });
+    }
+  };
+
+  // Use floating panel resize hook to keep pinned panel at right edge
+  useFloatingPanelResize({
+    isPinned,
+    panelWidth,
+    onPositionChange: (x, y) => {
+      setPosition({ x, y });
+      props.onPositionChange?.(x, y);
+    }
+  });
 
   // Load agents on mount
   onMount(async () => {
@@ -551,6 +668,8 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     await loadMcpTools();
     // Load available Bedrock models
     await loadAvailableModels();
+    // Load panel settings
+    await loadPanelSettings();
   });
 
   // Panel drag handling
@@ -701,27 +820,90 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     document.addEventListener('mouseup', handleResizeUp);
   };
 
-  // Dynamic node categories that include loaded agents
+  // Dynamic node categories that include loaded agents + registry nodes
   const nodeCategories = () => {
+    const allRegistryNodes = getAllNodes();
+
+    // Convert registry nodes to FloatingPanel node format
+    const convertRegistryNode = (node: RegistryNodeDefinition) => ({
+      type: node.type,
+      name: node.name,
+      description: node.description,
+      icon: node.icon || '⚙️',
+      color: node.color || 'bg-gray-500',
+      requiresConnectedApp: node.requiresIntegration
+    });
+
+    // Group registry nodes by category
+    const triggerNodes = getNodesByCategory('triggers').map(convertRegistryNode);
+    const actionNodes = getNodesByCategory('actions').map(convertRegistryNode);
+    const logicNodes = getNodesByCategory('logic').map(convertRegistryNode);
+    const dataNodes = getNodesByCategory('data').map(convertRegistryNode);
+    const integrationNodes = getNodesByCategory('integrations').map(convertRegistryNode);
+    const aiNodes = getNodesByCategory('ai').map(convertRegistryNode);
+    const datavisNodes = getNodesByCategory('datavis').map(convertRegistryNode);
+
     const baseCategories: NodeCategory[] = [
       {
-        id: 'input-output',
-        name: 'Input/Output',
+        id: 'all',
+        name: 'All Nodes',
+        icon: '📦',
+        nodes: [] // Will be populated by filteredNodes logic
+      },
+      {
+        id: 'triggers',
+        name: 'Triggers',
         icon: '⚡',
+        nodes: triggerNodes
+      },
+      {
+        id: 'actions',
+        name: 'Actions',
+        icon: '🎯',
+        nodes: actionNodes
+      },
+      {
+        id: 'logic',
+        name: 'Logic & Control',
+        icon: '🔀',
+        nodes: logicNodes
+      },
+      {
+        id: 'data',
+        name: 'Data & Storage',
+        icon: '💾',
+        nodes: dataNodes
+      },
+      {
+        id: 'integrations',
+        name: 'Integrations',
+        icon: '🔌',
         nodes: [
-          { type: 'webhook', name: 'Webhook', description: 'HTTP webhook trigger', icon: '🔗', color: 'bg-blue-500' },
-          { type: 'schedule', name: 'Schedule', description: 'Time-based trigger', icon: '⏰', color: 'bg-yellow-500' },
-          { type: 'send-email', name: 'Send Email', description: 'Send email notification', icon: '📧', color: 'bg-red-500' },
-          { type: 'notification', name: 'Notification', description: 'Push notification', icon: '🔔', color: 'bg-orange-500' }
+          ...integrationNodes,
+          ...generateDynamicAppNodes() // Keep dynamic app nodes
         ]
       },
       {
+        id: 'ai',
+        name: 'AI & Agents',
+        icon: '🤖',
+        nodes: [
+          ...aiNodes,
+          ...Object.values(agentNodes()).flat() // Keep dynamic agent nodes
+        ]
+      },
+      {
+        id: 'datavis',
+        name: 'Data Visualization',
+        icon: '📊',
+        nodes: datavisNodes
+      },
+      {
         id: 'shapes',
-        name: 'Shapes',
+        name: 'Visual Elements',
         icon: '🔷',
         nodes: [
-          { type: 'trigger', name: 'Trigger', description: 'Visually represent the start of a workflow execution', icon: '▶️', color: 'bg-green-500' },
-          { type: 'output', name: 'Output', description: 'Visually represent the final workflow result', icon: '📤', color: 'bg-purple-500' },
+          // Keep shape nodes (not in registry)
           { type: 'rectangle', name: 'Rectangle', description: 'Basic rectangle shape', icon: <Square class="w-4 h-4" />, color: 'bg-gray-500' },
           { type: 'circle', name: 'Circle', description: 'Basic circle shape', icon: <Circle class="w-4 h-4" />, color: 'bg-blue-500' },
           { type: 'triangle', name: 'Triangle', description: 'Basic triangle shape', icon: <Triangle class="w-4 h-4" />, color: 'bg-yellow-500' },
@@ -732,20 +914,6 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
           { type: 'heart', name: 'Heart', description: 'Heart shape for favorites', icon: <Heart class="w-4 h-4" />, color: 'bg-red-500' },
           { type: 'sticky-note', name: 'Sticky Note', description: 'Note with custom text and colors', icon: '📝', color: 'bg-yellow-300' }
         ]
-      },
-      {
-        id: 'ai-agents',
-        name: 'AI Agents',
-        icon: '🤖',
-        nodes: Object.values(agentNodes()).flat() // Flatten grouped agents for category
-      },
-      {
-        id: 'apps',
-        name: 'Apps',
-        icon: '🔌',
-        nodes: [
-          ...generateDynamicAppNodes()
-        ]
       }
     ];
 
@@ -755,6 +923,15 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
   const filteredNodes = () => {
     const query = searchQuery().toLowerCase();
     const categories = nodeCategories();
+
+    // Populate "All Nodes" category with all nodes from other categories
+    const allCategory = categories.find(cat => cat.id === 'all');
+    if (allCategory) {
+      allCategory.nodes = categories
+        .filter(cat => cat.id !== 'all')
+        .flatMap(cat => cat.nodes);
+    }
+
     if (!query) return categories;
 
     return categories.map(category => ({
@@ -806,9 +983,34 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     const [showPassword, setShowPassword] = createSignal(false);
     const [validationErrors, setValidationErrors] = createSignal<string[]>([]);
 
-    // Get node configuration from NODE_DEFINITIONS
+    // Get node configuration from NodeRegistry
     const getNodeDefinition = (nodeType: string) => {
-      return NODE_DEFINITIONS.find(def => def.type === nodeType) || {
+      const registryNode = getRegistryNodeDefinition(nodeType);
+
+      if (registryNode) {
+        // Convert registry format to old format for compatibility
+        return {
+          type: registryNode.type,
+          name: registryNode.name,
+          description: registryNode.description,
+          category: registryNode.category,
+          icon: registryNode.icon || '⚙️',
+          color: registryNode.color || 'bg-gray-500',
+          configFields: registryNode.fields?.map(f => ({
+            key: f.key,
+            label: f.label,
+            type: f.type,
+            required: f.required,
+            defaultValue: f.defaultValue,
+            placeholder: f.placeholder,
+            help: f.help,
+            options: f.options?.map(opt => ({ label: opt.label, value: opt.value }))
+          })) || []
+        };
+      }
+
+      // Fallback for unknown nodes
+      return {
         type: nodeType,
         name: nodeType,
         description: 'Custom node',
@@ -851,62 +1053,115 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     // Save changes
     const saveChanges = () => {
       props.onUpdate(localNode());
-      setCurrentView('nodes'); // Go back to nodes view
+      setCurrentView('nodes'); // Go back to nodes list after saving
     };
 
     const nodeDefinition = getNodeDefinition(props.node.type);
 
     return (
-      <div class="flex-1 overflow-y-auto">
-        {/* Configuration Content */}
-        <div class="p-4 space-y-4">
-          {/* Basic Settings */}
-          <div class="space-y-3">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Node Title
-              </label>
-              <input
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md text-sm focus:ring-2 focus:ring-blue-500 pointer-events-auto"
-                value={localNode().title || ''}
-                onInput={(e) => setLocalNode({ ...localNode(), title: e.currentTarget.value })}
-              />
+      <div class="flex flex-col h-full">
+        {/* Scrollable Configuration Content */}
+        <div class="flex-1 overflow-y-auto">
+          <div class="p-4 space-y-4">
+            {/* Basic Settings */}
+            <div class="space-y-3">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Node Title
+                </label>
+                <input
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md text-sm focus:ring-2 focus:ring-blue-500 pointer-events-auto"
+                  value={localNode().title || ''}
+                  onInput={(e) => setLocalNode({ ...localNode(), title: e.currentTarget.value })}
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Description
+                </label>
+                <textarea
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md text-sm focus:ring-2 focus:ring-blue-500 pointer-events-auto"
+                  rows="2"
+                  value={localNode().description || ''}
+                  onInput={(e) => setLocalNode({ ...localNode(), description: e.currentTarget.value })}
+                />
+              </div>
             </div>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Description
-              </label>
-              <textarea
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md text-sm focus:ring-2 focus:ring-blue-500 pointer-events-auto"
-                rows="2"
-                value={localNode().description || ''}
-                onInput={(e) => setLocalNode({ ...localNode(), description: e.currentTarget.value })}
-              />
-            </div>
+            {/* Type-specific Fields */}
+            <Show
+              when={isDataVisNode(localNode().type)}
+              fallback={
+                <NodeConfigRenderer
+                  nodeDefinition={nodeDefinition as any}
+                  config={localNode().config}
+                  onConfigChange={updateConfig}
+                />
+              }
+            >
+              {/* Data Visualization Nodes - Charts */}
+              <Show when={['chart-bar', 'chart-line', 'chart-pie', 'chart-area', 'chart-scatter'].includes(localNode().type)}>
+                <ChartNodeConfig
+                  value={{
+                    ...DEFAULT_CHART_CONFIG,
+                    type: localNode().type.replace('chart-', '') as any,
+                    ...(localNode().config || {})
+                  }}
+                  onChange={(config) => {
+                    setLocalNode({ ...localNode(), config: config });
+                  }}
+                />
+              </Show>
+
+              {/* Data Visualization Nodes - Table */}
+              <Show when={localNode().type === 'table'}>
+                <TableNodeConfig
+                  value={{
+                    ...DEFAULT_TABLE_CONFIG,
+                    ...(localNode().config || {})
+                  }}
+                  onChange={(config) => {
+                    setLocalNode({ ...localNode(), config: config });
+                  }}
+                />
+              </Show>
+
+              {/* Data Visualization Nodes - Metrics */}
+              <Show when={localNode().type === 'metrics'}>
+                <MetricsNodeConfig
+                  value={{
+                    ...DEFAULT_METRICS_CONFIG,
+                    ...(localNode().config || {})
+                  }}
+                  onChange={(config) => {
+                    setLocalNode({ ...localNode(), config: config });
+                  }}
+                />
+              </Show>
+            </Show>
           </div>
-
-          {/* Type-specific Fields - Now using NodeConfigRenderer */}
-          <NodeConfigRenderer
-            nodeDefinition={nodeDefinition}
-            config={localNode().config}
-            onConfigChange={updateConfig}
-          />
         </div>
 
-        {/* Footer Actions */}
-        <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+        {/* Fixed Footer Actions */}
+        <div class="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 pointer-events-auto">
           <div class="flex justify-end gap-2">
             <button
-              onClick={() => setCurrentView('nodes')}
-              class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentView('nodes');
+              }}
+              class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors pointer-events-auto"
             >
               Cancel
             </button>
             <button
-              onClick={saveChanges}
-              class="px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors flex items-center gap-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                saveChanges();
+              }}
+              class="px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors flex items-center gap-2 pointer-events-auto"
             >
               <Settings class="w-4 h-4" />
               Save
@@ -917,15 +1172,273 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
     );
   };
 
+  // Get ordered agent groups based on user settings
+  const getOrderedAgentGroups = () => {
+    const groups = Object.entries(agentNodes());
+    const settings = panelSettings();
+
+    if (settings.agentGroupOrder.length === 0) {
+      return groups;
+    }
+
+    // Create a map for quick lookup
+    const groupMap = new Map(groups);
+    const ordered: [string, any[]][] = [];
+
+    // Add groups in the saved order
+    settings.agentGroupOrder.forEach(groupName => {
+      const groupAgents = groupMap.get(groupName);
+      if (groupAgents !== undefined && Array.isArray(groupAgents)) {
+        ordered.push([groupName, groupAgents]);
+        groupMap.delete(groupName);
+      }
+    });
+
+    // Add any remaining groups that weren't in the saved order
+    groupMap.forEach((agents, groupName) => {
+      ordered.push([groupName, agents] as [string, any[]]);
+    });
+
+    return ordered;
+  };
+
+  // Panel Settings Modal Component
+  const PanelSettingsModal = () => {
+    const [localGroupOrder, setLocalGroupOrder] = createSignal<string[]>([...panelSettings().agentGroupOrder]);
+    const [localCustomizations, setLocalCustomizations] = createSignal<Record<string, GroupCustomization>>({ ...panelSettings().groupCustomizations });
+    const [draggedIndex, setDraggedIndex] = createSignal<number | null>(null);
+    const [editingGroup, setEditingGroup] = createSignal<string | null>(null);
+    const [showEmojiPicker, setShowEmojiPicker] = createSignal<string | null>(null);
+
+    // Initialize with current groups if no saved order
+    const allGroups = Object.keys(agentNodes());
+    if (localGroupOrder().length === 0) {
+      setLocalGroupOrder(allGroups);
+    }
+
+    // Common emojis for quick selection
+    const commonEmojis = ['🤖', '🎯', '⚙️', '☁️', '🏗️', '🚀', '🔗', '🌐', '🔌', '💼', '📊', '🎨', '🔧', '📱', '💻', '🌟', '⚡', '🔥', '💡', '🎭'];
+
+    const getCustomization = (groupName: string) => localCustomizations()[groupName] || {};
+
+    const handleDragStart = (index: number) => {
+      setDraggedIndex(index);
+    };
+
+    const handleDragOver = (e: DragEvent, index: number) => {
+      e.preventDefault();
+      const dragIdx = draggedIndex();
+      if (dragIdx === null || dragIdx === index) return;
+
+      const order = [...localGroupOrder()];
+      const [removed] = order.splice(dragIdx, 1);
+      order.splice(index, 0, removed);
+      setLocalGroupOrder(order);
+      setDraggedIndex(index);
+    };
+
+    const handleDragEnd = () => {
+      setDraggedIndex(null);
+    };
+
+    const handleSave = () => {
+      const settings = panelSettings();
+      const newSettings: PanelSettings = {
+        ...settings,
+        agentGroupOrder: localGroupOrder(),
+        collapsedGroups: Array.from(collapsedGroups()),
+        groupCustomizations: localCustomizations()
+      };
+      savePanelSettings(newSettings);
+      setShowPanelSettings(false);
+    };
+
+    const handleReset = () => {
+      setLocalGroupOrder(allGroups);
+      setLocalCustomizations({});
+    };
+
+    const updateGroupName = (groupName: string, newName: string) => {
+      setLocalCustomizations({
+        ...localCustomizations(),
+        [groupName]: {
+          ...getCustomization(groupName),
+          displayName: newName || undefined
+        }
+      });
+    };
+
+    const updateGroupIcon = (groupName: string, newIcon: string) => {
+      setLocalCustomizations({
+        ...localCustomizations(),
+        [groupName]: {
+          ...getCustomization(groupName),
+          icon: newIcon || undefined
+        }
+      });
+      setShowEmojiPicker(null);
+    };
+
+    return (
+      <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+          {/* Header */}
+          <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Panel Settings</h2>
+            <button
+              type="button"
+              onClick={() => setShowPanelSettings(false)}
+              class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-500 dark:text-gray-400"
+            >
+              <X class="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div class="flex-1 overflow-y-auto p-4">
+            <div class="space-y-4">
+              <div>
+                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Agent Group Order
+                </h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  Drag and drop to reorder how agent groups appear in the panel
+                </p>
+                <div class="space-y-2">
+                  <For each={localGroupOrder()}>
+                    {(groupName, index) => {
+                      const agents = agentNodes()[groupName] || [];
+                      const customization = getCustomization(groupName);
+                      const currentIcon = customization.icon || getGroupIcon(groupName);
+                      const defaultName = groupName.startsWith('mcp-app-')
+                        ? groupName.replace('mcp-app-', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+                        : groupName.replace(/-/g, ' ').replace('specialized ', 'Specialized: ');
+
+                      return (
+                        <div
+                          class={`bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 transition-all ${
+                            draggedIndex() === index() ? 'opacity-50 scale-95' : ''
+                          }`}
+                        >
+                          <div
+                            draggable={true}
+                            onDragStart={() => handleDragStart(index())}
+                            onDragOver={(e) => handleDragOver(e, index())}
+                            onDragEnd={handleDragEnd}
+                            class="flex items-center gap-3 p-3 cursor-move hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg"
+                          >
+                            <GripVertical class="w-5 h-5 text-gray-400 flex-shrink-0" />
+
+                            {/* Icon Selector */}
+                            <div class="relative flex-shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShowEmojiPicker(showEmojiPicker() === groupName ? null : groupName);
+                                }}
+                                class="text-2xl hover:scale-110 transition-transform"
+                                title="Change icon"
+                              >
+                                {currentIcon}
+                              </button>
+
+                              {/* Emoji Picker Popup */}
+                              <Show when={showEmojiPicker() === groupName}>
+                                <div class="absolute top-full left-0 mt-1 z-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl p-2 w-64">
+                                  <div class="grid grid-cols-8 gap-1">
+                                    <For each={commonEmojis}>
+                                      {(emoji) => (
+                                        <button
+                                          type="button"
+                                          onClick={() => updateGroupIcon(groupName, emoji)}
+                                          class="text-xl hover:bg-gray-100 dark:hover:bg-gray-700 rounded p-1 transition-colors"
+                                        >
+                                          {emoji}
+                                        </button>
+                                      )}
+                                    </For>
+                                  </div>
+                                  <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                                    <input
+                                      type="text"
+                                      placeholder="Or paste any emoji..."
+                                      maxLength={2}
+                                      class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                      onInput={(e) => {
+                                        const val = e.currentTarget.value;
+                                        if (val) updateGroupIcon(groupName, val);
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </Show>
+                            </div>
+
+                            {/* Name Editor */}
+                            <div class="flex-1 min-w-0">
+                              <input
+                                type="text"
+                                value={customization.displayName || ''}
+                                placeholder={defaultName}
+                                onInput={(e) => updateGroupName(groupName, e.currentTarget.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                class="w-full font-medium text-sm bg-transparent border-b border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 text-gray-900 dark:text-white outline-none transition-colors px-1 -mx-1"
+                              />
+                              <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                {agents.length} agent{agents.length !== 1 ? 's' : ''}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  </For>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div class="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              type="button"
+              onClick={handleReset}
+              class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            >
+              Reset to Default
+            </button>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowPanelSettings(false)}
+                class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+              >
+                Save Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Show when={isVisible()}>
       <div
         ref={panelRef}
-        class={`fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl transition-all duration-200 relative flex flex-col ${
+        class={`floating-panel fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl transition-all duration-200 relative flex flex-col pointer-events-auto ${
           isDragging() || isResizing() ? 'shadow-2xl scale-105 select-none' : ''
         } ${
           isPinned()
-            ? 'rounded-none border-l-0 border-t-0 border-b-0 h-screen'
+            ? 'rounded-none border-r-0 border-t-0 border-b-0 h-screen'
             : 'rounded-lg'
         }`}
         style={{
@@ -933,10 +1446,11 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
           top: `${position().y}px`,
           width: `${panelWidth()}px`,
           height: isPinned() ? '100vh' : `${panelHeight()}px`,
-          'max-height': isPinned() ? '100vh' : '90vh'
+          'max-height': isPinned() ? '100vh' : '90vh',
+          'will-change': isDragging() || isResizing() ? 'transform' : 'auto',
+          transform: 'translate3d(0, 0, 0)' // Force GPU acceleration
         }}
         onMouseDown={handleMouseDown}
-        onWheel={handlePanelWheel}
       >
         {/* Panel Header */}
         <div class={`flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700 ${!isPinned() ? 'cursor-move select-none' : ''}`} data-drag-handle={!isPinned() ? '' : undefined}>
@@ -946,14 +1460,16 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
             </Show>
             <Show when={showConnectedApps()}>
               <button
+                type="button"
                 onClick={() => setShowConnectedApps(false)}
                 class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-500 dark:text-gray-400 mr-2"
               >
                 <ArrowLeft class="w-4 h-4" />
               </button>
             </Show>
-            <Show when={currentView() === 'details' && props.selectedNode}>
+            <Show when={showingDetails()}>
               <button
+                type="button"
                 onClick={() => setCurrentView('nodes')}
                 class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-500 dark:text-gray-400 mr-2"
               >
@@ -963,13 +1479,23 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
             <span class="font-medium text-gray-900 dark:text-white text-sm">
               {showConnectedApps()
                 ? 'Connect Apps'
-                : currentView() === 'details' && props.selectedNode
-                  ? `Configure: ${props.selectedNode.title || props.selectedNode.type}`
+                : showingDetails()
+                  ? `Configure: ${props.selectedNode!.title || props.selectedNode!.type}`
                   : 'Workflow Nodes'
               }
             </span>
           </div>
           <div class="flex items-center gap-1">
+            <Show when={!showingDetails() && !showConnectedApps()}>
+              <button
+                type="button"
+                onClick={() => setShowPanelSettings(true)}
+                class="p-2 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 rounded-lg text-gray-600 dark:text-gray-400 transition-all duration-200 hover:scale-105"
+                title="Panel Settings"
+              >
+                <Settings class="w-4 h-4" />
+              </button>
+            </Show>
             <button
               onClick={handlePin}
               class="p-2 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 rounded-lg text-gray-600 dark:text-gray-400 transition-all duration-200 hover:scale-105"
@@ -995,7 +1521,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
             when={showConnectedApps()}
             fallback={
               <Show
-                when={currentView() === 'details' && props.selectedNode}
+                when={showingDetails()}
                 fallback={
                   /* Nodes Library View */
                   <div class="h-full flex flex-col">
@@ -1013,20 +1539,20 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                     </div>
                   </div>
 
-                  {/* Category Tabs */}
-                  <div class="flex justify-between border-b border-gray-200 dark:border-gray-700">
+                  {/* Category Tabs - HubSpot style: wrapping pills with icon + text */}
+                  <div class="flex flex-wrap gap-1 p-2 border-b border-gray-200 dark:border-gray-700">
                     <For each={nodeCategories()}>
                       {(category) => (
                         <button
                           onClick={() => setActiveCategory(category.id)}
-                          class={`flex-1 px-2 py-2 text-xs font-medium border-b-2 transition-colors text-center ${
+                          class={`flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
                             activeCategory() === category.id
-                              ? 'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                           }`}
                         >
-                          <span class="mr-1">{category.icon}</span>
-                          {category.name}
+                          <span class="text-sm">{category.icon}</span>
+                          <span class="whitespace-nowrap">{category.name}</span>
                         </button>
                       )}
                     </For>
@@ -1087,7 +1613,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                               </Show>
 
                               <Show
-                                when={category.id === 'ai-agents'}
+                                when={category.id === 'ai' || category.id === 'ai-agents'}
                                 fallback={
                                   <For each={category.nodes}>
                                     {(node) => {
@@ -1131,9 +1657,11 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                                 }
                               >
                                 {/* Collapsible groups for AI Agents */}
-                                <For each={Object.entries(agentNodes())}>
-                                  {([groupName, groupAgents]) => (
-                                    <Show when={groupAgents.length > 0}>
+                                <For each={getOrderedAgentGroups()}>
+                                  {([groupName, groupAgents]) => {
+                                    const agents = Array.isArray(groupAgents) ? groupAgents : [];
+                                    return (
+                                    <Show when={agents.length > 0}>
                                       <div class="mb-3">
                                         <button
                                           onClick={() => {
@@ -1153,16 +1681,19 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                                             groupName.includes('devops') ? 'bg-purple-100 dark:bg-purple-900/30' :
                                             groupName.includes('integrations') ? 'bg-pink-100 dark:bg-pink-900/30' :
                                             groupName.includes('universal') ? 'bg-green-100 dark:bg-green-900/30' :
-                                            groupName.includes('mcp-apps') ? 'bg-cyan-100 dark:bg-cyan-900/30' :
+                                            groupName.startsWith('mcp-app-') ? 'bg-cyan-100 dark:bg-cyan-900/30' :
                                             'bg-gray-100 dark:bg-gray-700'
                                           }`}
                                         >
                                           <div class="flex items-center gap-2">
+                                            <div class="text-base">
+                                              {getGroupIcon(groupName)}
+                                            </div>
                                             <span class="text-sm font-medium text-gray-900 dark:text-white capitalize">
-                                              {groupName.replace(/-/g, ' ').replace('specialized ', 'Specialized: ')}
+                                              {getAppDisplayName(groupName)}
                                             </span>
                                             <span class="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded-full">
-                                              {groupAgents.length}
+                                              {agents.length}
                                             </span>
                                           </div>
                                           <div class={`transform transition-transform ${collapsedGroups().has(groupName) ? 'rotate-180' : ''}`}>
@@ -1172,7 +1703,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
 
                                         <Show when={!collapsedGroups().has(groupName)}>
                                           <div class="ml-2 space-y-1">
-                                            <For each={groupAgents}>
+                                            <For each={agents}>
                                               {(node) => (
                                                 <div
                                                   draggable={true}
@@ -1198,7 +1729,8 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                                         </Show>
                                       </div>
                                     </Show>
-                                  )}
+                                    );
+                                  }}
                                 </For>
                               </Show>
                             </Show>
@@ -1212,11 +1744,13 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
                 }
             >
               {/* Node Details View */}
-              <NodeDetailsView
-                node={props.selectedNode!}
-                onUpdate={props.onNodeUpdate!}
-                availableModels={props.availableModels || ['claude-3-sonnet', 'claude-3-haiku', 'gpt-4', 'gpt-3.5-turbo']}
-              />
+              <div class="h-full flex flex-col">
+                <NodeDetailsView
+                  node={props.selectedNode!}
+                  onUpdate={props.onNodeUpdate!}
+                  availableModels={props.availableModels || ['claude-3-sonnet', 'claude-3-haiku', 'gpt-4', 'gpt-3.5-turbo']}
+                />
+              </div>
             </Show>
           }
         >
@@ -1266,8 +1800,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
             console.log('Agent created:', agent);
             // Reload agent list
             try {
-              const organizedAgents = await agentRegistryInitializer.initialize();
-              // TODO: Update local agent list state if needed
+              await loadAgents();
             } catch (err) {
               console.error('Failed to reload agents:', err);
             }
@@ -1275,10 +1808,15 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
           }}
           agentService={agentService}
           mcpClient={{ callMCPTool }}
-          existingAgents={[]} // TODO: Pass actual agent list for icon extraction
-          connectedApps={integrations?.connectedApps || []}
+          existingAgents={[]}
+          connectedApps={Object.keys(integrations?.getAllConnections() || {})}
           availableModels={availableModels()}
         />
+      </Show>
+
+      {/* Panel Settings Modal */}
+      <Show when={showPanelSettings()}>
+        <PanelSettingsModal />
       </Show>
     </Show>
   );

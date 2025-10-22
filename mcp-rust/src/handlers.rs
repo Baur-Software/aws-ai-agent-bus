@@ -7,8 +7,8 @@ use thiserror::Error;
 use tracing::{debug, error};
 
 use crate::aws::{AwsError, AwsService};
-use crate::tenant::{Permission, TenantSession};
 use crate::registry::MCPServerRegistry;
+use crate::tenant::{Permission, TenantSession};
 
 // Re-export handler modules
 pub mod integrations;
@@ -41,7 +41,7 @@ pub trait Handler: Send + Sync {
 
 pub struct HandlerRegistry {
     handlers: HashMap<String, Arc<dyn Handler>>,
-    registry: Arc<MCPServerRegistry>,
+    _registry: Arc<MCPServerRegistry>,
 }
 
 impl HandlerRegistry {
@@ -144,7 +144,10 @@ impl HandlerRegistry {
             Arc::new(mcp_proxy::MCPListToolsHandler::new(registry.clone())),
         );
 
-        Ok(Self { handlers, registry })
+        Ok(Self {
+            handlers,
+            _registry: registry,
+        })
     }
 
     pub async fn list_tools(&self, session: &TenantSession) -> Result<Vec<Value>, HandlerError> {
@@ -565,7 +568,7 @@ impl EventsQueryHandler {
 impl Handler for EventsQueryHandler {
     async fn handle(
         &self,
-        session: &TenantSession,
+        _session: &TenantSession,
         arguments: Value,
     ) -> Result<Value, HandlerError> {
         // Extract query parameters
@@ -623,7 +626,6 @@ impl Handler for EventsQueryHandler {
         let result = self
             .aws_service
             .query_events(
-                session,
                 user_id,
                 organization_id,
                 source,
@@ -711,31 +713,63 @@ impl EventsAnalyticsHandler {
 
 #[async_trait]
 impl Handler for EventsAnalyticsHandler {
-    async fn handle(&self, session: &TenantSession, arguments: Value) -> Result<Value, HandlerError> {
+    async fn handle(
+        &self,
+        session: &TenantSession,
+        arguments: Value,
+    ) -> Result<Value, HandlerError> {
         // Extract analytics parameters
-        let user_id = arguments.get("userId").and_then(|v| v.as_str()).map(|s| s.to_string());
-        let organization_id = arguments.get("organizationId").and_then(|v| v.as_str()).map(|s| s.to_string());
-        let start_time = arguments.get("startTime").and_then(|v| v.as_str()).map(|s| s.to_string());
-        let end_time = arguments.get("endTime").and_then(|v| v.as_str()).map(|s| s.to_string());
-        let metrics = arguments.get("metrics")
+        let user_id = arguments
+            .get("userId")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let organization_id = arguments
+            .get("organizationId")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let start_time = arguments
+            .get("startTime")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let end_time = arguments
+            .get("endTime")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let metrics = arguments
+            .get("metrics")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str()).map(|s| s.to_string()).collect::<Vec<_>>())
-            .unwrap_or_else(|| vec!["volume".to_string(), "topSources".to_string(), "priority".to_string()]);
-        let granularity = arguments.get("granularity")
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_else(|| {
+                vec![
+                    "volume".to_string(),
+                    "topSources".to_string(),
+                    "priority".to_string(),
+                ]
+            });
+        let granularity = arguments
+            .get("granularity")
             .and_then(|v| v.as_str())
             .unwrap_or("hourly")
             .to_string();
 
         // Execute analytics query
-        let result = self.aws_service.analytics_query(
-            session,
-            user_id,
-            organization_id,
-            start_time,
-            end_time,
-            metrics,
-            granularity
-        ).await?;
+        let result = self
+            .aws_service
+            .analytics_query(
+                session,
+                user_id,
+                organization_id,
+                start_time,
+                end_time,
+                metrics,
+                granularity,
+            )
+            .await?;
 
         Ok(result)
     }
@@ -808,33 +842,42 @@ impl EventsCreateRuleHandler {
 
 #[async_trait]
 impl Handler for EventsCreateRuleHandler {
-    async fn handle(&self, session: &TenantSession, arguments: Value) -> Result<Value, HandlerError> {
+    async fn handle(
+        &self,
+        session: &TenantSession,
+        arguments: Value,
+    ) -> Result<Value, HandlerError> {
         // Extract required fields
-        let name = arguments.get("name")
+        let name = arguments
+            .get("name")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| HandlerError::InvalidArguments("Missing required field 'name'".to_string()))?
+            .ok_or_else(|| {
+                HandlerError::InvalidArguments("Missing required field 'name'".to_string())
+            })?
             .to_string();
 
-        let pattern = arguments.get("pattern")
-            .ok_or_else(|| HandlerError::InvalidArguments("Missing required field 'pattern'".to_string()))?
+        let pattern = arguments
+            .get("pattern")
+            .ok_or_else(|| {
+                HandlerError::InvalidArguments("Missing required field 'pattern'".to_string())
+            })?
             .clone();
 
-        let description = arguments.get("description")
+        let description = arguments
+            .get("description")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        let enabled = arguments.get("enabled")
+        let enabled = arguments
+            .get("enabled")
             .and_then(|v| v.as_bool())
             .unwrap_or(true);
 
         // Create the rule
-        let result = self.aws_service.create_event_rule(
-            session,
-            &name,
-            pattern,
-            description,
-            enabled
-        ).await?;
+        let result = self
+            .aws_service
+            .create_event_rule(session, &name, pattern, description, enabled)
+            .await?;
 
         Ok(result)
     }
@@ -888,45 +931,66 @@ impl EventsCreateAlertHandler {
 
 #[async_trait]
 impl Handler for EventsCreateAlertHandler {
-    async fn handle(&self, session: &TenantSession, arguments: Value) -> Result<Value, HandlerError> {
+    async fn handle(
+        &self,
+        session: &TenantSession,
+        arguments: Value,
+    ) -> Result<Value, HandlerError> {
         // Extract required fields
-        let name = arguments.get("name")
+        let name = arguments
+            .get("name")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| HandlerError::InvalidArguments("Missing required field 'name'".to_string()))?
+            .ok_or_else(|| {
+                HandlerError::InvalidArguments("Missing required field 'name'".to_string())
+            })?
             .to_string();
 
-        let rule_id = arguments.get("ruleId")
+        let rule_id = arguments
+            .get("ruleId")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| HandlerError::InvalidArguments("Missing required field 'ruleId'".to_string()))?
+            .ok_or_else(|| {
+                HandlerError::InvalidArguments("Missing required field 'ruleId'".to_string())
+            })?
             .to_string();
 
-        let notification_method = arguments.get("notificationMethod")
+        let notification_method = arguments
+            .get("notificationMethod")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| HandlerError::InvalidArguments("Missing required field 'notificationMethod'".to_string()))?
+            .ok_or_else(|| {
+                HandlerError::InvalidArguments(
+                    "Missing required field 'notificationMethod'".to_string(),
+                )
+            })?
             .to_string();
 
-        let sns_topic_arn = arguments.get("snsTopicArn")
+        let sns_topic_arn = arguments
+            .get("snsTopicArn")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        let email_address = arguments.get("emailAddress")
+        let email_address = arguments
+            .get("emailAddress")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        let enabled = arguments.get("enabled")
+        let enabled = arguments
+            .get("enabled")
             .and_then(|v| v.as_bool())
             .unwrap_or(true);
 
         // Create the alert subscription
-        let result = self.aws_service.create_alert_subscription(
-            session,
-            &name,
-            &rule_id,
-            &notification_method,
-            sns_topic_arn,
-            email_address,
-            enabled
-        ).await?;
+        let result = self
+            .aws_service
+            .create_alert_subscription(
+                session,
+                &name,
+                &rule_id,
+                &notification_method,
+                sns_topic_arn,
+                email_address,
+                enabled,
+            )
+            .await?;
 
         Ok(result)
     }
@@ -989,7 +1053,11 @@ impl EventsHealthCheckHandler {
 
 #[async_trait]
 impl Handler for EventsHealthCheckHandler {
-    async fn handle(&self, session: &TenantSession, _arguments: Value) -> Result<Value, HandlerError> {
+    async fn handle(
+        &self,
+        session: &TenantSession,
+        _arguments: Value,
+    ) -> Result<Value, HandlerError> {
         // Perform health check
         let result = self.aws_service.events_health_check(session).await?;
         Ok(result)

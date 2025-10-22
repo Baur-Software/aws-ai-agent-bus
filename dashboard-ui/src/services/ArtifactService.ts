@@ -276,7 +276,7 @@ export function useArtifactService() {
 
   return new ArtifactService(
     callMCPTool,
-    () => user()?.userId,
+    () => user()?.id,
     () => currentOrganization()?.id
   );
 }

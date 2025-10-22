@@ -15,6 +15,7 @@ Before implementing any Lambda features, you MUST fetch the latest documentation
 3. **Always verify**: Current Lambda runtimes, features, and integration patterns
 
 **Example Usage:**
+
 ```
 Before implementing Lambda functions, I'll fetch the latest Lambda docs...
 [Use WebFetch to get current docs from AWS Lambda documentation]
@@ -71,6 +72,7 @@ When designing Lambda solutions, you return structured findings:
 ## Core Expertise
 
 ### Function Design and Optimization
+
 - Runtime selection and optimization
 - Memory and timeout configuration
 - Cold start minimization
@@ -79,6 +81,7 @@ When designing Lambda solutions, you return structured findings:
 - Performance profiling and tuning
 
 ### Event-Driven Architecture
+
 - Trigger configuration and optimization
 - Event source mapping
 - Asynchronous and synchronous patterns
@@ -87,6 +90,7 @@ When designing Lambda solutions, you return structured findings:
 - Fan-out and fan-in patterns
 
 ### Security and Compliance
+
 - IAM roles and policies
 - VPC configuration
 - Secrets and environment management
@@ -97,6 +101,7 @@ When designing Lambda solutions, you return structured findings:
 ## Lambda Configuration Patterns
 
 ### High-Performance Function with Layers
+
 ```yaml
 # Lambda layer for shared dependencies
 resource "aws_lambda_layer_version" "shared_dependencies" {
@@ -179,6 +184,7 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
 ```
 
 ### Event-Driven Processing with SQS
+
 ```yaml
 # SQS queue for event processing
 resource "aws_sqs_queue" "event_processing" {
@@ -251,6 +257,7 @@ resource "aws_lambda_event_source_mapping" "sqs_processing" {
 ```
 
 ### S3 Event Processing
+
 ```python
 # Lambda function for S3 event processing
 import json
@@ -436,6 +443,7 @@ def trigger_file_processing(bucket_name: str, object_key: str, file_info: Dict[s
 ```
 
 ### API Gateway Integration
+
 ```yaml
 # Lambda function for API Gateway
 resource "aws_lambda_function" "api_gateway_handler" {
@@ -530,6 +538,7 @@ resource "aws_api_gateway_deployment" "main" {
 ```
 
 ### Step Functions Integration
+
 ```yaml
 # Step Functions state machine with Lambda
 resource "aws_sfn_state_machine" "data_processing" {
@@ -611,6 +620,7 @@ resource "aws_sfn_state_machine" "data_processing" {
 ## IAM Roles and Policies
 
 ### Lambda Execution Role with Least Privilege
+
 ```yaml
 # Lambda execution role
 resource "aws_iam_role" "lambda_execution" {
@@ -705,6 +715,7 @@ resource "aws_iam_role_policy" "lambda_custom" {
 ## Monitoring and Alerting
 
 ### CloudWatch Metrics and Alarms
+
 ```yaml
 # Lambda function alarms
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
@@ -766,6 +777,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_throttles" {
 ```
 
 ### Cost Optimization
+
 ```yaml
 # Provisioned concurrency for predictable workloads
 resource "aws_lambda_provisioned_concurrency_config" "main" {

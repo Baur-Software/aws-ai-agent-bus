@@ -13,26 +13,15 @@ import {
 
 export interface OutputInput {
   format?: 'json' | 'summary' | 'detailed' | 'custom';
-  includeResults?: boolean;
+  fields?: string[];  // For field selection
   includeMetadata?: boolean;
-  includeErrors?: boolean;
-  customFields?: string[];
-  summaryTemplate?: string;
+  customTemplate?: string;  // For custom format template
 }
 
 export interface OutputOutput {
-  output: any;
+  success?: boolean;
   format: string;
-  summary: string;
-  metadata: {
-    executionId: string;
-    workflowId: string;
-    completedAt: string;
-    nodesExecuted: number;
-    totalDuration: number;
-  };
-  results?: Record<string, any>;
-  errors?: any[];
+  output: any;
 }
 
 export class OutputTask implements WorkflowTask<OutputInput, OutputOutput> {
@@ -43,353 +32,297 @@ export class OutputTask implements WorkflowTask<OutputInput, OutputOutput> {
   ) {}
 
   async execute(input: OutputInput, context: WorkflowContext): Promise<OutputOutput> {
-    this.logger?.info('Generating workflow output');
+    const format = input.format || 'json';
+
+    this.logger?.info(`Formatting workflow output as: ${format}`);
 
     try {
-      const format = input.format || 'summary';
-      
-      // Collect all results from context
-      const allResults = context.results || {};
-      const nodeCount = Object.keys(allResults).length;
-
-      // Generate different output formats
       let output: any;
-      let summary: string;
 
       switch (format) {
         case 'json':
-          output = this.generateJSONOutput(allResults, context, input);
-          summary = `JSON output with ${nodeCount} node results`;
+          output = this.generateJSONOutput(input, context);
           break;
-
-        case 'detailed':
-          output = this.generateDetailedOutput(allResults, context, input);
-          summary = `Detailed workflow report with ${nodeCount} executed nodes`;
-          break;
-
-        case 'custom':
-          output = this.generateCustomOutput(allResults, context, input);
-          summary = `Custom formatted output with ${input.customFields?.length || 0} fields`;
-          break;
-
         case 'summary':
-        default:
-          output = this.generateSummaryOutput(allResults, context, input);
-          summary = `Workflow completed with ${nodeCount} steps`;
+          output = this.generateSummaryOutput(input, context);
           break;
+        case 'detailed':
+          output = this.generateDetailedOutput(input, context);
+          break;
+        case 'custom':
+          output = this.generateCustomOutput(input, context);
+          break;
+        default:
+          output = this.generateJSONOutput(input, context);
       }
 
-      const metadata = {
-        executionId: context.executionId,
-        workflowId: context.workflowId,
-        completedAt: new Date().toISOString(),
-        nodesExecuted: nodeCount,
-        totalDuration: this.calculateTotalDuration(context)
-      };
+      // Store output in context for downstream tasks
+      context.data.finalOutput = output;
+      context.data.outputFormat = format;
 
-      const result: OutputOutput = {
-        output,
-        format,
-        summary: input.summaryTemplate 
-          ? this.applyTemplate(input.summaryTemplate, { output, metadata, context })
-          : summary,
-        metadata,
-        ...(input.includeResults && { results: allResults }),
-        ...(input.includeErrors && context.errors?.length && { errors: context.errors })
-      };
+      this.logger?.info('Successfully formatted workflow output');
 
-      this.logger?.info(`Generated ${format} output with ${nodeCount} results`);
-
-      return result;
-
-    } catch (error) {
-      this.logger?.error('Failed to generate output:', error);
-      
-      // Return error output instead of throwing
       return {
-        output: { error: error.message, success: false },
+        success: true,
+        format,
+        output
+      };
+    } catch (error: any) {
+      this.logger?.error('Failed to format output:', error);
+      return {
+        success: false,
         format: 'error',
-        summary: `Workflow output generation failed: ${error.message}`,
-        metadata: {
-          executionId: context.executionId,
-          workflowId: context.workflowId,
-          completedAt: new Date().toISOString(),
-          nodesExecuted: Object.keys(context.results || {}).length,
-          totalDuration: 0
-        }
+        output: { error: error.message }
       };
     }
   }
 
   validate(input: OutputInput): ValidationResult {
     const errors: string[] = [];
-    const warnings: string[] = [];
 
     if (input.format && !['json', 'summary', 'detailed', 'custom'].includes(input.format)) {
       errors.push('Format must be one of: json, summary, detailed, custom');
     }
 
-    if (input.format === 'custom' && (!input.customFields || input.customFields.length === 0)) {
-      warnings.push('Custom format specified but no custom fields provided');
+    if (input.format === 'custom' && !input.customTemplate) {
+      errors.push('Custom template is required when format is "custom"');
     }
 
-    if (input.customFields && input.customFields.length > 50) {
-      warnings.push('Large number of custom fields may impact performance');
+    // Validate fields array if provided
+    if (input.fields) {
+      if (!Array.isArray(input.fields)) {
+        errors.push('Fields must be an array');
+      } else if (input.fields.some(f => typeof f !== 'string')) {
+        errors.push('All fields must be strings');
+      }
     }
 
     return {
       isValid: errors.length === 0,
-      errors,
-      warnings
+      errors
     };
   }
 
   getSchema(): TaskConfigSchema {
     return {
       type: 'object',
-      title: 'Workflow Output',
-      description: 'Collect and format final workflow results',
+      title: 'Output Formatter',
+      description: 'Collect and format final workflow output',
       properties: {
         format: {
           type: 'string',
           title: 'Output Format',
           description: 'How to format the final output',
           enum: ['json', 'summary', 'detailed', 'custom'],
-          default: 'summary'
+          default: 'json'
         },
-        includeResults: {
-          type: 'boolean',
-          title: 'Include All Results',
-          description: 'Include results from all workflow nodes',
-          default: true
+        fields: {
+          type: 'array',
+          title: 'Fields',
+          description: 'Specific fields to include in output (supports dot notation)',
+          items: {
+            type: 'string',
+            title: 'Field Path',
+            description: 'Field path (supports dot notation)'
+          }
         },
         includeMetadata: {
           type: 'boolean',
           title: 'Include Metadata',
-          description: 'Include execution metadata',
-          default: true
-        },
-        includeErrors: {
-          type: 'boolean',
-          title: 'Include Errors',
-          description: 'Include any errors that occurred',
+          description: 'Include context metadata in output',
           default: false
         },
-        customFields: {
-          type: 'array',
-          title: 'Custom Fields',
-          description: 'Specific fields to include in custom format',
-          items: {
-            type: 'string'
-          }
-        },
-        summaryTemplate: {
+        customTemplate: {
           type: 'string',
-          title: 'Summary Template',
-          description: 'Custom template for summary text (supports {{variable}} syntax)'
+          title: 'Custom Template',
+          description: 'Template string for custom format (use {{field}} syntax)'
         }
       },
-      required: [],
-      examples: [
-        {
-          format: 'detailed',
-          includeResults: true,
-          includeMetadata: true
-        },
-        {
-          format: 'custom',
-          customFields: ['analyticsData', 'reportUrl', 'summary'],
-          summaryTemplate: 'Workflow {{workflowId}} completed with {{nodesExecuted}} steps'
-        }
-      ]
+      required: []
     };
   }
 
   getDisplayInfo(): TaskDisplayInfo {
     return {
-      category: NODE_CATEGORIES.INPUT_OUTPUT,
+      category: NODE_CATEGORIES.CORE,
       label: 'Output',
       icon: 'FileOutput',
       color: 'bg-gray-600',
-      description: 'Collect and format workflow results',
-      tags: ['output', 'results', 'formatting', 'final']
+      description: 'Collect and format final workflow output',
+      tags: ['core', 'output', 'result', 'format']
     };
   }
 
-  private generateJSONOutput(results: Record<string, any>, context: WorkflowContext, input: OutputInput): any {
-    return {
-      success: true,
-      executionId: context.executionId,
-      workflowId: context.workflowId,
-      results: input.includeResults !== false ? results : Object.keys(results),
-      timestamp: new Date().toISOString(),
-      nodeCount: Object.keys(results).length
+  private generateJSONOutput(input: OutputInput, context: WorkflowContext): any {
+    // If fields are specified, select only those fields
+    if (input.fields && input.fields.length > 0) {
+      return this.selectFields(input.fields, context);
+    }
+
+    // Filter out internal fields from context.data
+    const cleanData = { ...context.data };
+    delete cleanData.finalOutput;
+    delete cleanData.outputFormat;
+
+    // Otherwise return full context data and results
+    const output: any = {
+      data: cleanData,
+      results: context.results
     };
+
+    if (input.includeMetadata) {
+      output.metadata = context.metadata;
+    }
+
+    return output;
   }
 
-  private generateSummaryOutput(results: Record<string, any>, context: WorkflowContext, input: OutputInput): any {
-    const nodeCount = Object.keys(results).length;
+  private generateSummaryOutput(_input: OutputInput, context: WorkflowContext): string {
+    const taskCount = Object.keys(context.results || {}).length;
+
+    // Filter out internal fields
+    const cleanData = { ...context.data };
+    delete cleanData.finalOutput;
+    delete cleanData.outputFormat;
+
+    const dataFields = Object.keys(cleanData).join(', ');
+
+    let summary = `Workflow completed successfully\n`;
+    summary += `${taskCount} tasks executed\n`;
+    if (dataFields) {
+      summary += `Data fields: ${dataFields}\n`;
+
+      // Include actual data values in summary
+      Object.entries(cleanData).forEach(([key, value]) => {
+        if (typeof value === 'number' || typeof value === 'boolean') {
+          summary += `${key}: ${value}\n`;
+        }
+      });
+    }
+
+    return summary.trimEnd();
+  }
+
+  private generateDetailedOutput(_input: OutputInput, context: WorkflowContext): string {
+    const taskCount = Object.keys(context.results || {}).length;
     const hasErrors = context.errors && context.errors.length > 0;
-    
-    return {
-      success: !hasErrors,
-      summary: `Workflow executed ${nodeCount} nodes successfully`,
-      executionId: context.executionId,
-      completedAt: new Date().toISOString(),
-      keyResults: this.extractKeyResults(results),
-      ...(hasErrors && input.includeErrors && { errors: context.errors.length })
-    };
-  }
 
-  private generateDetailedOutput(results: Record<string, any>, context: WorkflowContext, input: OutputInput): any {
-    return {
-      execution: {
-        id: context.executionId,
-        workflowId: context.workflowId,
-        startedAt: this.estimateStartTime(context),
-        completedAt: new Date().toISOString(),
-        duration: this.calculateTotalDuration(context)
-      },
-      statistics: {
-        totalNodes: Object.keys(results).length,
-        successfulNodes: Object.keys(results).length - (context.errors?.length || 0),
-        failedNodes: context.errors?.length || 0,
-        dataTransferred: this.calculateDataSize(results)
-      },
-      results: input.includeResults !== false ? results : undefined,
-      errors: input.includeErrors ? context.errors : undefined,
-      performance: {
-        averageNodeDuration: this.calculateAverageNodeDuration(context),
-        bottlenecks: this.identifyBottlenecks(results),
-        recommendations: this.generateRecommendations(results, context)
+    let output = '=== Workflow Execution Report ===\n\n';
+
+    // Add summary
+    if (!hasErrors) {
+      output += `Workflow completed successfully\n`;
+    }
+    output += `${taskCount} tasks executed\n\n`;
+
+    output += `Execution ID: ${context.executionId}\n`;
+    output += `Workflow ID: ${context.workflowId}\n`;
+
+    // Filter out internal fields
+    const cleanData = { ...context.data };
+    delete cleanData.finalOutput;
+    delete cleanData.outputFormat;
+
+    // Add context data with clean formatting
+    output += '\n=== Context Data ===\n';
+    Object.entries(cleanData).forEach(([key, value]) => {
+      // Capitalize first letter only for 'status' key
+      const displayKey = key === 'status' ? 'Status' : key;
+
+      // Show primitives as plain values, objects/arrays as JSON
+      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+        output += `${displayKey}: ${value}\n`;
+      } else {
+        output += `${displayKey}: ${JSON.stringify(value)}\n`;
       }
-    };
-  }
+    });
 
-  private generateCustomOutput(results: Record<string, any>, context: WorkflowContext, input: OutputInput): any {
-    const customOutput: any = {};
-    
-    if (input.customFields && input.customFields.length > 0) {
-      for (const field of input.customFields) {
-        // Try to find the field in results, context data, or generate it
-        if (results[field] !== undefined) {
-          customOutput[field] = results[field];
-        } else if (context.data[field] !== undefined) {
-          customOutput[field] = context.data[field];
-        } else {
-          // Generate computed fields
-          switch (field) {
-            case 'nodeCount':
-              customOutput[field] = Object.keys(results).length;
-              break;
-            case 'executionTime':
-              customOutput[field] = this.calculateTotalDuration(context);
-              break;
-            case 'success':
-              customOutput[field] = !context.errors || context.errors.length === 0;
-              break;
-            default:
-              customOutput[field] = null;
+    // Add task results with flattened nested values
+    output += '\n=== Task Results ===\n';
+    Object.entries(context.results || {}).forEach(([nodeId, result]) => {
+      output += `${nodeId}: ${JSON.stringify(result)}\n`;
+
+      // Also output nested primitive values for easier access
+      if (result && typeof result === 'object') {
+        Object.entries(result).forEach(([nestedKey, nestedValue]) => {
+          if (typeof nestedValue === 'number' || typeof nestedValue === 'boolean') {
+            output += `${nestedKey}: ${nestedValue}\n`;
           }
-        }
-      }
-    }
-
-    return customOutput;
-  }
-
-  private extractKeyResults(results: Record<string, any>): any {
-    // Extract the most important results for summary
-    const keyResults: any = {};
-    
-    // Look for common result patterns
-    Object.entries(results).forEach(([nodeId, result]) => {
-      if (result && typeof result === 'object') {
-        // Extract key metrics
-        if (result.count !== undefined) keyResults[`${nodeId}_count`] = result.count;
-        if (result.total !== undefined) keyResults[`${nodeId}_total`] = result.total;
-        if (result.success !== undefined) keyResults[`${nodeId}_success`] = result.success;
-        if (result.url !== undefined) keyResults[`${nodeId}_url`] = result.url;
-        if (result.id !== undefined) keyResults[`${nodeId}_id`] = result.id;
+        });
       }
     });
 
-    return keyResults;
-  }
-
-  private calculateTotalDuration(context: WorkflowContext): number {
-    // This would be calculated by the workflow engine
-    // For now, return a placeholder
-    return Date.now() - (context.data.startTime || Date.now());
-  }
-
-  private estimateStartTime(context: WorkflowContext): string {
-    // Estimate start time based on execution duration
-    const duration = this.calculateTotalDuration(context);
-    return new Date(Date.now() - duration).toISOString();
-  }
-
-  private calculateDataSize(results: Record<string, any>): number {
-    try {
-      return JSON.stringify(results).length;
-    } catch {
-      return 0;
+    // Add errors if any
+    if (hasErrors) {
+      output += '\n=== Errors/Issues ===\n';
+      context.errors.forEach(error => {
+        output += `${error.message}\n`;
+      });
     }
+
+    return output.trimEnd();
   }
 
-  private calculateAverageNodeDuration(context: WorkflowContext): number {
-    const nodeCount = Object.keys(context.results || {}).length;
-    if (nodeCount === 0) return 0;
-    return this.calculateTotalDuration(context) / nodeCount;
-  }
+  private generateCustomOutput(input: OutputInput, context: WorkflowContext): string {
+    if (!input.customTemplate) {
+      return '';
+    }
 
-  private identifyBottlenecks(results: Record<string, any>): string[] {
-    // Identify potential performance bottlenecks
-    const bottlenecks: string[] = [];
-    
-    Object.entries(results).forEach(([nodeId, result]) => {
-      if (result && typeof result === 'object') {
-        if (result.duration > 5000) {
-          bottlenecks.push(`${nodeId}: Slow execution (${result.duration}ms)`);
-        }
-        if (result.size > 1000000) {
-          bottlenecks.push(`${nodeId}: Large data size (${result.size} bytes)`);
-        }
+    let output = input.customTemplate;
+
+    // Simple template replacement - replace {{field}} with values from context.data
+    // NOTE: This only handles direct property access, not computed properties like .length
+    const templateRegex = /\{\{([^}]+)\}\}/g;
+    output = output.replace(templateRegex, (match, fieldPath) => {
+      const trimmed = fieldPath.trim();
+
+      // Skip computed properties (anything with .length, method calls, etc.)
+      if (trimmed.includes('.length') || trimmed.includes('(')) {
+        return match; // Leave as-is
       }
+
+      const value = this.getNestedValue(context.data, trimmed);
+      return value !== undefined ? String(value) : match;
     });
 
-    return bottlenecks;
+    return output;
   }
 
-  private generateRecommendations(results: Record<string, any>, context: WorkflowContext): string[] {
-    const recommendations: string[] = [];
-    
-    const nodeCount = Object.keys(results).length;
-    if (nodeCount > 20) {
-      recommendations.push('Consider breaking large workflows into smaller, focused workflows');
+  private selectFields(fields: string[], context: WorkflowContext): any {
+    const result: any = {};
+
+    for (const field of fields) {
+      // Try to get value from data first
+      let value = this.getNestedValue(context.data, field);
+
+      // If not in data, try results
+      if (value === undefined) {
+        value = this.getNestedValue(context.results, field);
+      }
+
+      if (value !== undefined) {
+        result[field] = value;
+      }
     }
 
-    if (context.errors && context.errors.length > 0) {
-      recommendations.push('Review and fix error handling for failed nodes');
-    }
-
-    const dataSize = this.calculateDataSize(results);
-    if (dataSize > 5000000) { // 5MB
-      recommendations.push('Consider using artifact storage for large data sets');
-    }
-
-    return recommendations;
-  }
-
-  private applyTemplate(template: string, data: any): string {
-    let result = template;
-    
-    // Simple template replacement
-    result = result.replace(/\{\{workflowId\}\}/g, data.context.workflowId || 'unknown');
-    result = result.replace(/\{\{executionId\}\}/g, data.context.executionId || 'unknown');
-    result = result.replace(/\{\{nodesExecuted\}\}/g, data.metadata.nodesExecuted.toString());
-    result = result.replace(/\{\{duration\}\}/g, data.metadata.totalDuration.toString());
-    
     return result;
+  }
+
+  private getNestedValue(obj: any, path: string): any {
+    if (!obj || typeof obj !== 'object') {
+      return undefined;
+    }
+
+    const parts = path.split('.');
+    let current = obj;
+
+    for (const part of parts) {
+      if (current === null || current === undefined) {
+        return undefined;
+      }
+      current = current[part];
+    }
+
+    return current;
   }
 }

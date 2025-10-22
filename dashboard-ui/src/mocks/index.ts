@@ -167,8 +167,8 @@ export class MockDataGenerator {
       contextName: 'Default Context',
       organizationId: 'demo-org-456',
       permissions: ['mcp:*'],
-      oauthGrants: ['google-analytics', 'slack'],
-      workflows: ['workflow-ga-report-123', 'workflow-slack-automation-456'],
+      oauthGrants: ['slack'],
+      workflows: ['workflow-slack-automation-456'],
       createdBy: 'demo-user-123',
       createdAt: '2024-01-15T10:00:00Z',
       updatedAt: '2024-03-10T14:30:00Z'
@@ -178,7 +178,7 @@ export class MockDataGenerator {
       contextName: 'Marketing Context',
       organizationId: 'demo-org-456',
       permissions: ['mcp:analytics', 'mcp:content'],
-      oauthGrants: ['google-analytics', 'linkedin', 'twitter'],
+      oauthGrants: ['linkedin', 'twitter'],
       workflows: ['workflow-content-calendar-789'],
       createdBy: 'jane-smith-789',
       createdAt: '2024-02-01T16:20:00Z',
@@ -187,28 +187,6 @@ export class MockDataGenerator {
   ];
 
   static workflows: MockWorkflow[] = [
-    {
-      workflowId: 'workflow-ga-report-123',
-      name: 'Google Analytics Weekly Report',
-      description: 'Automated weekly analytics report generation with email delivery',
-      contextId: 'context-default-123',
-      requiredApps: ['google-analytics', 'email'],
-      sharedWith: ['john-doe-456'],
-      createdBy: 'demo-user-123',
-      createdAt: '2024-01-15T10:00:00Z',
-      updatedAt: '2024-02-28T14:30:00Z',
-      definition: JSON.stringify({
-        nodes: [
-          { id: 'trigger', type: 'schedule', config: { interval: 'weekly' } },
-          { id: 'analytics', type: 'ga-top-pages', config: { days: 7 } },
-          { id: 'email', type: 'send-email', config: { template: 'weekly-report' } }
-        ],
-        connections: [
-          { from: 'trigger', to: 'analytics' },
-          { from: 'analytics', to: 'email' }
-        ]
-      })
-    },
     {
       workflowId: 'workflow-slack-automation-456',
       name: 'Incident Response Workflow',
@@ -259,14 +237,6 @@ export class MockDataGenerator {
 
   static oauthTokens: MockOAuthToken[] = [
     {
-      tokenId: 'token-ga-123',
-      appType: 'google-analytics',
-      connectionName: 'Main Analytics Account',
-      scopes: ['analytics.readonly'],
-      expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
-      createdAt: '2024-03-01T10:00:00Z'
-    },
-    {
       tokenId: 'token-slack-456',
       appType: 'slack',
       connectionName: 'Team Workspace',
@@ -298,27 +268,6 @@ export class MockDataGenerator {
       }]
     },
     {
-      name: 'ga_getTopPages',
-      description: 'Get top performing pages from Google Analytics',
-      category: 'analytics',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          propertyId: { type: 'string', description: 'GA4 property ID' },
-          days: { type: 'number', description: 'Number of days to analyze' }
-        },
-        required: ['propertyId']
-      },
-      provider: 'Google Analytics',
-      isAvailable: true,
-      tags: ['analytics', 'google', 'reporting', 'metrics'],
-      examples: [{
-        name: 'Weekly report',
-        description: 'Get top pages for the last 7 days',
-        inputExample: { propertyId: '12345678', days: 7 }
-      }]
-    },
-    {
       name: 'events_send',
       description: 'Send an event to the event bus',
       category: 'communication',
@@ -346,41 +295,6 @@ export class MockDataGenerator {
   ];
 
   static workflowTemplates: MockWorkflowTemplate[] = [
-    {
-      id: 'google-analytics-report',
-      name: 'Google Analytics Weekly Report',
-      description: 'Automated weekly analytics report generation with email delivery',
-      category: 'analytics',
-      tags: ['analytics', 'automation', 'popular', 'email'],
-      author: {
-        id: 'system',
-        name: 'Agent Mesh',
-        organizationName: 'Official Templates'
-      },
-      stats: {
-        starCount: 245,
-        forkCount: 89,
-        usageCount: 1200,
-        rating: 4.8,
-        reviewCount: 67
-      },
-      metadata: {
-        version: '2.1.0',
-        createdAt: '2024-01-15T10:00:00Z',
-        updatedAt: '2024-02-28T14:30:00Z',
-        complexity: 'beginner',
-        estimatedTime: '5-10 minutes',
-        requiredIntegrations: ['google-analytics', 'email']
-      },
-      preview: {
-        nodeCount: 8,
-        connectionCount: 12,
-        hasScreenshots: true
-      },
-      isOfficial: true,
-      isFeatured: true,
-      context: 'public'
-    },
     {
       id: 'slack-incident-response',
       name: 'Incident Response Workflow',
@@ -425,7 +339,7 @@ export class MockDataGenerator {
       detailType: 'WorkflowStarted',
       source: 'workflow-engine',
       detail: {
-        workflowId: 'workflow-ga-report-123',
+        workflowId: 'workflow-slack-automation-456',
         userId: 'demo-user-123',
         trigger: 'schedule'
       },
@@ -439,7 +353,7 @@ export class MockDataGenerator {
       detailType: 'MCPToolCalled',
       source: 'mcp-server',
       detail: {
-        toolName: 'ga_getTopPages',
+        toolName: 'kv_get',
         userId: 'demo-user-123',
         duration: 1250,
         success: true

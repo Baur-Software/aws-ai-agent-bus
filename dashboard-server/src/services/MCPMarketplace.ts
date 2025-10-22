@@ -50,6 +50,27 @@ export interface MCPServerListing {
   installCommand?: string;
   dockerImage?: string;
   npmPackage?: string;
+
+  // Workflow integration
+  workflowNodes?: string[];
+  workflowNodeDetails?: Array<{
+    type: string;
+    name: string;
+    description: string;
+    category: string;
+    icon?: string;
+  }>;
+  specializedAgents?: string[];
+  specializedAgentDetails?: Array<{
+    id: string;
+    name: string;
+    description: string;
+    expertise: string[];
+  }>;
+  nodeShapes?: string[];
+  canExecuteAgents?: boolean;
+  dataInputTypes?: string[];
+  dataOutputTypes?: string[];
 }
 
 export class MCPMarketplace {

@@ -10,9 +10,11 @@ expertise: [testing, validation]
 This is a test agent used for validating the agent delegation system.
 
 ## Capabilities
+
 - Test execution
 - System validation
 - Mock responses
 
 ## Usage
+
 This agent is designed for testing purposes only and provides predictable responses for validation.

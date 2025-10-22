@@ -1,0 +1,127 @@
+{
+  "version": "1.0",
+  "created": "2025-10-11T00:00:00Z",
+  "name": "Historical Analytics & Trend Analysis",
+  "description": "Long-term data storage and trend analysis. Query historical analytics data from DynamoDB, identify patterns, predict future trends, and generate executive reports.",
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "trigger",
+      "x": 50,
+      "y": 300,
+      "inputs": [],
+      "outputs": ["output"],
+      "config": {
+        "name": "Monthly Trend Report",
+        "schedule": "0 9 1 * *"
+      }
+    },
+    {
+      "id": "query-90-days-1",
+      "type": "dynamodb-query",
+      "x": 300,
+      "y": 300,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "tableName": "{{DYNAMODB_TABLE}}",
+        "indexName": "gsi1",
+        "keyConditionExpression": "gsi1pk = :pk AND gsi1sk BETWEEN :start AND :end",
+        "expressionAttributeValues": {
+          ":pk": "METRICS",
+          ":start": "{{ninetyDaysAgo}}",
+          ":end": "{{yesterday}}"
+        }
+      }
+    },
+    {
+      "id": "calculate-trends-1",
+      "type": "transform",
+      "x": 550,
+      "y": 300,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "operations": [
+          {"field": "avgSessions", "formula": "AVG(sessions)"},
+          {"field": "growthRate", "formula": "(sessions[LAST] - sessions[FIRST]) / sessions[FIRST] * 100"},
+          {"field": "peakDay", "formula": "MAX_BY(date, sessions)"},
+          {"field": "volatility", "formula": "STDDEV(sessions) / AVG(sessions)"}
+        ]
+      }
+    },
+    {
+      "id": "ai-forecast-1",
+      "type": "agent-conductor",
+      "x": 800,
+      "y": 200,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "agentType": "data-analyst",
+        "prompt": "Analyze this 90-day traffic data and provide:\n1. Key trends and patterns\n2. 30-day forecast\n3. Seasonality analysis\n4. Anomaly detection\n5. Recommendations\n\nData: {{historicalData}}",
+        "model": "claude-3-5-sonnet"
+      }
+    },
+    {
+      "id": "create-charts-1",
+      "type": "parallel",
+      "x": 1050,
+      "y": 300,
+      "inputs": ["input"],
+      "outputs": ["timeSeries", "heatmap", "forecast"],
+      "config": {
+        "branches": [
+          {"name": "Time Series", "output": "timeSeries"},
+          {"name": "Heatmap", "output": "heatmap"},
+          {"name": "Forecast", "output": "forecast"}
+        ]
+      }
+    },
+    {
+      "id": "generate-report-1",
+      "type": "pdf-generate",
+      "x": 1550,
+      "y": 300,
+      "inputs": ["charts", "analysis"],
+      "outputs": ["output"],
+      "config": {
+        "template": "executive-analytics-report",
+        "includeCharts": true,
+        "fileName": "analytics-report-{{month}}-{{year}}.pdf"
+      }
+    },
+    {
+      "id": "send-email-1",
+      "type": "email",
+      "x": 1800,
+      "y": 300,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "to": "executives@company.com",
+        "subject": "Monthly Analytics Report - {{month}} {{year}}",
+        "body": "Executive Summary:\n\n{{aiSummary}}\n\n[Download Full Report]({{pdfUrl}})",
+        "attachments": ["{{pdfUrl}}"]
+      }
+    }
+  ],
+  "connections": [
+    {"from": "trigger-1", "to": "query-90-days-1", "fromOutput": "output", "toInput": "input"},
+    {"from": "query-90-days-1", "to": "calculate-trends-1", "fromOutput": "output", "toInput": "input"},
+    {"from": "calculate-trends-1", "to": "ai-forecast-1", "fromOutput": "output", "toInput": "input"},
+    {"from": "ai-forecast-1", "to": "create-charts-1", "fromOutput": "output", "toInput": "input"},
+    {"from": "create-charts-1", "to": "generate-report-1", "fromOutput": "timeSeries", "toInput": "charts"},
+    {"from": "ai-forecast-1", "to": "generate-report-1", "fromOutput": "output", "toInput": "analysis"},
+    {"from": "generate-report-1", "to": "send-email-1", "fromOutput": "output", "toInput": "input"}
+  ],
+  "metadata": {
+    "author": "AWS AI Agent Bus",
+    "tags": ["analytics", "trends", "forecasting", "historical-data", "reporting"],
+    "category": "Analytics & Content",
+    "requiredApps": ["aws", "bedrock"],
+    "estimatedDuration": "5-10 minutes",
+    "difficulty": "intermediate",
+    "isTemplate": true
+  }
+}

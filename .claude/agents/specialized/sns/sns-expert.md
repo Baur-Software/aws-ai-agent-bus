@@ -15,6 +15,7 @@ Before implementing any SNS features, you MUST fetch the latest documentation to
 3. **Always verify**: Current SNS features, delivery protocols, and integration patterns
 
 **Example Usage:**
+
 ```
 Before implementing SNS topics, I'll fetch the latest SNS docs...
 [Use WebFetch to get current docs from AWS SNS documentation]
@@ -71,6 +72,7 @@ When designing SNS solutions, you return structured findings:
 ## Core Expertise
 
 ### Topic Design and Management
+
 - Topic organization strategies
 - FIFO vs Standard topic selection
 - Message attribute design
@@ -79,6 +81,7 @@ When designing SNS solutions, you return structured findings:
 - Dead letter queue integration
 
 ### Subscription Management
+
 - Protocol-specific optimizations
 - Message filtering rules
 - Subscription confirmation handling
@@ -87,6 +90,7 @@ When designing SNS solutions, you return structured findings:
 - Subscription health monitoring
 
 ### Security and Compliance
+
 - Topic access policies
 - Cross-account access control
 - Message encryption (in-transit/at-rest)
@@ -97,6 +101,7 @@ When designing SNS solutions, you return structured findings:
 ## SNS Configuration Patterns
 
 ### Standard Topic with Multiple Subscribers
+
 ```yaml
 # SNS topic for application events
 resource "aws_sns_topic" "application_events" {
@@ -214,6 +219,7 @@ resource "aws_lambda_permission" "sns_invoke" {
 ```
 
 ### FIFO Topic for Ordered Messages
+
 ```yaml
 # FIFO topic for ordered processing
 resource "aws_sns_topic" "order_events" {
@@ -274,6 +280,7 @@ resource "aws_sqs_queue_policy" "order_processing_fifo" {
 ```
 
 ### Mobile Push Notifications
+
 ```yaml
 # SNS platform application for mobile push
 resource "aws_sns_platform_application" "ios_app" {
@@ -328,6 +335,7 @@ resource "aws_lambda_function" "device_registration" {
 ```
 
 ### Cross-Account Topic Access
+
 ```yaml
 # SNS topic with cross-account access
 resource "aws_sns_topic" "cross_account_events" {
@@ -398,6 +406,7 @@ resource "aws_sns_topic_policy" "cross_account_events" {
 ## Advanced SNS Features
 
 ### Message Publishing with Attributes
+
 ```python
 # Python SDK example for publishing with attributes
 import boto3
@@ -511,6 +520,7 @@ if __name__ == "__main__":
 ```
 
 ### HTTP/HTTPS Endpoint Subscription
+
 ```yaml
 # HTTP endpoint subscription with retry policy
 resource "aws_sns_topic_subscription" "webhook_notification" {
@@ -585,6 +595,7 @@ resource "aws_iam_role_policy" "sns_delivery" {
 ```
 
 ### Dead Letter Queue Configuration
+
 ```yaml
 # Dead letter queue for failed deliveries
 resource "aws_sqs_queue" "sns_dlq" {
@@ -631,6 +642,7 @@ resource "aws_sns_topic_subscription" "with_dlq" {
 ## Monitoring and Alerting
 
 ### CloudWatch Metrics and Alarms
+
 ```yaml
 # CloudWatch alarms for SNS
 resource "aws_cloudwatch_metric_alarm" "sns_failed_deliveries" {
@@ -685,6 +697,7 @@ resource "aws_cloudwatch_log_metric_filter" "message_processing_time" {
 ```
 
 ### Cost Optimization
+
 ```yaml
 # Variables for cost optimization
 variable "sns_message_retention_hours" {

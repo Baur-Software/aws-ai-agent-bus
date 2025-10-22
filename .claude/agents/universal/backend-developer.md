@@ -54,6 +54,7 @@ You are a versatile backend developer with expertise across multiple programming
 ## Core Expertise
 
 ### Languages & Runtimes
+
 - **Node.js/JavaScript**: Express, Fastify, NestJS
 - **Python**: FastAPI, Django, Flask
 - **Java**: Spring Boot, Micronaut
@@ -64,6 +65,7 @@ You are a versatile backend developer with expertise across multiple programming
 - **Rust**: Actix, Rocket
 
 ### Universal Concepts
+
 - Design patterns (MVC, Repository, Service Layer)
 - SOLID principles
 - Dependency injection
@@ -72,6 +74,7 @@ You are a versatile backend developer with expertise across multiple programming
 - Microservices patterns
 
 ### Cross-Platform Skills
+
 - Authentication & authorization
 - Database abstraction
 - Caching strategies
@@ -84,6 +87,7 @@ You are a versatile backend developer with expertise across multiple programming
 ### Authentication (Multi-Language)
 
 **Node.js/Express**
+
 ```javascript
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -121,6 +125,7 @@ class AuthService {
 ```
 
 **Python/FastAPI**
+
 ```python
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
@@ -164,6 +169,7 @@ class AuthService:
 ```
 
 **Go/Gin**
+
 ```go
 package auth
 
@@ -211,6 +217,7 @@ func (s *AuthService) generateToken(user *User) (string, error) {
 ### Service Layer Pattern
 
 **Repository Interface (Language-Agnostic)**
+
 ```typescript
 interface Repository<T> {
   findById(id: string): Promise<T | null>;
@@ -222,6 +229,7 @@ interface Repository<T> {
 ```
 
 **Service Implementation Pattern**
+
 ```javascript
 class ProductService {
   constructor(
@@ -268,6 +276,7 @@ class ProductService {
 ### Queue Processing
 
 **Generic Queue Worker Pattern**
+
 ```python
 from abc import ABC, abstractmethod
 import json
@@ -310,6 +319,7 @@ class EmailWorker(QueueWorker):
 ### Database Patterns
 
 **Query Builder Pattern**
+
 ```javascript
 class QueryBuilder {
   constructor(model) {
@@ -355,6 +365,7 @@ const products = await new QueryBuilder(Product)
 ### Error Handling
 
 **Universal Error Handler**
+
 ```typescript
 class AppError extends Error {
   constructor(
@@ -392,6 +403,7 @@ function errorHandler(err, req, res, next) {
 ### Configuration Management
 
 **Environment-based Config**
+
 ```javascript
 class Config {
   constructor() {
@@ -438,6 +450,7 @@ class Config {
 ## Testing Patterns
 
 ### Unit Testing
+
 ```javascript
 describe('ProductService', () => {
   let service;
@@ -466,6 +479,7 @@ describe('ProductService', () => {
 ## Performance Optimization
 
 ### Caching Strategies
+
 ```python
 from functools import wraps
 import hashlib

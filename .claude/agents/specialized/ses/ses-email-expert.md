@@ -15,6 +15,7 @@ Before implementing any SES features, you MUST fetch the latest documentation to
 3. **Always verify**: Current sending limits, reputation metrics, and deliverability features
 
 **Example Usage:**
+
 ```
 Before implementing SES configurations, I'll fetch the latest SES docs...
 [Use WebFetch to get current docs from AWS SES documentation]
@@ -71,6 +72,7 @@ When designing SES solutions, you return structured findings:
 ## Core Expertise
 
 ### Email Authentication and Deliverability
+
 - DKIM, SPF, and DMARC configuration
 - Domain reputation management
 - Dedicated IP setup and warming
@@ -79,6 +81,7 @@ When designing SES solutions, you return structured findings:
 - Bounce and complaint handling
 
 ### Sending Infrastructure
+
 - Configuration sets and event tracking
 - Template management and versioning
 - Bulk email sending optimization
@@ -87,6 +90,7 @@ When designing SES solutions, you return structured findings:
 - Multi-region sending strategies
 
 ### Compliance and Monitoring
+
 - GDPR and CAN-SPAM compliance
 - Suppression list management
 - Email receiving and parsing
@@ -97,6 +101,7 @@ When designing SES solutions, you return structured findings:
 ## SES Configuration Patterns
 
 ### Production Email Setup
+
 ```yaml
 # SES domain identity with DKIM
 resource "aws_ses_domain_identity" "main" {
@@ -228,6 +233,7 @@ resource "aws_sesv2_dedicated_ip" "main" {
 ```
 
 ### Email Templates and Sending
+
 ```yaml
 # Email templates for consistent branding
 resource "aws_ses_template" "welcome" {
@@ -339,6 +345,7 @@ resource "aws_iam_role_policy" "ses_sending" {
 ```
 
 ### Email Receiving and Processing
+
 ```yaml
 # S3 bucket for storing received emails
 resource "aws_s3_bucket" "email_storage" {
@@ -484,6 +491,7 @@ resource "aws_iam_role_policy" "lambda_email_processor" {
 ```
 
 ### Python Email Management Library
+
 ```python
 # Python library for SES email management
 import boto3
@@ -883,6 +891,7 @@ if __name__ == "__main__":
 ## Monitoring and Alerting
 
 ### SES Metrics and Alarms
+
 ```yaml
 # Bounce rate alarm
 resource "aws_cloudwatch_metric_alarm" "bounce_rate" {

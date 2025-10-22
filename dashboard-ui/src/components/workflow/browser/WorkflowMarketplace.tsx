@@ -164,50 +164,13 @@ export default function WorkflowMarketplace(props: WorkflowMarketplaceProps = {}
     try {
       setLoading(true);
 
-      // Use mock data in development mode
-      if (MockDataGenerator.shouldUseMockData('templates')) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setTemplates(mockWorkflowTemplates);
-        return;
-      }
+      // Use mock data for now (TODO: implement API endpoint)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setTemplates(mockWorkflowTemplates as any);
+      return;
 
       // Load from API in production (TODO: implement API endpoint)
       const sampleTemplates: WorkflowTemplate[] = [
-        {
-          id: 'google-analytics-report',
-          name: 'Google Analytics Weekly Report',
-          description: 'Automated weekly analytics report generation with email delivery',
-          category: 'analytics',
-          tags: ['analytics', 'automation', 'popular', 'email'],
-          author: {
-            id: 'system',
-            name: 'Agent Mesh',
-            organizationName: 'Official Templates'
-          },
-          stats: {
-            starCount: 245,
-            forkCount: 89,
-            usageCount: 1200,
-            rating: 4.8,
-            reviewCount: 67
-          },
-          metadata: {
-            version: '2.1.0',
-            createdAt: '2024-01-15T10:00:00Z',
-            updatedAt: '2024-02-28T14:30:00Z',
-            complexity: 'beginner',
-            estimatedTime: '5-10 minutes',
-            requiredIntegrations: ['google-analytics', 'email']
-          },
-          preview: {
-            nodeCount: 8,
-            connectionCount: 12,
-            hasScreenshots: true
-          },
-          isOfficial: true,
-          isFeatured: true,
-          context: 'public'
-        },
         {
           id: 'slack-incident-response',
           name: 'Incident Response Workflow',
@@ -507,10 +470,10 @@ export default function WorkflowMarketplace(props: WorkflowMarketplaceProps = {}
                               {template.name}
                             </h3>
                             <Show when={template.isOfficial}>
-                              <Award class="w-4 h-4 text-yellow-500" title="Official Template" />
+                              <Award class="w-4 h-4 text-yellow-500" />
                             </Show>
                             <Show when={template.isFeatured}>
-                              <Sparkles class="w-4 h-4 text-purple-500" title="Featured Template" />
+                              <Sparkles class="w-4 h-4 text-purple-500" />
                             </Show>
                           </div>
                           <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">

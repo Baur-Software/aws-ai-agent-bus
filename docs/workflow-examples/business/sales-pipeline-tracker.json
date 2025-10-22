@@ -1,0 +1,451 @@
+{
+  "version": "1.0",
+  "created": "2025-10-11T00:00:00Z",
+  "name": "Sales Pipeline to Invoice Tracker",
+  "description": "Match invoices with sales pipelines to see the complete picture of your customer's journey from lead to repeat client. Track conversion rates, payment cycles, and customer satisfaction.",
+  "nodes": [
+    {
+      "id": "webhook-1",
+      "type": "webhook",
+      "x": 50,
+      "y": 250,
+      "inputs": [],
+      "outputs": ["opportunity", "invoice", "payment"],
+      "config": {
+        "name": "CRM & QuickBooks Webhook",
+        "description": "Receives updates from CRM and QuickBooks",
+        "webhookUrl": "/webhooks/sales-pipeline",
+        "events": ["opportunity.updated", "invoice.created", "payment.received"]
+      }
+    },
+    {
+      "id": "parse-event-1",
+      "type": "json-parse",
+      "x": 250,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "extractFields": ["eventType", "objectId", "timestamp", "data"]
+      }
+    },
+    {
+      "id": "route-event-1",
+      "type": "switch",
+      "x": 450,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["opportunity", "invoice", "payment"],
+      "config": {
+        "variable": "eventType",
+        "cases": [
+          { "value": "opportunity.updated", "output": "opportunity" },
+          { "value": "invoice.created", "output": "invoice" },
+          { "value": "payment.received", "output": "payment" }
+        ]
+      }
+    },
+    {
+      "id": "get-opportunity-1",
+      "type": "salesforce-get",
+      "x": 650,
+      "y": 100,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "object": "Opportunity",
+        "fields": ["Id", "AccountId", "Name", "Amount", "Stage", "CloseDate", "ContactId", "Custom__Invoice_Sent__c"],
+        "includeRelated": ["Account", "Contact"]
+      }
+    },
+    {
+      "id": "get-invoice-1",
+      "type": "quickbooks-get",
+      "x": 650,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "entity": "Invoice",
+        "includeLineItems": true,
+        "includeCustomer": true,
+        "includePayments": true
+      }
+    },
+    {
+      "id": "get-payment-1",
+      "type": "quickbooks-get",
+      "x": 650,
+      "y": 400,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "entity": "Payment",
+        "includeInvoice": true,
+        "includeCustomer": true
+      }
+    },
+    {
+      "id": "match-opportunity-invoice-1",
+      "type": "data-join",
+      "x": 900,
+      "y": 175,
+      "inputs": ["opportunity", "invoice"],
+      "outputs": ["matched", "unmatched"],
+      "config": {
+        "joinType": "full-outer",
+        "leftKey": "accountId",
+        "rightKey": "customerId",
+        "fuzzyMatchFields": ["accountName", "customerName"],
+        "fuzzyThreshold": 0.9,
+        "includeUnmatched": true
+      }
+    },
+    {
+      "id": "calculate-journey-1",
+      "type": "transform",
+      "x": 1150,
+      "y": 175,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "operations": [
+          {
+            "field": "leadCreatedDate",
+            "formula": "opportunity.createdDate"
+          },
+          {
+            "field": "opportunityCreatedDate",
+            "formula": "opportunity.createdDate"
+          },
+          {
+            "field": "closeDate",
+            "formula": "opportunity.closeDate"
+          },
+          {
+            "field": "invoiceSentDate",
+            "formula": "invoice.txnDate"
+          },
+          {
+            "field": "paymentReceivedDate",
+            "formula": "payment.txnDate"
+          },
+          {
+            "field": "leadToOpportunity",
+            "formula": "DAYS_BETWEEN(leadCreatedDate, opportunityCreatedDate)"
+          },
+          {
+            "field": "opportunityToClose",
+            "formula": "DAYS_BETWEEN(opportunityCreatedDate, closeDate)"
+          },
+          {
+            "field": "closeToInvoice",
+            "formula": "DAYS_BETWEEN(closeDate, invoiceSentDate)"
+          },
+          {
+            "field": "invoiceToPayment",
+            "formula": "DAYS_BETWEEN(invoiceSentDate, paymentReceivedDate)"
+          },
+          {
+            "field": "totalJourneyDays",
+            "formula": "DAYS_BETWEEN(leadCreatedDate, paymentReceivedDate)"
+          },
+          {
+            "field": "journeyStage",
+            "formula": "CASE WHEN paymentReceivedDate IS NOT NULL THEN 'completed' WHEN invoiceSentDate IS NOT NULL THEN 'invoiced' WHEN closeDate IS NOT NULL THEN 'closed' ELSE 'in_progress' END"
+          },
+          {
+            "field": "revenueRecognized",
+            "formula": "IF(journeyStage = 'completed', invoice.totalAmount, 0)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "update-opportunity-1",
+      "type": "salesforce-update",
+      "x": 1400,
+      "y": 100,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "object": "Opportunity",
+        "updateFields": {
+          "Custom__Invoice_Number__c": "{{invoice.docNumber}}",
+          "Custom__Invoice_Sent_Date__c": "{{invoiceSentDate}}",
+          "Custom__Payment_Received_Date__c": "{{paymentReceivedDate}}",
+          "Custom__Total_Journey_Days__c": "{{totalJourneyDays}}",
+          "Custom__Journey_Stage__c": "{{journeyStage}}"
+        }
+      }
+    },
+    {
+      "id": "calculate-cohort-metrics-1",
+      "type": "transform",
+      "x": 1400,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "operations": [
+          {
+            "field": "isFirstPurchase",
+            "formula": "COUNT(previousInvoices) = 0"
+          },
+          {
+            "field": "isRepeatCustomer",
+            "formula": "COUNT(previousInvoices) > 0"
+          },
+          {
+            "field": "repeatPurchaseRate",
+            "formula": "IF(isRepeatCustomer, 100, 0)"
+          },
+          {
+            "field": "customerTenure",
+            "formula": "DAYS_BETWEEN(firstPurchaseDate, NOW())"
+          },
+          {
+            "field": "avgDaysBetweenPurchases",
+            "formula": "IF(isRepeatCustomer, customerTenure / COUNT(previousInvoices), NULL)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "store-journey-data-1",
+      "type": "kv-set",
+      "x": 1650,
+      "y": 175,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "key": "customer-journey-{{customerId}}-{{timestamp}}",
+        "useContextData": true,
+        "ttl_hours": 8760
+      }
+    },
+    {
+      "id": "check-thresholds-1",
+      "type": "condition",
+      "x": 1400,
+      "y": 400,
+      "inputs": ["input"],
+      "outputs": ["alert", "normal"],
+      "config": {
+        "conditions": [
+          {
+            "field": "invoiceToPayment",
+            "operator": ">",
+            "value": 45,
+            "output": "alert",
+            "alertType": "overdue"
+          },
+          {
+            "field": "opportunityToClose",
+            "operator": ">",
+            "value": 90,
+            "output": "alert",
+            "alertType": "stuck_deal"
+          },
+          {
+            "field": "totalJourneyDays",
+            "operator": ">",
+            "value": 180,
+            "output": "alert",
+            "alertType": "long_cycle"
+          }
+        ],
+        "defaultOutput": "normal"
+      }
+    },
+    {
+      "id": "send-alert-1",
+      "type": "slack-message",
+      "x": 1650,
+      "y": 400,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "channel": "#sales-alerts",
+        "message": "⚠️ **Sales Pipeline Alert**\n\nCustomer: {{customerName}}\nAlert Type: {{alertType}}\n\nDetails:\n{{#if alertType == 'overdue'}}\n- Invoice overdue by {{invoiceToPayment}} days\n- Invoice Amount: {{invoiceAmount}}\n- Customer: {{customerName}}\n{{/if}}\n{{#if alertType == 'stuck_deal'}}\n- Opportunity stuck in {{stage}} for {{opportunityToClose}} days\n- Deal Value: {{amount}}\n{{/if}}\n{{#if alertType == 'long_cycle'}}\n- Total journey: {{totalJourneyDays}} days (target: 180)\n- Current stage: {{journeyStage}}\n{{/if}}\n\n[View Details]({{opportunityUrl}})"
+      }
+    },
+    {
+      "id": "create-visualization-1",
+      "type": "chart-sankey",
+      "x": 1650,
+      "y": 250,
+      "inputs": ["input"],
+      "outputs": ["output", "image"],
+      "config": {
+        "title": "Customer Journey Flow",
+        "nodes": [
+          { "name": "Lead", "color": "#9C27B0" },
+          { "name": "Opportunity", "color": "#673AB7" },
+          { "name": "Closed Won", "color": "#4CAF50" },
+          { "name": "Invoiced", "color": "#2196F3" },
+          { "name": "Paid", "color": "#00BCD4" },
+          { "name": "Repeat Customer", "color": "#FF9800" }
+        ],
+        "links": "{{journeyFlowData}}",
+        "showValues": true,
+        "width": 1000,
+        "height": 600
+      }
+    },
+    {
+      "id": "send-event-1",
+      "type": "events-send",
+      "x": 1650,
+      "y": 100,
+      "inputs": ["input"],
+      "outputs": ["output"],
+      "config": {
+        "detailType": "CustomerJourney.Updated",
+        "detail": {
+          "customerId": "{{customerId}}",
+          "customerName": "{{customerName}}",
+          "journeyStage": "{{journeyStage}}",
+          "totalJourneyDays": "{{totalJourneyDays}}",
+          "revenueRecognized": "{{revenueRecognized}}",
+          "isRepeatCustomer": "{{isRepeatCustomer}}",
+          "alertTriggered": "{{alertTriggered}}",
+          "timestamp": "{{timestamp}}"
+        }
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "webhook-1",
+      "to": "parse-event-1",
+      "fromOutput": "opportunity",
+      "toInput": "input"
+    },
+    {
+      "from": "webhook-1",
+      "to": "parse-event-1",
+      "fromOutput": "invoice",
+      "toInput": "input"
+    },
+    {
+      "from": "webhook-1",
+      "to": "parse-event-1",
+      "fromOutput": "payment",
+      "toInput": "input"
+    },
+    {
+      "from": "parse-event-1",
+      "to": "route-event-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "route-event-1",
+      "to": "get-opportunity-1",
+      "fromOutput": "opportunity",
+      "toInput": "input"
+    },
+    {
+      "from": "route-event-1",
+      "to": "get-invoice-1",
+      "fromOutput": "invoice",
+      "toInput": "input"
+    },
+    {
+      "from": "route-event-1",
+      "to": "get-payment-1",
+      "fromOutput": "payment",
+      "toInput": "input"
+    },
+    {
+      "from": "get-opportunity-1",
+      "to": "match-opportunity-invoice-1",
+      "fromOutput": "output",
+      "toInput": "opportunity"
+    },
+    {
+      "from": "get-invoice-1",
+      "to": "match-opportunity-invoice-1",
+      "fromOutput": "output",
+      "toInput": "invoice"
+    },
+    {
+      "from": "match-opportunity-invoice-1",
+      "to": "calculate-journey-1",
+      "fromOutput": "matched",
+      "toInput": "input"
+    },
+    {
+      "from": "calculate-journey-1",
+      "to": "update-opportunity-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "calculate-journey-1",
+      "to": "calculate-cohort-metrics-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "calculate-cohort-metrics-1",
+      "to": "store-journey-data-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "calculate-journey-1",
+      "to": "check-thresholds-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "check-thresholds-1",
+      "to": "send-alert-1",
+      "fromOutput": "alert",
+      "toInput": "input"
+    },
+    {
+      "from": "calculate-cohort-metrics-1",
+      "to": "create-visualization-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "store-journey-data-1",
+      "to": "send-event-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    }
+  ],
+  "metadata": {
+    "author": "AWS AI Agent Bus",
+    "tags": ["sales", "pipeline", "crm", "quickbooks", "customer-journey", "business-intelligence"],
+    "category": "Business Intelligence",
+    "requiredApps": ["salesforce", "quickbooks", "slack"],
+    "estimatedDuration": "Real-time processing on each event",
+    "difficulty": "advanced",
+    "isTemplate": true,
+    "features": [
+      "Real-time matching of opportunities to invoices",
+      "Complete customer journey tracking",
+      "Automatic CRM updates with invoice data",
+      "Repeat customer identification",
+      "Sales cycle timing analysis",
+      "Threshold-based alerts for stuck deals",
+      "Sankey diagram visualization of customer flow",
+      "Event-driven architecture for instant updates"
+    ],
+    "instructions": [
+      "Connect Salesforce and QuickBooks in integrations",
+      "Configure webhooks in both platforms",
+      "Connect Slack for alert notifications",
+      "Customize threshold values for alerts",
+      "Map custom fields in Salesforce",
+      "Test with sample opportunity",
+      "Monitor real-time updates on canvas",
+      "View customer journey visualizations"
+    ]
+  }
+}

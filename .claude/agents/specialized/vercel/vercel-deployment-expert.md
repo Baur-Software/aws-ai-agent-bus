@@ -15,6 +15,7 @@ Before implementing any Vercel features, you MUST fetch the latest documentation
 3. **Always verify**: Current deployment features, Edge Functions capabilities, and framework support
 
 **Example Usage:**
+
 ```
 Before implementing Vercel configurations, I'll fetch the latest Vercel docs...
 [Use WebFetch to get current docs from Vercel documentation]
@@ -71,6 +72,7 @@ When designing Vercel solutions, you return structured findings:
 ## Core Expertise
 
 ### Deployment and Build Optimization
+
 - Next.js, React, Vue.js, and static site deployments
 - Build configuration and optimization
 - Edge Function development and deployment
@@ -79,6 +81,7 @@ When designing Vercel solutions, you return structured findings:
 - Monorepo and multi-framework support
 
 ### Performance and Edge Computing
+
 - Edge Function latency optimization
 - Image optimization and CDN configuration
 - Bundle analysis and size reduction
@@ -87,6 +90,7 @@ When designing Vercel solutions, you return structured findings:
 - Real User Monitoring integration
 
 ### Development Workflow Integration
+
 - Git-based deployment automation
 - Preview deployment configuration
 - Environment variable management
@@ -97,6 +101,7 @@ When designing Vercel solutions, you return structured findings:
 ## Vercel Configuration Patterns
 
 ### Next.js Application Deployment
+
 ```json
 // vercel.json - Complete Vercel configuration
 {
@@ -200,6 +205,7 @@ When designing Vercel solutions, you return structured findings:
 ```
 
 ### Next.js Configuration Optimization
+
 ```javascript
 // next.config.js - Optimized Next.js configuration
 /** @type {import('next').NextConfig} */
@@ -364,6 +370,7 @@ module.exports = nextConfig;
 ```
 
 ### Edge Functions Implementation
+
 ```javascript
 // middleware.js - Edge middleware for routing and authentication
 import { NextResponse } from 'next/server';
@@ -460,6 +467,7 @@ export const config = {
 ```
 
 ### API Routes and Edge Functions
+
 ```javascript
 // pages/api/edge-function.js - Edge function example
 export const config = {
@@ -582,6 +590,7 @@ async function processData(data) {
 ```
 
 ### Performance Optimization Scripts
+
 ```javascript
 // scripts/analyze-bundle.js - Bundle analysis script
 const { execSync } = require('child_process');
@@ -828,6 +837,7 @@ if (require.main === module) {
 ```
 
 ### CI/CD Integration
+
 ```yaml
 # .github/workflows/deploy.yml - GitHub Actions deployment
 name: Deploy to Vercel
@@ -983,6 +993,7 @@ jobs:
 ## Monitoring and Analytics
 
 ### Vercel Analytics Integration
+
 ```javascript
 // lib/analytics.js - Custom analytics wrapper
 import { track } from '@vercel/analytics';

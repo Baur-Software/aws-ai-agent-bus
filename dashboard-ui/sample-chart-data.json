@@ -1,0 +1,37 @@
+{
+  "monthlyRevenue": [
+    { "month": "January", "revenue": 45000, "expenses": 32000, "profit": 13000 },
+    { "month": "February", "revenue": 52000, "expenses": 35000, "profit": 17000 },
+    { "month": "March", "revenue": 48000, "expenses": 33000, "profit": 15000 },
+    { "month": "April", "revenue": 61000, "expenses": 38000, "profit": 23000 },
+    { "month": "May", "revenue": 58000, "expenses": 36000, "profit": 22000 },
+    { "month": "June", "revenue": 67000, "expenses": 40000, "profit": 27000 }
+  ],
+  "salesByRegion": [
+    { "region": "North America", "sales": 145000, "customers": 342, "avgOrderValue": 424 },
+    { "region": "Europe", "sales": 98000, "customers": 256, "avgOrderValue": 383 },
+    { "region": "Asia Pacific", "sales": 127000, "customers": 418, "avgOrderValue": 304 },
+    { "region": "Latin America", "sales": 56000, "customers": 167, "avgOrderValue": 335 },
+    { "region": "Middle East", "sales": 42000, "customers": 98, "avgOrderValue": 429 }
+  ],
+  "productPerformance": [
+    { "product": "Widget Pro", "units": 1245, "revenue": 62250, "rating": 4.7 },
+    { "product": "Gadget Plus", "units": 987, "revenue": 49350, "rating": 4.5 },
+    { "product": "Tool Master", "units": 756, "revenue": 37800, "rating": 4.8 },
+    { "product": "Device Elite", "units": 2103, "revenue": 105150, "rating": 4.6 },
+    { "product": "Gizmo Deluxe", "units": 534, "revenue": 26700, "rating": 4.4 }
+  ],
+  "userEngagement": [
+    { "week": "Week 1", "activeUsers": 3245, "sessions": 8932, "avgDuration": 342 },
+    { "week": "Week 2", "activeUsers": 3567, "sessions": 9821, "avgDuration": 356 },
+    { "week": "Week 3", "activeUsers": 3821, "sessions": 10543, "avgDuration": 378 },
+    { "week": "Week 4", "activeUsers": 4102, "sessions": 11234, "avgDuration": 391 }
+  ],
+  "marketShare": [
+    { "competitor": "Our Company", "percentage": 32.5, "growth": 8.2 },
+    { "competitor": "Competitor A", "percentage": 28.3, "growth": 3.1 },
+    { "competitor": "Competitor B", "percentage": 19.7, "growth": -2.4 },
+    { "competitor": "Competitor C", "percentage": 12.1, "growth": 5.6 },
+    { "competitor": "Others", "percentage": 7.4, "growth": 1.2 }
+  ]
+}

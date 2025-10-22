@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@solidjs/testing-library';
 import { createRoot } from 'solid-js';
 import WorkflowNodeDetails from '../workflow/ui/WorkflowNodeDetails';
@@ -219,8 +219,8 @@ class AgentModelConfigurationService {
 
 describe('Agent Model Configuration', () => {
   let service: AgentModelConfigurationService;
-  let mockOnUpdate: vi.Mock;
-  let mockOnClose: vi.Mock;
+  let mockOnUpdate: Mock;
+  let mockOnClose: Mock;
 
   const createTestNode = (agentType: string, agentConfig?: any): WorkflowNode => ({
     id: 'test-node',

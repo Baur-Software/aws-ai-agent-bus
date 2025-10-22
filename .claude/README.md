@@ -73,6 +73,7 @@ cp .env.example .env
 ```
 
 Key environment variables:
+
 - `AWS_PROFILE` - Your AWS profile name
 - `AWS_REGION` - AWS region (default: us-west-2)
 - `MCP_SERVER_URL` - MCP server endpoint
@@ -99,4 +100,5 @@ See `.env.example` for all available configuration options.
 Whenever new agents, scripts, or policies are added, extend the structure map and key roles here to keep it authoritative.
 
 ## Changelog
+
 - See `CHANGELOG.md`. Sweeper can append entries when agent specs change.

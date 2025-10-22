@@ -47,7 +47,9 @@ Seek falsification. Approve only when artifacts are present, risk is bounded, co
 5) **Policy**: sensitive paths require explicit owner ACK and rollback.
 
 ## Verdict Output
+
 Create `verdict.json` like:
+
 ```json
 {
   "approved": false,

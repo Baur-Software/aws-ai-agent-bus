@@ -10,29 +10,48 @@ Welcome to the AWS AI Agent Bus documentation! This project provides a comprehen
 
 ## 📚 Core Components
 
-### MCP Server
+### 🤖 AI Features
+
+AI-powered workflow generation, persistent chat, and intelligent assistance.
+
+- [**AI Features Overview**](ai-features/) - Complete AI capabilities documentation
+- [**Bedrock Setup Guide**](ai-features/bedrock-setup-guide.md) - AWS Bedrock configuration
+- [**Chat System**](ai-features/CHAT_SYSTEM_COMPLETE.md) - Architecture and features
+- [**Deployment Guide**](ai-features/DEPLOYMENT_BEDROCK_CHAT.md) - Production deployment
+
+**Key Capabilities:**
+- Context-aware workflow generation (knows your integrations)
+- Persistent chat history (30-day retention in DynamoDB)
+- Plan Mode & Edit Mode for different use cases
+- Smart integration suggestions
+- Real-time event-driven canvas updates
+
+### 🔧 MCP Server
+
 The Model Context Protocol server provides AI assistants with AWS service access.
 
+- [**Rust MCP Server**](../mcp-rust/README.md) - High-performance Rust implementation
+- [**Tool Catalog**](../mcp-rust/TOOLS.md) - Available MCP tools
 - [**API Reference**](mcp-server/api.md) - Complete API documentation
-- [**Setup & Configuration**](mcp-server/setup.md) - Installation and configuration
-- [**Integration Guide**](mcp-server/integration.md) - Integration patterns
-- [**Examples**](mcp-server/examples.md) - Usage examples
 - [**Google Analytics Setup**](mcp-server/google-analytics-setup.md) - Analytics integration
 
-### Infrastructure 
+### 🏗️ Infrastructure
+
 Terraform modules for scalable AWS deployment organized by workspaces.
 
-- [**Infrastructure Overview**](infra/) - Architecture and components
-- **Workspaces**: [Small](infra/small/) | [Medium](infra/medium/) | [Large](infra/large/)
-- **Integrations**: [Stripe](infra/integrations/stripe/) | [Supabase](infra/integrations/supabase/) | [Vercel](infra/integrations/vercel/)
+- [**Infrastructure Overview**](infrastructure/) - AWS resources and IAM
+- [**Bedrock IAM**](infrastructure/BEDROCK_IAM.md) - Permissions for AI features
+- **Workspaces**: [Small](../infra/workspaces/small/) | [Medium](../infra/workspaces/medium/) | [Large](../infra/workspaces/large/)
+- **Terraform Modules**: [DynamoDB](../infra/modules/dynamodb/) | [S3](../infra/modules/s3/) | [EventBridge](../infra/modules/eventbridge/)
 
-### Agent System
+### 🎭 Agent System
+
 Sophisticated agent orchestration with conductors, critics, and specialists.
 
-- [**Agent Architecture**](agents/) - System overview
-- [**Conductor Agent**](agents/conductor.md) - Goal-driven planner
-- [**Critic Agent**](agents/critic.md) - Safety and verification
-- [**Specialized Agents**](agents/specialized/) - Framework and service experts
+- [**Agent Definitions**](../.claude/agents/) - All agent configurations
+- [**Mentor Agent**](../.claude/agents/mentor.md) - Documentation teacher
+- [**Conductor Agent**](../.claude/agents/conductor.md) - Goal-driven planner
+- [**Framework Experts**](../.claude/agents/) - Django, Rails, React, Vue, Terraform specialists
 
 ## 🛠️ Development
 

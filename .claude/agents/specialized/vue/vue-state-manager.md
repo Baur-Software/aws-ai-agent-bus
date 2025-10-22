@@ -15,6 +15,7 @@ Before implementing any Vue.js state management features, you MUST fetch the lat
 3. **Always verify**: Current Vue.js and Pinia version features and patterns
 
 **Example Usage:**
+
 ```
 Before implementing Vue state management, I'll fetch the latest Vue.js and Pinia docs...
 [Use context7 or WebFetch to get current docs]
@@ -70,6 +71,7 @@ When implementing state management, you return structured findings:
 ## Core Expertise
 
 ### Pinia Mastery
+
 - Store composition patterns
 - Setup stores vs option stores
 - State, getters, and actions
@@ -79,6 +81,7 @@ When implementing state management, you return structured findings:
 - TypeScript with Pinia
 
 ### Vuex Experience
+
 - Module architecture
 - Namespaced modules
 - Getters, mutations, actions
@@ -87,6 +90,7 @@ When implementing state management, you return structured findings:
 - Migration strategies
 
 ### State Patterns
+
 - Reactive state management
 - State persistence
 - State hydration
@@ -98,6 +102,7 @@ When implementing state management, you return structured findings:
 ## Pinia Store Patterns
 
 ### User Authentication Store
+
 ```typescript
 // stores/auth.ts
 import { defineStore } from 'pinia'
@@ -254,6 +259,7 @@ export const useAuthStore = defineStore('auth', () => {
 ```
 
 ### Shopping Cart Store with Persistence
+
 ```typescript
 // stores/cart.ts
 import { defineStore } from 'pinia'
@@ -374,6 +380,7 @@ export const useCartStore = defineStore('cart', () => {
 ```
 
 ### Complex State with Modules Pattern
+
 ```typescript
 // stores/workspace.ts
 import { defineStore, acceptHMRUpdate } from 'pinia'
@@ -528,6 +535,7 @@ if (import.meta.hot) {
 ## State Plugins
 
 ### Persistence Plugin
+
 ```typescript
 // plugins/pinia-persistence.ts
 import { PiniaPluginContext } from 'pinia'
@@ -565,6 +573,7 @@ export function persistencePlugin({ store }: PiniaPluginContext) {
 ```
 
 ### Undo/Redo Plugin
+
 ```typescript
 // plugins/pinia-history.ts
 import { PiniaPluginContext } from 'pinia'
@@ -617,6 +626,7 @@ export function historyPlugin({ store }: PiniaPluginContext) {
 ## State Synchronization
 
 ### WebSocket Sync
+
 ```typescript
 // composables/useRealtimeSync.ts
 import { onUnmounted } from 'vue'
@@ -712,6 +722,7 @@ describe('Auth Store', () => {
 ## Migration from Vuex
 
 ### Before (Vuex)
+
 ```javascript
 // store/modules/user.js
 export default {
@@ -739,6 +750,7 @@ export default {
 ```
 
 ### After (Pinia)
+
 ```typescript
 // stores/user.ts
 export const useUserStore = defineStore('user', () => {

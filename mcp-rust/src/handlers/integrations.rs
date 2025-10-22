@@ -2,11 +2,13 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::sync::Arc;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use crate::aws::AwsService;
 use crate::handlers::{Handler, HandlerError};
-use crate::registry::{AuthMethod, DeploymentConfig, MCPServerConfig, MCPServerRegistry, MCPServerType};
+use crate::registry::{
+    AuthMethod, DeploymentConfig, MCPServerConfig, MCPServerRegistry, MCPServerType,
+};
 use crate::tenant::{Permission, TenantSession};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,7 +39,10 @@ pub struct IntegrationRegisterHandler {
 
 impl IntegrationRegisterHandler {
     pub fn new(aws_service: Arc<AwsService>, registry: Arc<MCPServerRegistry>) -> Self {
-        Self { aws_service, registry }
+        Self {
+            aws_service,
+            registry,
+        }
     }
 }
 
@@ -51,7 +56,10 @@ impl Handler for IntegrationRegisterHandler {
         let args: IntegrationRegisterArgs = serde_json::from_value(arguments)
             .map_err(|e| HandlerError::InvalidArguments(e.to_string()))?;
 
-        info!("Registering integration {} for tenant {}", args.service_id, session.context.tenant_id);
+        info!(
+            "Registering integration {} for tenant {}",
+            args.service_id, session.context.tenant_id
+        );
 
         // Create MCP server config from integration args
         let deployment = if let Some(docker) = args.docker_config {
@@ -101,8 +109,8 @@ impl Handler for IntegrationRegisterHandler {
             capabilities: args.capabilities,
         };
 
-        let value = serde_json::to_string(&config)
-            .map_err(|e| HandlerError::Internal(e.to_string()))?;
+        let value =
+            serde_json::to_string(&config).map_err(|e| HandlerError::Internal(e.to_string()))?;
 
         self.aws_service
             .kv_set_direct(&key, &value, Some(24 * 365)) // 1 year TTL
@@ -224,7 +232,10 @@ pub struct IntegrationConnectHandler {
 
 impl IntegrationConnectHandler {
     pub fn new(aws_service: Arc<AwsService>, registry: Arc<MCPServerRegistry>) -> Self {
-        Self { aws_service, registry }
+        Self {
+            aws_service,
+            registry,
+        }
     }
 }
 
@@ -285,7 +296,11 @@ impl Handler for IntegrationConnectHandler {
 
         // Connect to the MCP server
         self.registry
-            .connect_server(&session.context.get_context_id(), &args.service_id, args.credentials)
+            .connect_server(
+                &session.context.get_context_id(),
+                &args.service_id,
+                args.credentials,
+            )
             .await
             .map_err(|e| HandlerError::Internal(e.to_string()))?;
 
@@ -360,7 +375,10 @@ pub struct IntegrationListHandler {
 
 impl IntegrationListHandler {
     pub fn new(aws_service: Arc<AwsService>, registry: Arc<MCPServerRegistry>) -> Self {
-        Self { aws_service, registry }
+        Self {
+            aws_service,
+            registry,
+        }
     }
 }
 
@@ -377,14 +395,16 @@ impl Handler for IntegrationListHandler {
         );
 
         // Get registered servers from registry
-        let servers = self.registry
+        let servers = self
+            .registry
             .list_servers(&session.context.get_context_id())
             .await
             .map_err(|e| HandlerError::Internal(e.to_string()))?;
 
         // Get user connections
         let prefix = format!("user-{}-integration-", session.context.user_id);
-        let connections = self.aws_service
+        let connections = self
+            .aws_service
             .kv_list(&prefix)
             .await
             .map_err(|e| HandlerError::Internal(e.to_string()))?;
@@ -417,7 +437,10 @@ pub struct IntegrationDisconnectHandler {
 
 impl IntegrationDisconnectHandler {
     pub fn new(aws_service: Arc<AwsService>, registry: Arc<MCPServerRegistry>) -> Self {
-        Self { aws_service, registry }
+        Self {
+            aws_service,
+            registry,
+        }
     }
 }
 
@@ -518,7 +541,8 @@ impl Handler for IntegrationTestHandler {
         );
 
         // Get server status from registry
-        let servers = self.registry
+        let servers = self
+            .registry
             .list_servers(&session.context.get_context_id())
             .await
             .map_err(|e| HandlerError::Internal(e.to_string()))?;
@@ -526,7 +550,9 @@ impl Handler for IntegrationTestHandler {
         let server_info = servers
             .iter()
             .find(|s| s.id == args.service_id)
-            .ok_or_else(|| HandlerError::Internal(format!("Server {} not found", args.service_id)))?;
+            .ok_or_else(|| {
+                HandlerError::Internal(format!("Server {} not found", args.service_id))
+            })?;
 
         let is_connected = server_info.status == "Connected";
 

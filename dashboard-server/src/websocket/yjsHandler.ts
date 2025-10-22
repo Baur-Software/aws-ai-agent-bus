@@ -165,7 +165,7 @@ export class YjsWebSocketHandler {
     // Observe queue changes
     executionQueue.observe((event) => {
       event.changes.added.forEach((item) => {
-        const task = item.content.getJSON();
+        const task = (item.content as any).getJSON();
 
         if (task.status === 'queued') {
           console.log(`[Yjs] New agent execution queued:`, task);
@@ -242,7 +242,7 @@ export class YjsWebSocketHandler {
     const index = tasks.findIndex((t: any) => t.id === taskId);
 
     if (index >= 0) {
-      const task = tasks[index];
+      const task = tasks[index] as any;
       doc.transact(() => {
         executionQueue.delete(index, 1);
         executionQueue.insert(index, [{

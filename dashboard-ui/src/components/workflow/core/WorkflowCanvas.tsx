@@ -1,7 +1,13 @@
 import { createSignal, createEffect, For, onMount, onCleanup, Show, createMemo } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { Plus, Sparkles, ZoomIn, ZoomOut, RotateCcw, Hand } from 'lucide-solid';
+import { Plus, Sparkles } from 'lucide-solid';
 import ConnectionToolbar, { ConnectionStyle } from '../ui/ConnectionToolbar';
+import ConnectionRenderer from '../ui/ConnectionRenderer';
+import ZoomControls from '../ui/ZoomControls';
+import { useNodeLookup } from '../../../hooks/useNodeLookup';
+import { useSpatialIndex } from '../../../hooks/useSpatialIndex';
+import { ChartRenderer, type ChartConfig } from '@ai-agent-bus/datavis-nodes';
+import { ShapeRenderer, type ShapeType } from '@ai-agent-bus/shapes';
 
 export interface WorkflowNode {
   id: string;
@@ -61,6 +67,7 @@ interface WorkflowCanvasProps {
   isNodePanelPinned?: boolean;
   // Pan mode for hand tool
   isPanMode?: boolean;
+  onTogglePanMode?: () => void;
   // Storyboard props
   storyboards?: Storyboard[];
   setStoryboards?: (storyboards: Storyboard[]) => void;
@@ -94,6 +101,9 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
     resizeHandle: null,
     initialNodeSize: null
   });
+
+  // Performance: O(1) node lookup instead of O(n) array.find()
+  const nodeLookup = useNodeLookup(props.nodes);
 
   // Use props for canvas transform if provided, otherwise use local state
   const canvasOffset = () => props.canvasOffset || { x: 0, y: 0 };
@@ -177,203 +187,7 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
     };
   };
 
-  // Render SVG shapes for shape nodes
-  const renderShape = (shapeType: string, width: number, height: number, color: string) => {
-    const colorClass = color.replace('bg-', '');
-    const fillColor = {
-      'gray-500': '#6b7280',
-      'blue-500': '#3b82f6',
-      'yellow-500': '#eab308',
-      'purple-500': '#a855f7',
-      'green-500': '#22c55e',
-      'indigo-500': '#6366f1',
-      'orange-500': '#f97316',
-      'red-500': '#ef4444'
-    }[colorClass] || '#6b7280';
-
-    const halfWidth = width / 2;
-    const halfHeight = height / 2;
-
-    switch (shapeType) {
-      case 'circle':
-        return (
-          <svg width={width} height={height} class="absolute inset-0">
-            <circle
-              cx={halfWidth}
-              cy={halfHeight}
-              r={Math.min(halfWidth, halfHeight) - 2}
-              fill={fillColor}
-              stroke="white"
-              stroke-width="2"
-            />
-          </svg>
-        );
-
-      case 'triangle':
-        return (
-          <svg width={width} height={height} class="absolute inset-0">
-            <polygon
-              points={`${halfWidth},4 ${width-4},${height-4} 4,${height-4}`}
-              fill={fillColor}
-              stroke="white"
-              stroke-width="2"
-            />
-          </svg>
-        );
-
-      case 'diamond':
-        return (
-          <svg width={width} height={height} class="absolute inset-0">
-            <polygon
-              points={`${halfWidth},4 ${width-4},${halfHeight} ${halfWidth},${height-4} 4,${halfHeight}`}
-              fill={fillColor}
-              stroke="white"
-              stroke-width="2"
-            />
-          </svg>
-        );
-
-      case 'arrow':
-        return (
-          <svg width={width} height={height} class="absolute inset-0">
-            <polygon
-              points={`4,${halfHeight-8} ${width-20},${halfHeight-8} ${width-20},4 ${width-4},${halfHeight} ${width-20},${height-4} ${width-20},${halfHeight+8} 4,${halfHeight+8}`}
-              fill={fillColor}
-              stroke="white"
-              stroke-width="2"
-            />
-          </svg>
-        );
-
-      case 'hexagon':
-        const points = [];
-        for (let i = 0; i < 6; i++) {
-          const angle = (i * Math.PI) / 3;
-          const x = halfWidth + (halfWidth - 4) * Math.cos(angle);
-          const y = halfHeight + (halfHeight - 4) * Math.sin(angle);
-          points.push(`${x},${y}`);
-        }
-        return (
-          <svg width={width} height={height} class="absolute inset-0">
-            <polygon
-              points={points.join(' ')}
-              fill={fillColor}
-              stroke="white"
-              stroke-width="2"
-            />
-          </svg>
-        );
-
-      case 'star':
-        const starPoints = [];
-        for (let i = 0; i < 10; i++) {
-          const angle = (i * Math.PI) / 5;
-          const radius = i % 2 === 0 ? halfWidth - 4 : (halfWidth - 4) / 2;
-          const x = halfWidth + radius * Math.cos(angle - Math.PI / 2);
-          const y = halfHeight + radius * Math.sin(angle - Math.PI / 2);
-          starPoints.push(`${x},${y}`);
-        }
-        return (
-          <svg width={width} height={height} class="absolute inset-0">
-            <polygon
-              points={starPoints.join(' ')}
-              fill={fillColor}
-              stroke="white"
-              stroke-width="2"
-            />
-          </svg>
-        );
-
-      case 'heart':
-        const r = Math.min(halfWidth, halfHeight) * 0.4;
-        const leftCx = halfWidth - r * 0.6;
-        const rightCx = halfWidth + r * 0.6;
-        const cy = height * 0.35;
-        return (
-          <svg width={width} height={height} class="absolute inset-0">
-            {/* Left circle */}
-            <circle
-              cx={leftCx}
-              cy={cy}
-              r={r}
-              fill={fillColor}
-              stroke="white"
-              stroke-width="2"
-            />
-            {/* Right circle */}
-            <circle
-              cx={rightCx}
-              cy={cy}
-              r={r}
-              fill={fillColor}
-              stroke="white"
-              stroke-width="2"
-            />
-            {/* Bottom triangle */}
-            <path
-              d={`M${leftCx - r},${cy} L${rightCx + r},${cy} L${halfWidth},${height - 8} Z`}
-              fill={fillColor}
-              stroke="white"
-              stroke-width="2"
-            />
-          </svg>
-        );
-
-      case 'rectangle':
-        return (
-          <svg width={width} height={height} class="absolute inset-0">
-            <rect
-              x="2"
-              y="2"
-              width={width - 4}
-              height={height - 4}
-              fill={fillColor}
-              stroke="white"
-              stroke-width="2"
-              rx="4"
-            />
-          </svg>
-        );
-
-      case 'sticky-note':
-        return (
-          <svg width={width} height={height} class="absolute inset-0">
-            {/* Main note body */}
-            <rect
-              x="2"
-              y="2"
-              width={width - 4}
-              height={height - 4}
-              fill={fillColor}
-              stroke="#fbbf24"
-              stroke-width="1"
-              rx="2"
-            />
-            {/* Top fold corner */}
-            <polygon
-              points={`${width-15},2 ${width-2},2 ${width-2},15`}
-              fill="#f59e0b"
-              stroke="#fbbf24"
-              stroke-width="1"
-            />
-            {/* Shadow effect */}
-            <rect
-              x="4"
-              y="4"
-              width={width - 8}
-              height={height - 8}
-              fill="none"
-              stroke="rgba(0,0,0,0.1)"
-              stroke-width="1"
-              rx="2"
-            />
-          </svg>
-        );
-
-      default:
-        return null;
-    }
-  };
+  // Shape rendering is now handled by the ShapeRenderer component from @ai-agent-bus/shapes
 
   // Convert screen coordinates to canvas coordinates
   const screenToCanvas = (screenX: number, screenY: number) => {
@@ -424,9 +238,10 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
 
   // Reactive connection data that updates when nodes or connections change
   const connectionData = createMemo(() => {
+    const lookup = nodeLookup();
     return props.connections.map(connection => {
-      const fromNode = props.nodes.find(n => n.id === connection.from);
-      const toNode = props.nodes.find(n => n.id === connection.to);
+      const fromNode = lookup.get(connection.from);
+      const toNode = lookup.get(connection.to);
 
       if (!fromNode || !toNode) return null;
 
@@ -480,6 +295,9 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
     return { x, y };
   };
 
+  // Performance: Spatial indexing for O(1) port lookups (critical with hundreds of nodes)
+  const spatialIndex = useSpatialIndex(props.nodes, getPortPosition, 100);
+
   // Check if connection is valid
   const isValidConnection = (fromNode: WorkflowNode, fromPort: string, fromType: 'input' | 'output', toNode: WorkflowNode, toPort: string, toType: 'input' | 'output') => {
     // Can't connect to same node
@@ -497,32 +315,20 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
     return !existingConnection;
   };
 
-  // Find nearby port for snapping
+  // Find nearby port for snapping (optimized with spatial index)
   const findNearbyPort = (screenX: number, screenY: number, maxDistance: number = 30) => {
     const canvasPos = screenToCanvas(screenX, screenY);
+    const index = spatialIndex();
 
-    for (const node of props.nodes) {
-      const config = getNodeConfig(node.type, node);
+    const nearbyPort = index.findNearby(canvasPos.x, canvasPos.y, maxDistance);
 
-      // Check input ports
-      for (let i = 0; i < node.inputs.length; i++) {
-        const portPos = getPortPosition(node, node.inputs[i], 'input');
-        const distance = Math.sqrt(Math.pow(canvasPos.x - portPos.x, 2) + Math.pow(canvasPos.y - portPos.y, 2));
-
-        if (distance <= maxDistance) {
-          return { nodeId: node.id, port: node.inputs[i], type: 'input' as const, position: portPos };
-        }
-      }
-
-      // Check output ports
-      for (let i = 0; i < node.outputs.length; i++) {
-        const portPos = getPortPosition(node, node.outputs[i], 'output');
-        const distance = Math.sqrt(Math.pow(canvasPos.x - portPos.x, 2) + Math.pow(canvasPos.y - portPos.y, 2));
-
-        if (distance <= maxDistance) {
-          return { nodeId: node.id, port: node.outputs[i], type: 'output' as const, position: portPos };
-        }
-      }
+    if (nearbyPort) {
+      return {
+        nodeId: nearbyPort.nodeId,
+        port: nearbyPort.port,
+        type: nearbyPort.type,
+        position: { x: nearbyPort.x, y: nearbyPort.y }
+      };
     }
 
     return null;
@@ -745,7 +551,8 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
       setDragState('startPos', currentPos);
     } else if (dragState.dragType === 'connection' && dragState.connectionStart) {
       // Update temporary connection line with snapping and visual feedback
-      const startNode = props.nodes.find(n => n.id === dragState.connectionStart!.nodeId);
+      const lookup = nodeLookup();
+      const startNode = lookup.get(dragState.connectionStart!.nodeId);
       if (startNode) {
         const startPos = getPortPosition(startNode, dragState.connectionStart.port, dragState.connectionStart.type);
 
@@ -806,8 +613,9 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
       }
 
       if (targetNodeId && targetPort && targetPortType && targetPortType !== dragState.connectionStart.type) {
-        const fromNode = props.nodes.find(n => n.id === dragState.connectionStart.nodeId);
-        const toNode = props.nodes.find(n => n.id === targetNodeId);
+        const lookup = nodeLookup();
+        const fromNode = lookup.get(dragState.connectionStart.nodeId);
+        const toNode = lookup.get(targetNodeId);
 
         if (fromNode && toNode && isValidConnection(fromNode, dragState.connectionStart.port, dragState.connectionStart.type, toNode, targetPort, targetPortType)) {
           // Create new connection
@@ -1031,212 +839,20 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
           'pointer-events': 'none' // Disable for the SVG container
         }}
       >
-        {/* Arrowhead marker definitions */}
-        <defs style={{ 'pointer-events': 'none' }}>
-          <marker
-            id="arrow-end"
-            markerWidth="10"
-            markerHeight="10"
-            refX="9"
-            refY="3"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <polygon points="0 0, 10 3, 0 6" fill="currentColor" />
-          </marker>
-          <marker
-            id="arrow-start"
-            markerWidth="10"
-            markerHeight="10"
-            refX="1"
-            refY="3"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <polygon points="10 0, 0 3, 10 6" fill="currentColor" />
-          </marker>
-          <marker
-            id="circle-end"
-            markerWidth="8"
-            markerHeight="8"
-            refX="4"
-            refY="4"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <circle cx="4" cy="4" r="3" fill="none" stroke="currentColor" stroke-width="1" />
-          </marker>
-          <marker
-            id="circle-start"
-            markerWidth="8"
-            markerHeight="8"
-            refX="4"
-            refY="4"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <circle cx="4" cy="4" r="3" fill="none" stroke="currentColor" stroke-width="1" />
-          </marker>
-          <marker
-            id="diamond-end"
-            markerWidth="10"
-            markerHeight="10"
-            refX="5"
-            refY="5"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <polygon points="0 5, 5 0, 10 5, 5 10" fill="none" stroke="currentColor" stroke-width="1" />
-          </marker>
-          <marker
-            id="diamond-start"
-            markerWidth="10"
-            markerHeight="10"
-            refX="5"
-            refY="5"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <polygon points="0 5, 5 0, 10 5, 5 10" fill="none" stroke="currentColor" stroke-width="1" />
-          </marker>
-        </defs>
-
         {/* Render existing connections */}
-        <For each={connectionData()}>
-          {(connData) => {
-            if (!connData) return null;
-
-            const { connection, fromPos, toPos, fromControl, toControl, path } = connData;
-            const isHovered = hoveredConnection() === connection.id;
-            const isSelected = selectedConnection() === connection.id;
-            const style = getConnectionStyle(connection);
-
-            // Reduce opacity and stroke width for selected connections to make toolbar more visible
-            const selectedOpacity = isSelected ? 0.3 : 1;
-            const selectedStrokeWidth = isSelected ? Math.max(1, style.strokeWidth - 1) : style.strokeWidth;
-
-            return (
-              <g>
-                {/* Connection shadow for depth */}
-                <path
-                  d={path}
-                  stroke="rgba(0,0,0,0.1)"
-                  stroke-width={isHovered && !isSelected ? selectedStrokeWidth + 4 : selectedStrokeWidth + 2}
-                  fill="none"
-                  stroke-dasharray={style.strokeDasharray}
-                  opacity={selectedOpacity * 0.5}
-                  style={{
-                    transform: 'translate(2px, 2px)',
-                    'pointer-events': 'none' // Shadow shouldn't be clickable
-                  }}
-                />
-                {/* Main connection line */}
-                <path
-                  d={path}
-                  stroke={isSelected ? "#8b5cf6" : isHovered ? "#7c3aed" : style.color}
-                  stroke-width={isHovered && !isSelected ? selectedStrokeWidth + 1 : selectedStrokeWidth}
-                  fill="none"
-                  stroke-dasharray={style.strokeDasharray}
-                  marker-start={getMarkerUrl(style.startArrow, 'start')}
-                  marker-end={getMarkerUrl(style.endArrow, 'end')}
-                  opacity={selectedOpacity}
-                  class="transition-all duration-200 cursor-pointer"
-                  style={{
-                    'stroke-linecap': 'round',
-                    color: isSelected ? "#8b5cf6" : isHovered ? "#7c3aed" : style.color,
-                    'pointer-events': 'auto' // Enable clicking on connection lines
-                  }}
-                  onMouseEnter={() => setHoveredConnection(connection.id)}
-                  onMouseLeave={() => setHoveredConnection(null)}
-                  onClick={(e) => {
-                    e.stopPropagation();
-
-                    // Show connection toolbar on click
-                    setSelectedConnection(connection.id);
-
-                    // Calculate midpoint for toolbar position
-                    const midX = (fromPos.x + toPos.x) / 2;
-                    const midY = (fromPos.y + toPos.y) / 2;
-                    const screenPos = canvasToScreen(midX, midY);
-
-                    // Ensure toolbar stays within viewport
-                    const viewportWidth = window.innerWidth;
-                    const viewportHeight = window.innerHeight;
-                    const toolbarWidth = 400; // Approximate toolbar width
-                    const toolbarHeight = 60; // Approximate toolbar height
-
-                    const constrainedPos = {
-                      x: Math.max(toolbarWidth / 2, Math.min(viewportWidth - toolbarWidth / 2, screenPos.x)),
-                      y: Math.max(toolbarHeight + 10, Math.min(viewportHeight - toolbarHeight - 10, screenPos.y))
-                    };
-
-                    setConnectionToolbarPosition(constrainedPos);
-                  }}
-                />
-
-                {/* Connection label */}
-                {style.label && (
-                  <text
-                    x={(fromPos.x + toPos.x) / 2}
-                    y={(fromPos.y + toPos.y) / 2 - 8}
-                    fill={style.color}
-                    font-size="12"
-                    font-family="system-ui"
-                    text-anchor="middle"
-                    class="select-none"
-                    style={{
-                      stroke: 'white',
-                      'stroke-width': '2px',
-                      'paint-order': 'stroke',
-                      'font-weight': '500',
-                      'pointer-events': 'none' // Labels shouldn't be clickable
-                    }}
-                  >
-                    {style.label}
-                  </text>
-                )}
-                {/* Invisible wider area for easier hovering */}
-                <path
-                  d={path}
-                  stroke="transparent"
-                  stroke-width="12"
-                  fill="none"
-                  opacity={selectedOpacity}
-                  style={{
-                    cursor: 'pointer',
-                    'pointer-events': 'auto' // Enable clicking on wider hover area
-                  }}
-                  onMouseEnter={() => setHoveredConnection(connection.id)}
-                  onMouseLeave={() => setHoveredConnection(null)}
-                  onClick={(e) => {
-                    e.stopPropagation();
-
-                    // Show connection toolbar on click
-                    setSelectedConnection(connection.id);
-
-                    // Calculate midpoint for toolbar position
-                    const midX = (fromPos.x + toPos.x) / 2;
-                    const midY = (fromPos.y + toPos.y) / 2;
-                    const screenPos = canvasToScreen(midX, midY);
-
-                    // Ensure toolbar stays within viewport
-                    const viewportWidth = window.innerWidth;
-                    const viewportHeight = window.innerHeight;
-                    const toolbarWidth = 400; // Approximate toolbar width
-                    const toolbarHeight = 60; // Approximate toolbar height
-
-                    const constrainedPos = {
-                      x: Math.max(toolbarWidth / 2, Math.min(viewportWidth - toolbarWidth / 2, screenPos.x)),
-                      y: Math.max(toolbarHeight + 10, Math.min(viewportHeight - toolbarHeight - 10, screenPos.y))
-                    };
-
-                    setConnectionToolbarPosition(constrainedPos);
-                  }}
-                />
-              </g>
-            );
+        <ConnectionRenderer
+          connections={connectionData()}
+          hoveredConnection={hoveredConnection()}
+          selectedConnection={selectedConnection()}
+          onConnectionHover={setHoveredConnection}
+          onConnectionClick={(connection, position) => {
+            setSelectedConnection(connection.id);
+            setConnectionToolbarPosition(position);
           }}
-        </For>
+          getConnectionStyle={getConnectionStyle}
+          getMarkerUrl={getMarkerUrl}
+          canvasToScreen={canvasToScreen}
+        />
 
         {/* Arrow marker definitions */}
         <defs>
@@ -1296,12 +912,13 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
             };
 
             const nearbyPort = hoveredPort();
+            const lookup = nodeLookup();
             const isValidTarget = nearbyPort && dragState.connectionStart ?
               isValidConnection(
-                props.nodes.find(n => n.id === dragState.connectionStart!.nodeId)!,
+                lookup.get(dragState.connectionStart!.nodeId)!,
                 dragState.connectionStart.port,
                 dragState.connectionStart.type,
-                props.nodes.find(n => n.id === nearbyPort.nodeId)!,
+                lookup.get(nearbyPort.nodeId)!,
                 nearbyPort.port,
                 nearbyPort.type
               ) : false;
@@ -1476,7 +1093,12 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
                 {/* Shape rendering or regular node content */}
                 {config.shape ? (
                   <div class="relative w-full h-full">
-                    {renderShape(config.shape, config.width, config.height, config.color)}
+                    <ShapeRenderer
+                      shape={config.shape as ShapeType}
+                      width={config.width}
+                      height={config.height}
+                      color={config.color}
+                    />
                     {/* Label for shapes */}
                     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div
@@ -1490,6 +1112,20 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
                         {node.title && node.title !== node.type ? node.title : ''}
                       </div>
                     </div>
+                  </div>
+                ) : ['chart-bar', 'chart-line', 'chart-pie', 'chart-area', 'chart-scatter'].includes(node.type) && node.config?.manualData ? (
+                  /* Chart visualization nodes with data */
+                  <div class="w-full h-full overflow-hidden">
+                    <ChartRenderer
+                      config={node.config as ChartConfig}
+                      data={(() => {
+                        try {
+                          return JSON.parse(node.config.manualData);
+                        } catch {
+                          return null;
+                        }
+                      })()}
+                    />
                   </div>
                 ) : (
                   <div class="p-2 h-full flex flex-col justify-center">
@@ -1556,9 +1192,10 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
                     const portSpacing = config.width / (node.inputs.length + 1);
                     const isHovered = hoveredPort()?.nodeId === node.id && hoveredPort()?.port === input && hoveredPort()?.type === 'input';
                     const isConnecting = dragState.dragType === 'connection' && dragState.connectionStart?.type === 'output';
+                    const lookup = nodeLookup();
                     const isCompatible = isConnecting && dragState.connectionStart ?
                       isValidConnection(
-                        props.nodes.find(n => n.id === dragState.connectionStart!.nodeId)!,
+                        lookup.get(dragState.connectionStart!.nodeId)!,
                         dragState.connectionStart.port,
                         dragState.connectionStart.type,
                         node,
@@ -1639,9 +1276,10 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
                     const portSpacing = config.width / (node.outputs.length + 1);
                     const isHovered = hoveredPort()?.nodeId === node.id && hoveredPort()?.port === output && hoveredPort()?.type === 'output';
                     const isConnecting = dragState.dragType === 'connection' && dragState.connectionStart?.type === 'input';
+                    const lookup = nodeLookup();
                     const isCompatible = isConnecting && dragState.connectionStart ?
                       isValidConnection(
-                        props.nodes.find(n => n.id === dragState.connectionStart!.nodeId)!,
+                        lookup.get(dragState.connectionStart!.nodeId)!,
                         dragState.connectionStart.port,
                         dragState.connectionStart.type,
                         node,
@@ -1721,83 +1359,54 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
         </For>
       </div>
 
-      {/* Enhanced zoom and navigation controls */}
-      <div
-        class="absolute bottom-4 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 p-3 flex flex-col gap-2 pointer-events-auto"
-        style={{
-          'z-index': 'var(--z-node-details)',
-          right: props.isNodePanelPinned ? '340px' : '16px' // 320px panel width + 20px spacing
+      {/* Zoom and navigation controls */}
+      <ZoomControls
+        zoom={zoom()}
+        onZoomIn={() => setZoom(zoom() * 1.2)}
+        onZoomOut={() => setZoom(zoom() * 0.8)}
+        onResetView={() => {
+          setZoom(1);
+          setCanvasOffset({ x: 0, y: 0 });
         }}
-      >
-        <button
-          class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-all duration-200 hover:scale-105"
-          onClick={() => setZoom(zoom() * 1.2)}
-          title="Zoom In"
-        >
-          <ZoomIn class="w-4 h-4" />
-        </button>
-        <div class="text-xs text-center text-gray-600 dark:text-gray-400 px-1 py-1 bg-gray-50 dark:bg-gray-700 rounded">
-          {Math.round(zoom() * 100)}%
-        </div>
-        <button
-          class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-all duration-200 hover:scale-105"
-          onClick={() => setZoom(zoom() * 0.8)}
-          title="Zoom Out"
-        >
-          <ZoomOut class="w-4 h-4" />
-        </button>
-        <div class="border-t border-gray-200 dark:border-gray-600 my-1"></div>
-        <button
-          class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-all duration-200 hover:scale-105"
-          onClick={() => {
-            setZoom(1);
-            setCanvasOffset({ x: 0, y: 0 });
-          }}
-          title="Reset View"
-        >
-          <RotateCcw class="w-4 h-4" />
-        </button>
-        <button
-          class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-all duration-200 hover:scale-105"
-          onClick={() => {
-            // Fit all nodes in view
-            if (props.nodes.length > 0) {
-              const bounds = props.nodes.reduce(
-                (acc, node) => {
-                  const config = getNodeConfig(node.type, node);
-                  return {
-                    minX: Math.min(acc.minX, node.x),
-                    maxX: Math.max(acc.maxX, node.x + config.width),
-                    minY: Math.min(acc.minY, node.y),
-                    maxY: Math.max(acc.maxY, node.y + config.height)
-                  };
-                },
-                { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
-              );
+        onFitToScreen={() => {
+          // Fit all nodes in view
+          if (props.nodes.length > 0) {
+            const bounds = props.nodes.reduce(
+              (acc, node) => {
+                const config = getNodeConfig(node.type, node);
+                return {
+                  minX: Math.min(acc.minX, node.x),
+                  maxX: Math.max(acc.maxX, node.x + config.width),
+                  minY: Math.min(acc.minY, node.y),
+                  maxY: Math.max(acc.maxY, node.y + config.height)
+                };
+              },
+              { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
+            );
 
-              const canvas = canvasRef();
-              if (canvas) {
-                const rect = canvas.getBoundingClientRect();
-                const width = bounds.maxX - bounds.minX;
-                const height = bounds.maxY - bounds.minY;
-                const newZoom = Math.min(
-                  (rect.width * 0.8) / width,
-                  (rect.height * 0.8) / height,
-                  1
-                );
-                setZoom(newZoom);
-                setCanvasOffset({
-                  x: (rect.width - width * newZoom) / 2 - bounds.minX * newZoom,
-                  y: (rect.height - height * newZoom) / 2 - bounds.minY * newZoom
-                });
-              }
+            const canvas = canvasRef();
+            if (canvas) {
+              const rect = canvas.getBoundingClientRect();
+              const width = bounds.maxX - bounds.minX;
+              const height = bounds.maxY - bounds.minY;
+              const newZoom = Math.min(
+                (rect.width * 0.8) / width,
+                (rect.height * 0.8) / height,
+                1
+              );
+              setZoom(newZoom);
+              setCanvasOffset({
+                x: (rect.width - width * newZoom) / 2 - bounds.minX * newZoom,
+                y: (rect.height - height * newZoom) / 2 - bounds.minY * newZoom
+              });
             }
-          }}
-          title="Fit to Screen"
-        >
-          <Hand class="w-4 h-4" />
-        </button>
-      </div>
+          }
+        }}
+        isPanMode={props.isPanMode}
+        onTogglePanMode={props.onTogglePanMode}
+        isNodePanelPinned={props.isNodePanelPinned}
+        nodes={props.nodes}
+      />
 
       {/* Connection Toolbar */}
       <Show when={selectedConnection() && connectionToolbarPosition()}>

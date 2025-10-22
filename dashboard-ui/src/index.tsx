@@ -40,16 +40,18 @@ render(
                             <WorkflowProvider>
                               <Router root={Layout}>
                                 <Route path="/" component={Canvas} />
+                                {/* Overlay routes that render Canvas but trigger overlays */}
                                 <Route path="/workflows" component={Canvas} />
                                 <Route path="/workflows/:id" component={Canvas} />
-                                {/* Overlay routes that render Canvas but trigger overlays */}
                                 <Route path="/dashboard" component={Canvas} />
+                                <Route path="/agents" component={Canvas} />
                                 <Route path="/apps" component={Canvas} />
                                 <Route path="/kv-store" component={Canvas} />
                                 <Route path="/artifacts" component={Canvas} />
                                 <Route path="/events" component={Canvas} />
                                 <Route path="/settings" component={Canvas} />
                                 <Route path="/chat" component={Canvas} />
+                                <Route path="/node-designer" component={Canvas} />
                                 {/* Catch-all route for any other paths */}
                                 <Route path="*" component={Canvas} />
                               </Router>

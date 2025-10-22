@@ -1,17 +1,17 @@
-import { Settings as SettingsIcon, Plug, User, Shield, Bell, Palette, Database, Menu, ArrowLeft } from 'lucide-solid';
+import { Settings as SettingsIcon, Plug, User, Shield, Bell, Palette, Database, Menu, ArrowLeft, Box } from 'lucide-solid';
 import { useNavigate } from '@solidjs/router';
-import { createSignal, Show } from 'solid-js';
+import { createSignal, Show, For, mergeProps } from 'solid-js';
 import { usePageHeader } from '../contexts/HeaderContext';
-import IntegrationsSettings from '../components/IntegrationsSettings';
 import SidebarSettings from '../components/SidebarSettings';
 import NotificationSettings from '../components/NotificationSettings';
+import NodeManagementSettings from '../components/organization/settings/NodeManagementSettings';
 
 const SETTINGS_SECTIONS = [
   {
-    title: 'Connected Apps',
-    description: 'Connect external services and APIs',
-    icon: Plug,
-    href: '/settings/integrations',
+    title: 'Workflow Nodes',
+    description: 'Manage available workflow nodes and create custom ones',
+    icon: Box,
+    href: '/settings/nodes',
     available: true
   },
   {
@@ -58,16 +58,16 @@ const SETTINGS_SECTIONS = [
   }
 ];
 
-function SettingsCard({ section, onNavigate }) {
+function SettingsCard(props) {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    if (section.available) {
+    if (props.section.available) {
       // Check if we have an onNavigate prop (overlay mode) or use regular navigation
-      if (onNavigate) {
-        onNavigate(section.href);
+      if (props.onNavigate) {
+        props.onNavigate(props.section.href);
       } else {
-        navigate(section.href);
+        navigate(props.section.href);
       }
     }
   };
@@ -75,26 +75,26 @@ function SettingsCard({ section, onNavigate }) {
   return (
     <div 
       class={`bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 transition-all ${
-        section.available 
+        props.section.available 
           ? 'hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md cursor-pointer' 
           : 'opacity-60 cursor-not-allowed'
       }`}
       onClick={handleClick}
     >
       <div class="flex items-start gap-4">
-        <div class={`p-3 rounded-lg ${section.available ? 'bg-blue-500' : 'bg-slate-400 dark:bg-slate-600'} text-white`}>
-          <section.icon class="w-6 h-6" />
+        <div class={`p-3 rounded-lg ${props.section.available ? 'bg-blue-500' : 'bg-slate-400 dark:bg-slate-600'} text-white`}>
+          <props.section.icon class="w-6 h-6" />
         </div>
         <div class="flex-1">
           <div class="flex items-center gap-2 mb-2">
-            <h3 class="text-lg font-semibold text-slate-900 dark:text-white">{section.title}</h3>
-            {!section.available && (
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white">{props.section.title}</h3>
+            {!props.section.available && (
               <span class="px-2 py-1 text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full">
                 Coming Soon
               </span>
             )}
           </div>
-          <p class="text-sm text-slate-600 dark:text-slate-400">{section.description}</p>
+          <p class="text-sm text-slate-600 dark:text-slate-400">{props.section.description}</p>
         </div>
       </div>
     </div>
@@ -105,11 +105,12 @@ interface SettingsProps {
   isOverlay?: boolean;
 }
 
-function Settings({ isOverlay = false }: SettingsProps) {
-  const [currentView, setCurrentView] = createSignal('main');
+function Settings(_props: SettingsProps) {
+    const props = mergeProps({ isOverlay: false }, _props);
+const [currentView, setCurrentView] = createSignal('main');
 
   // Set page-specific header (only when not in overlay)
-  if (!isOverlay) {
+  if (!props.isOverlay) {
     usePageHeader('Settings', 'Configure dashboard preferences and integrations');
   }
 
@@ -123,8 +124,8 @@ function Settings({ isOverlay = false }: SettingsProps) {
 
   const getPageInfo = (view: string) => {
     switch (view) {
-      case '/settings/integrations':
-        return { title: 'Connected Apps', description: 'Connect external services and APIs' };
+      case '/settings/nodes':
+        return { title: 'Workflow Nodes', description: 'Manage available workflow nodes and create custom ones' };
       case '/settings/sidebar':
         return { title: 'Sidebar Settings', description: 'Customize navigation menu visibility' };
       case '/settings/notifications':
@@ -136,31 +137,31 @@ function Settings({ isOverlay = false }: SettingsProps) {
 
   const renderContent = () => {
     switch (currentView()) {
-      case '/settings/integrations':
-        return <IntegrationsSettings isOverlay={isOverlay} />;
+      case '/settings/nodes':
+        return <NodeManagementSettings />;
       case '/settings/sidebar':
-        return <SidebarSettings isOverlay={isOverlay} />;
+        return <SidebarSettings isOverlay={props.isOverlay} />;
       case '/settings/notifications':
         return <NotificationSettings />;
       default:
         return (
           <div class="grid gap-6 md:grid-cols-2">
-            {SETTINGS_SECTIONS.map(section => (
+            <For each={SETTINGS_SECTIONS}>{section => (
               <SettingsCard
                 key={section.title}
                 section={section}
-                onNavigate={isOverlay ? handleNavigate : undefined}
+                onNavigate={props.isOverlay ? handleNavigate : undefined}
               />
-            ))}
+            )}</For>
           </div>
         );
     }
   };
 
   return (
-    <div class={`${isOverlay ? 'h-full flex flex-col' : 'max-w-4xl mx-auto'} p-6`}>
+    <div class={`${props.isOverlay ? 'h-full flex flex-col' : 'max-w-4xl mx-auto'} p-6`}>
       {/* Header for overlay mode */}
-      <Show when={isOverlay}>
+      <Show when={props.isOverlay}>
         <div class="flex-shrink-0 mb-6">
           <div class="flex items-center gap-3 mb-2">
             {/* Back button in header */}
@@ -181,7 +182,7 @@ function Settings({ isOverlay = false }: SettingsProps) {
       </Show>
 
       {/* Content */}
-      <div class={isOverlay ? 'flex-1 overflow-auto' : ''}>
+      <div class={props.isOverlay ? 'flex-1 overflow-auto' : ''}>
         {renderContent()}
       </div>
     </div>

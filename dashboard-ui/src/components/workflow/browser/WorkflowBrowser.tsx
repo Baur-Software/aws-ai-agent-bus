@@ -8,8 +8,8 @@ import {
   Calendar, BarChart3, Settings, Share2, Eye, FileText,
   ChevronDown, SortAsc, SortDesc, Folder, Globe
 } from 'lucide-solid';
-import { WorkflowStorageService, WorkflowListItem, WorkflowSearchFilters } from '../services/WorkflowStorageService';
-import { WorkflowDefinition } from '../workflow/types';
+import { WorkflowStorageService, WorkflowListItem, WorkflowSearchFilters } from '../../../services/WorkflowStorageService';
+import { WorkflowDefinition } from '../../../workflow/types';
 
 interface WorkflowBrowserProps {
   workflowStorage: WorkflowStorageService;
@@ -425,11 +425,11 @@ export default function WorkflowBrowser(props: WorkflowBrowserProps) {
             <For each={Array(6).fill(null)}>
               {() => (
                 <div class="border border-gray-200 rounded-lg p-4 animate-pulse">
-                  <div class="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div class="h-3 bg-gray-200 rounded mb-4"></div>
+                  <div class="h-4 bg-gray-200 rounded mb-2" />
+                  <div class="h-3 bg-gray-200 rounded mb-4" />
                   <div class="flex gap-2">
-                    <div class="h-6 bg-gray-200 rounded w-16"></div>
-                    <div class="h-6 bg-gray-200 rounded w-12"></div>
+                    <div class="h-6 bg-gray-200 rounded w-16" />
+                    <div class="h-6 bg-gray-200 rounded w-12" />
                   </div>
                 </div>
               )}

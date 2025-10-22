@@ -26,13 +26,19 @@ export interface WorkflowUIState {
 
   // Grid and canvas view state
   gridMode: () => 'off' | 'grid' | 'dots';
-  setGridMode: (mode: 'off' | 'grid' | 'dots') => void;
+  setGridMode: (mode: 'off' | 'grid' | 'dots' | ((prev: 'off' | 'grid' | 'dots') => 'off' | 'grid' | 'dots')) => void;
   canvasOffset: () => { x: number; y: number };
   setCanvasOffset: (offset: { x: number; y: number }) => void;
   zoom: () => number;
   setZoom: (zoom: number) => void;
 
-
+  // Agent chat state
+  agentChatState: () => 'launcher' | 'agentchat' | 'planning';
+  setAgentChatState: (state: 'launcher' | 'agentchat' | 'planning') => void;
+  agentChatPosition: () => { x: number; y: number };
+  setAgentChatPosition: (pos: { x: number; y: number }) => void;
+  isAgentChatPinned: () => boolean;
+  setIsAgentChatPinned: (pinned: boolean) => void;
 }
 
 const WorkflowUIContext = createContext<WorkflowUIState>();
@@ -65,6 +71,11 @@ export const WorkflowUIProvider: ParentComponent<{ children: JSX.Element }> = (p
   const [canvasOffset, setCanvasOffset] = createSignal({ x: 0, y: 0 });
   const [zoom, setZoom] = createSignal(1);
 
+  // Agent chat state
+  const [agentChatState, setAgentChatState] = createSignal<'launcher' | 'agentchat' | 'planning'>('launcher');
+  const [agentChatPosition, setAgentChatPosition] = createSignal({ x: 20, y: 20 });
+  const [isAgentChatPinned, setIsAgentChatPinned] = createSignal(false);
+
   const toggleNodesPanel = () => {
     const currentValue = isNodesPanelVisible();
     const newValue = !currentValue;
@@ -92,6 +103,12 @@ export const WorkflowUIProvider: ParentComponent<{ children: JSX.Element }> = (p
     setCanvasOffset,
     zoom,
     setZoom,
+    agentChatState,
+    setAgentChatState,
+    agentChatPosition,
+    setAgentChatPosition,
+    isAgentChatPinned,
+    setIsAgentChatPinned,
   };
 
   return (
