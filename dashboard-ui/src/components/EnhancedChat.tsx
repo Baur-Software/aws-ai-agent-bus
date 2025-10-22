@@ -457,7 +457,7 @@ ${response.data.rawResponse || ''}`;
             <div class="flex items-center space-x-2 px-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-2xl">
               <Loader2 class="w-4 h-4 animate-spin text-blue-500" />
               <span class="text-sm text-gray-600 dark:text-gray-400">
-                Claude is thinking...
+                ...thinking...
               </span>
             </div>
           </div>

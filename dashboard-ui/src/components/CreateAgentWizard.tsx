@@ -359,9 +359,6 @@ Generate a complete, professional agent markdown file following the template str
               <div class="text-lg font-medium text-white mb-2">
                 Generating your agent...
               </div>
-              <div class="text-sm text-gray-400">
-                Using Claude to create a professional agent definition
-              </div>
               <div class="mt-6 w-full max-w-md bg-gray-800 rounded-full h-2">
                 <div class="bg-blue-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }} />
               </div>

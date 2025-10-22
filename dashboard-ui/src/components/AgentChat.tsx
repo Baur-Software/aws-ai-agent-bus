@@ -201,11 +201,6 @@ export default function AgentChat() {
             <Send class="w-5 h-5" />
           </button>
         </div>
-
-        <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center space-x-1">
-          <Bot class="w-3 h-3" />
-          <span>Powered by Claude via AWS Bedrock • Tenant-aware AI assistance</span>
-        </div>
       </div>
     </div>
   );
