@@ -13,7 +13,7 @@ This deployment adds AWS Bedrock Runtime API access to the dashboard-server ECS 
 - [ ] AWS account with admin access
 - [ ] AWS CLI installed and configured
 - [ ] Terraform installed (v1.0+)
-- [ ] AWS profile configured: `baursoftware`
+- [ ] AWS profile configured (e.g., `your-aws-profile`)
 
 ### 2. Enable Claude Models in Bedrock
 
@@ -74,7 +74,7 @@ Expected output:
 #### 2.1 Set Environment Variables
 
 ```bash
-export AWS_PROFILE=baursoftware
+export AWS_PROFILE=your-aws-profile
 export AWS_REGION=us-west-2
 ```
 

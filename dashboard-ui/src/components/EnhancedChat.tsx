@@ -53,14 +53,10 @@ export default function EnhancedChat() {
   // Configure marked for syntax highlighting and load chat history
   onMount(async () => {
     marked.setOptions({
-      highlight: function (code, lang) {
-        const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-        return hljs.highlight(code, { language }).value;
-      },
       langPrefix: 'hljs language-',
       breaks: true,
       gfm: true
-    });
+    } as any);
 
     // Load most recent chat session
     try {

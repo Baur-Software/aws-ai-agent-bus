@@ -14,7 +14,7 @@ Create `dashboard-server/.env`:
 
 ```bash
 AWS_REGION=us-west-2
-AWS_PROFILE=baursoftware
+AWS_PROFILE=your-aws-profile
 BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
 ```
 

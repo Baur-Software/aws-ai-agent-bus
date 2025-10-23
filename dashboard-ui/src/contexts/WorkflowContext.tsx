@@ -816,8 +816,8 @@ export const WorkflowProvider: ParentComponent = (props) => {
    */
   const loadWorkflowFromJSON = async (workflowJson: any): Promise<void> => {
     try {
-      const currentUser = auth.user();
-      const currentOrg = sidebar.currentOrganization();
+      const currentUser = user();
+      const currentOrg = currentOrganization();
 
       if (!currentUser || !currentOrg) {
         error('User or organization not found');
@@ -837,9 +837,16 @@ export const WorkflowProvider: ParentComponent = (props) => {
         updatedAt: new Date().toISOString(),
         createdBy: currentUser.id,
         version: '1.0.0',
-        status: 'draft',
-        visibility: 'private',
-        category: workflowJson.category || 'general',
+        isPublic: false,
+        context: 'user',
+        tags: workflowJson.tags || [],
+        topics: workflowJson.topics || [],
+        stats: {
+          forkCount: 0,
+          starCount: 0,
+          usageCount: 0
+        },
+        versionHistory: [],
         collaborators: [{
           userId: currentUser.id,
           email: currentUser.email,
@@ -855,21 +862,7 @@ export const WorkflowProvider: ParentComponent = (props) => {
           canEdit: [currentUser.id],
           canDelete: [currentUser.id],
           canShare: [currentUser.id]
-        },
-        metadata: {
-          aiGenerated: true,
-          generatedAt: new Date().toISOString(),
-          triggerCount: 0,
-          successRate: 0,
-          avgExecutionTime: 0,
-          lastExecutedAt: undefined,
-          forkCount: 0,
-          starCount: 0,
-          usageCount: 0
-        },
-        versionHistory: [],
-        tags: workflowJson.tags || [],
-        topics: workflowJson.topics || []
+        }
       };
 
       // Set the workflow and its data

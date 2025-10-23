@@ -46,7 +46,7 @@ Create or update `dashboard-server/.env`:
 ```bash
 # AWS Configuration
 AWS_REGION=us-west-2
-AWS_PROFILE=baursoftware  # Optional, for local development
+AWS_PROFILE=your-aws-profile  # Optional, for local development
 
 # Bedrock Model Configuration
 BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
@@ -287,7 +287,7 @@ const sendMessage = async (message: string) => {
 
 1. **Set AWS credentials**:
    ```bash
-   export AWS_PROFILE=baursoftware
+   export AWS_PROFILE=your-aws-profile
    export AWS_REGION=us-west-2
    ```
 
