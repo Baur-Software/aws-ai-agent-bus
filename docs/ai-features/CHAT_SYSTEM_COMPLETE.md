@@ -88,6 +88,7 @@ A production-ready AI chat system with AWS Bedrock (Claude), conversation histor
 **File**: `dashboard-ui/src/components/EnhancedChat.tsx`
 
 Features:
+
 - **Markdown Rendering**: Full markdown support with `marked`
 - **Code Syntax Highlighting**: Using `highlight.js`
 - **Copy to Clipboard**: One-click copy for assistant responses
@@ -99,6 +100,7 @@ Features:
 - **Welcome Screen**: Contextual welcome with feature highlights
 
 UI Elements:
+
 - Gradient header with connection status
 - User/Assistant avatars
 - Timestamp on every message
@@ -113,18 +115,21 @@ UI Elements:
 **File**: `dashboard-server/src/services/ChatHistoryService.ts`
 
 #### Personal Context
+
 - Each user has their own chat history
 - Stored with `USER#{userId}` partition key
 - Private, isolated conversations
 - 90-day TTL for automatic cleanup
 
 #### Organization Context
+
 - Shared chat sessions for teams
 - Stored with `ORG#{organizationId}` partition key
 - Visible to all org members
 - Support for group chats (future)
 
-#### Features:
+#### Features
+
 1. **Session Management**
    - Create, retrieve, update, delete sessions
    - List user/org sessions
@@ -144,6 +149,7 @@ UI Elements:
    - Most used model analytics
 
 4. **Data Model**
+
    ```typescript
    // Sessions Table (PK: USER#xxx or ORG#xxx, SK: SESSION#xxx)
    {
@@ -177,10 +183,12 @@ UI Elements:
 ### Frontend
 
 ✅ **Created:**
+
 - `dashboard-ui/src/components/EnhancedChat.tsx` - Claude IDE-style chat
 - `dashboard-ui/package.json` - Added markdown and highlighting deps
 
 ✅ **Modified:**
+
 - `dashboard-ui/src/components/ChatPanel.tsx` - Fixed WebSocket routing
 - `dashboard-ui/src/components/FloatingChatPanel.tsx` - Fixed WebSocket routing
 - `dashboard-ui/src/components/AgentChat.tsx` - Already correct ✅
@@ -188,9 +196,11 @@ UI Elements:
 ### Backend
 
 ✅ **Created:**
+
 - `dashboard-server/src/services/ChatHistoryService.ts` - History persistence
 
 ✅ **Modified:**
+
 - `dashboard-server/src/services/ChatService.ts`:
   - Added Bedrock client initialization
   - Implemented real Bedrock API calls (non-streaming)
@@ -209,6 +219,7 @@ UI Elements:
 ### Infrastructure
 
 ✅ **Modified:**
+
 - `infra/modules/ecs_dashboard_service/main.tf`:
   - Added Bedrock IAM permissions
   - `bedrock:InvokeModel`
@@ -218,6 +229,7 @@ UI Elements:
 ### Documentation
 
 ✅ **Created:**
+
 - `docs/aws-bedrock-chat-setup.md` - Complete feature guide (450+ lines)
 - `docs/DEPLOYMENT_BEDROCK_CHAT.md` - Deployment walkthrough (520+ lines)
 - `docs/CHAT_SYSTEM_COMPLETE.md` - This file
@@ -225,6 +237,7 @@ UI Elements:
 - `dashboard-server/BEDROCK_SETUP.md` - Quick reference (190+ lines)
 
 ✅ **Modified:**
+
 - `CLAUDE.md` - Added AI Chat System section
 
 ## Usage Examples
@@ -241,6 +254,7 @@ import EnhancedChat from './components/EnhancedChat';
 ### WebSocket API
 
 #### Non-Streaming (Complete Response)
+
 ```typescript
 const response = await sendMessageWithResponse({
   type: 'chat.send_message',
@@ -272,6 +286,7 @@ const response = await sendMessageWithResponse({
 ```
 
 #### Streaming (Token-by-Token)
+
 ```typescript
 // Send with streaming enabled
 ws.send(JSON.stringify({
@@ -342,6 +357,7 @@ const stats = await chatHistoryService.getUserChatStats('user_456');
 ### 1. DynamoDB Tables Required
 
 #### Chat Sessions Table
+
 ```hcl
 resource "aws_dynamodb_table" "chat_sessions" {
   name           = "agent-mesh-${var.env}-chat-sessions"
@@ -373,6 +389,7 @@ resource "aws_dynamodb_table" "chat_sessions" {
 ```
 
 #### Chat Messages Table
+
 ```hcl
 resource "aws_dynamodb_table" "chat_messages" {
   name           = "agent-mesh-${var.env}-chat-messages"
@@ -440,6 +457,7 @@ statement {
 ## Feature Roadmap
 
 ### ✅ Completed
+
 - [x] AWS Bedrock integration
 - [x] Streaming support
 - [x] Role alternation handling
@@ -456,6 +474,7 @@ statement {
 ### 🚧 Planned
 
 #### Group Chat Features
+
 - [ ] Multi-participant group chats
 - [ ] Real-time presence indicators
 - [ ] Typing indicators
@@ -464,6 +483,7 @@ statement {
 - [ ] Thread replies
 
 #### Advanced Features
+
 - [ ] Voice input/output
 - [ ] File uploads (images, documents)
 - [ ] Image analysis with Claude
@@ -473,6 +493,7 @@ statement {
 - [ ] Custom system prompts per session
 
 #### Enterprise Features
+
 - [ ] Chat moderation
 - [ ] Content filtering
 - [ ] Compliance logging
@@ -482,6 +503,7 @@ statement {
 - [ ] E2E encryption
 
 #### Analytics
+
 - [ ] Chat analytics dashboard
 - [ ] Token usage by user/org
 - [ ] Popular topics
@@ -491,12 +513,14 @@ statement {
 ## Cost Optimization
 
 ### Current Setup (Claude 3.5 Sonnet)
+
 - $3.00 per million input tokens
 - $15.00 per million output tokens
 
 ### Recommendations
 
 1. **Use Haiku for simple queries**
+
    ```typescript
    // In ChatService config
    const modelId = query.isSimple()
@@ -505,18 +529,21 @@ statement {
    ```
 
 2. **Limit conversation history**
+
    ```typescript
    // Keep only last 10 messages
    const messages = session.messages.slice(-10);
    ```
 
 3. **Implement rate limiting**
+
    ```typescript
    // Per user: 100 messages/hour
    const rateLimit = 100;
    ```
 
 4. **Set up cost alerts**
+
    ```bash
    aws cloudwatch put-metric-alarm \
      --alarm-name bedrock-monthly-cost-alert \
@@ -538,6 +565,7 @@ statement {
    - Metric: `OutputTokenCount`
 
 3. **Custom Metrics**
+
    ```typescript
    cloudwatch.putMetricData({
      Namespace: 'AgentMesh/Chat',
@@ -583,6 +611,7 @@ statement {
 ### Issue: Markdown not rendering
 
 **Solution**: Install dependencies:
+
 ```bash
 npm install marked highlight.js @tailwindcss/typography
 ```
@@ -590,21 +619,25 @@ npm install marked highlight.js @tailwindcss/typography
 ## Security Considerations
 
 ### 1. User Isolation
+
 - Personal chats: Isolated by `USER#{userId}`
 - Org chats: Isolated by `ORG#{organizationId}`
 - WebSocket authentication enforced
 
 ### 2. Data Retention
+
 - 90-day TTL on all chat data
 - Automatic cleanup via DynamoDB TTL
 - Manual deletion available
 
 ### 3. Content Moderation
+
 - Future: Implement content filtering
 - Future: PII detection and redaction
 - Future: Toxic content detection
 
 ### 4. Encryption
+
 - Data encrypted at rest (DynamoDB)
 - Data encrypted in transit (TLS)
 - Future: Client-side E2E encryption
@@ -612,6 +645,7 @@ npm install marked highlight.js @tailwindcss/typography
 ## Testing
 
 ### Unit Tests
+
 ```bash
 cd dashboard-server
 npm test -- --testPathPattern=ChatService
@@ -619,11 +653,13 @@ npm test -- --testPathPattern=ChatHistoryService
 ```
 
 ### Integration Tests
+
 ```bash
 npm test -- --testPathPattern=chat-integration
 ```
 
 ### Manual Testing
+
 1. Start dashboard-server: `bun run dev`
 2. Open UI: `http://localhost:5173`
 3. Navigate to chat
@@ -652,6 +688,7 @@ npm test -- --testPathPattern=chat-integration
 ## Support
 
 For issues or questions:
+
 1. Check CloudWatch logs: `/ecs/agent-mesh-dev-dashboard`
 2. Review CloudTrail for Bedrock API calls
 3. Verify IAM policy with `aws iam get-role-policy`

@@ -20,6 +20,7 @@ AI-powered workflow generation, persistent chat, and intelligent assistance.
 - [**Deployment Guide**](ai-features/DEPLOYMENT_BEDROCK_CHAT.md) - Production deployment
 
 **Key Capabilities:**
+
 - Context-aware workflow generation (knows your integrations)
 - Persistent chat history (30-day retention in DynamoDB)
 - Plan Mode & Edit Mode for different use cases

@@ -32,6 +32,7 @@ This deployment adds AWS Bedrock Runtime API access to the dashboard-server ECS 
 7. Wait for "Access granted" status (usually instant)
 
 **Verify access:**
+
 ```bash
 aws bedrock list-foundation-models \
   --region us-west-2 \
@@ -39,6 +40,7 @@ aws bedrock list-foundation-models \
 ```
 
 Expected output:
+
 ```json
 {
   "modelSummaries": [
@@ -56,6 +58,7 @@ Expected output:
 ### Step 1: Review Code Changes
 
 **Files Modified:**
+
 1. [dashboard-server/src/services/ChatService.ts](../dashboard-server/src/services/ChatService.ts)
    - Added real Bedrock API integration
    - Added streaming support
@@ -67,6 +70,7 @@ Expected output:
    - Added Bedrock IAM permissions
 
 **Dependencies Added:**
+
 - `@aws-sdk/client-bedrock-runtime` in dashboard-server/package.json
 
 ### Step 2: Deploy Infrastructure Changes
@@ -91,6 +95,7 @@ terraform plan
 ```
 
 **Expected changes:**
+
 ```hcl
 # aws_iam_role_policy.task_role_policy will be updated in-place
 ~ resource "aws_iam_role_policy" "task_role_policy" {
@@ -139,6 +144,7 @@ aws iam get-role-policy \
 ```
 
 **Expected output:**
+
 ```json
 {
   "Sid": "BedrockRuntimeAccess",
@@ -187,6 +193,7 @@ aws ecs update-service \
 **Deployment time**: ~2-3 minutes
 
 **Watch deployment:**
+
 ```bash
 watch -n 2 'aws ecs describe-services \
   --cluster agent-mesh-dev-dashboard \
@@ -196,6 +203,7 @@ watch -n 2 'aws ecs describe-services \
 ```
 
 Wait until:
+
 - `runningCount` matches `desiredCount`
 - `status` is `PRIMARY`
 - Old tasks are drained
@@ -213,6 +221,7 @@ If you want to use a different Claude model, add environment variable to ECS tas
 ```
 
 **Available models:**
+
 - `anthropic.claude-3-5-sonnet-20241022-v2:0` (default, best balance)
 - `anthropic.claude-3-sonnet-20240229-v1:0` (previous version)
 - `anthropic.claude-3-haiku-20240307-v1:0` (fastest, cheapest)
@@ -238,6 +247,7 @@ aws logs tail /ecs/agent-mesh-dev-dashboard \
 ```
 
 **Look for:**
+
 ```
 [ChatService] Initialized Bedrock client for region: us-west-2
 ```
@@ -267,6 +277,7 @@ wscat -c $ALB_URL
 ```
 
 **Expected response:**
+
 ```json
 {
   "type": "chat.message_response",
@@ -287,6 +298,7 @@ wscat -c $ALB_URL
 ```
 
 **Verify:**
+
 - ✅ Response is contextually appropriate (not generic)
 - ✅ `usage` object contains real token counts
 - ✅ Response time is reasonable (2-5 seconds)
@@ -307,6 +319,7 @@ wscat -c $ALB_URL
 ```
 
 **Expected response (multiple messages):**
+
 ```json
 // Token chunks (arrives in real-time)
 {"type": "chat.message_stream", "data": {"content": "AWS "}}
@@ -338,6 +351,7 @@ wscat -c $ALB_URL
 5. Verify Claude responds appropriately
 
 **Success criteria:**
+
 - ✅ Response appears within 2-5 seconds
 - ✅ Content is contextually relevant
 - ✅ No error messages in browser console
@@ -365,12 +379,14 @@ aws cloudwatch get-metric-statistics \
 ### Issue: "AccessDeniedException"
 
 **Error:**
+
 ```
 User: arn:aws:sts::ACCOUNT_ID:assumed-role/agent-mesh-dev-dashboard-task/...
 is not authorized to perform: bedrock:InvokeModel
 ```
 
 **Solutions:**
+
 1. Verify IAM policy applied (Step 3)
 2. Wait 5 seconds for IAM propagation
 3. Check model access enabled (Prerequisites Step 2)
@@ -388,11 +404,13 @@ aws ecs update-service \
 ### Issue: "ResourceNotFoundException"
 
 **Error:**
+
 ```
 Could not find model anthropic.claude-3-5-sonnet-20241022-v2:0
 ```
 
 **Solutions:**
+
 1. Check model access enabled in AWS Console → Bedrock
 2. Verify region supports Claude models
 3. Check `BEDROCK_MODEL_ID` environment variable
@@ -401,12 +419,15 @@ Could not find model anthropic.claude-3-5-sonnet-20241022-v2:0
 ### Issue: Simulated Responses Still Appearing
 
 **Symptoms:**
+
 - Responses are generic/templated
 - No `usage` object in response
 - Response format: "I understand you're asking about..."
 
 **Solutions:**
+
 1. Verify container deployed with new code:
+
    ```bash
    aws ecs describe-tasks \
      --cluster agent-mesh-dev-dashboard \
@@ -416,6 +437,7 @@ Could not find model anthropic.claude-3-5-sonnet-20241022-v2:0
    ```
 
 2. Check logs for Bedrock initialization:
+
    ```bash
    aws logs tail /ecs/agent-mesh-dev-dashboard --follow --region us-west-2 | grep Bedrock
    ```
@@ -425,10 +447,12 @@ Could not find model anthropic.claude-3-5-sonnet-20241022-v2:0
 ### Issue: High Latency
 
 **Symptoms:**
+
 - Responses take >10 seconds
 - Timeout errors
 
 **Solutions:**
+
 1. Check region: Use us-west-2 or us-east-1 (closest to Bedrock)
 2. Switch to Haiku model for faster responses
 3. Enable streaming for better perceived performance
@@ -437,6 +461,7 @@ Could not find model anthropic.claude-3-5-sonnet-20241022-v2:0
 ### Issue: Unexpected Costs
 
 **Check current usage:**
+
 ```bash
 # Get token metrics for last 24 hours
 aws cloudwatch get-metric-statistics \
@@ -451,6 +476,7 @@ aws cloudwatch get-metric-statistics \
 ```
 
 **Cost controls:**
+
 1. Switch to Haiku (1/12th the cost)
 2. Implement rate limiting per user
 3. Set up CloudWatch alarms (see below)
@@ -501,6 +527,7 @@ fields @timestamp, @message
 ### 3. Set Up Dashboard (Optional)
 
 Create CloudWatch dashboard to monitor Bedrock usage:
+
 - Invocation count (daily)
 - Input/output tokens (hourly)
 - Error rate
@@ -550,19 +577,23 @@ aws ecs update-service \
 ## Cost Estimation
 
 **Claude 3.5 Sonnet pricing:**
+
 - Input: $3 per million tokens
 - Output: $15 per million tokens
 
 **Example usage:**
+
 - 100 messages/day
 - 200 tokens per message (50 input, 150 output)
 
 **Daily cost:**
+
 - Input: `100 × 50 / 1,000,000 × $3 = $0.015`
 - Output: `100 × 150 / 1,000,000 × $15 = $0.225`
 - **Total: $0.24/day** = **$7.20/month**
 
 **For cost-sensitive applications**, use Claude 3 Haiku:
+
 - Input: $0.25 per million tokens
 - Output: $1.25 per million tokens
 - **Same usage: $0.60/month** (12x cheaper)
@@ -576,6 +607,7 @@ aws ecs update-service \
 ## Support
 
 If issues persist:
+
 1. Check CloudWatch logs: `/ecs/agent-mesh-dev-dashboard`
 2. Review CloudTrail for Bedrock API calls
 3. Verify IAM policy with `aws iam get-role-policy`
@@ -584,6 +616,7 @@ If issues persist:
 ## Next Steps
 
 After successful deployment:
+
 1. **Frontend Updates**: Enable streaming in chat components for better UX
 2. **Rate Limiting**: Implement per-user quotas
 3. **Monitoring**: Set up CloudWatch dashboards
