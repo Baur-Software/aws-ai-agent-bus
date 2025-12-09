@@ -21,21 +21,18 @@ AWS Bedrock Runtime
 ## Features
 
 ### 1. Real-time Bedrock Integration
-
 - Direct integration with AWS Bedrock Runtime API
 - Uses Claude 3.5 Sonnet model by default
 - Accurate token usage tracking
 - Full conversation history support
 
 ### 2. Streaming Responses
-
 - Token-by-token streaming for better UX
 - Real-time display of Claude's responses
 - Lower perceived latency
 - WebSocket-based streaming
 
 ### 3. MCP Tool Integration
-
 - Automatic tool detection (analytics, data queries)
 - Context-aware responses
 - Tool execution tracking
@@ -49,7 +46,7 @@ Create or update `dashboard-server/.env`:
 ```bash
 # AWS Configuration
 AWS_REGION=us-west-2
-AWS_PROFILE=your-aws-profile  # Optional, for local development
+AWS_PROFILE=baursoftware  # Optional, for local development
 
 # Bedrock Model Configuration
 BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
@@ -106,7 +103,6 @@ Before using Claude models, you must enable them in your AWS account:
 #### Non-Streaming Chat (Default)
 
 **Request:**
-
 ```json
 {
   "id": "msg_123",
@@ -120,7 +116,6 @@ Before using Claude models, you must enable them in your AWS account:
 ```
 
 **Response:**
-
 ```json
 {
   "id": "msg_123",
@@ -145,7 +140,6 @@ Before using Claude models, you must enable them in your AWS account:
 #### Streaming Chat (Recommended)
 
 **Request:**
-
 ```json
 {
   "id": "msg_456",
@@ -159,7 +153,6 @@ Before using Claude models, you must enable them in your AWS account:
 ```
 
 **Streaming Responses:**
-
 ```json
 // Token chunks (multiple messages)
 {
@@ -203,7 +196,6 @@ Before using Claude models, you must enable them in your AWS account:
 Send a message and get complete response (non-streaming).
 
 **Usage:**
-
 ```typescript
 const response = await chatService.sendMessage({
   sessionId: 'chat_123',
@@ -221,7 +213,6 @@ console.log(response.usage);   // Token counts
 Generate streaming response token-by-token.
 
 **Usage:**
-
 ```typescript
 for await (const chunk of chatService.generateBedrockStreamingResponse(session, request)) {
   if (chunk.type === 'token') {
@@ -295,14 +286,12 @@ const sendMessage = async (message: string) => {
 ### Local Development
 
 1. **Set AWS credentials**:
-
    ```bash
-   export AWS_PROFILE=your-aws-profile
+   export AWS_PROFILE=baursoftware
    export AWS_REGION=us-west-2
    ```
 
 2. **Start dashboard-server**:
-
    ```bash
    cd dashboard-server
    bun run dev
@@ -317,7 +306,6 @@ const sendMessage = async (message: string) => {
 ### Test with curl
 
 Test non-streaming:
-
 ```bash
 wscat -c ws://localhost:3001
 
@@ -333,7 +321,6 @@ wscat -c ws://localhost:3001
 ```
 
 Test streaming:
-
 ```bash
 {
   "id": "test_2",
@@ -350,13 +337,11 @@ Test streaming:
 ### Error: "Failed to generate response from Bedrock"
 
 **Possible causes:**
-
 1. No AWS credentials configured
 2. Model not enabled in Bedrock
 3. Insufficient IAM permissions
 
 **Solution:**
-
 ```bash
 # Check credentials
 aws sts get-caller-identity
@@ -372,7 +357,6 @@ aws bedrock list-foundation-models --region us-west-2
 The model ID is invalid or not available in your region.
 
 **Solution:**
-
 - Verify `BEDROCK_MODEL_ID` matches available models
 - Check model availability in your AWS region
 - Some regions don't have all Claude models
@@ -380,12 +364,10 @@ The model ID is invalid or not available in your region.
 ### Streaming not working
 
 **Symptoms:**
-
 - Messages appear all at once
 - No token-by-token updates
 
 **Solution:**
-
 - Verify `streaming: true` in WebSocket message
 - Check browser console for WebSocket errors
 - Ensure dashboard-server is running latest code
@@ -393,13 +375,11 @@ The model ID is invalid or not available in your region.
 ### High latency
 
 **Possible causes:**
-
 1. Using Opus model (slower but more capable)
 2. Large conversation history
 3. Network latency to AWS
 
 **Solutions:**
-
 - Switch to Haiku for faster responses
 - Limit conversation history to last 10 messages
 - Use streaming for better perceived performance
@@ -407,31 +387,25 @@ The model ID is invalid or not available in your region.
 ## Performance Optimization
 
 ### 1. Model Selection
-
 - **Interactive chat**: Use Claude 3.5 Sonnet or Haiku
 - **Complex analysis**: Use Opus
 - **Simple queries**: Use Haiku
 
 ### 2. Context Management
-
 ```typescript
 // Limit conversation history
 const messages = session.messages.slice(-10); // Last 10 messages only
 ```
 
 ### 3. System Prompt Optimization
-
 Keep system prompts concise and specific:
-
 ```typescript
 const systemPrompt = `You are a workflow automation assistant.
 Be concise and specific. Use bullet points when listing items.`;
 ```
 
 ### 4. Use Streaming
-
 Streaming provides better UX even if total latency is the same:
-
 ```typescript
 streaming: true  // Always prefer streaming for chat UI
 ```
@@ -439,27 +413,22 @@ streaming: true  // Always prefer streaming for chat UI
 ## Security Considerations
 
 ### 1. Credential Management
-
 - Never commit AWS credentials to git
 - Use environment variables or AWS profiles
 - Rotate credentials regularly
 
 ### 2. User Isolation
-
 - Each chat session is user-specific
 - WebSocket authentication enforced
 - Organization context isolated
 
 ### 3. Content Filtering
-
 Consider implementing:
-
 - Input sanitization
 - Output content filtering
 - Rate limiting per user
 
 ### 4. Logging
-
 - Log all Bedrock API calls for auditing
 - Track token usage per user/organization
 - Monitor for unusual patterns
@@ -469,7 +438,6 @@ Consider implementing:
 ### Token Usage Tracking
 
 The system tracks token usage automatically:
-
 ```typescript
 {
   "usage": {
@@ -483,12 +451,10 @@ The system tracks token usage automatically:
 ### Cost Estimation
 
 For Claude 3.5 Sonnet:
-
 - Input: `inputTokens / 1000 * $3.00`
 - Output: `outputTokens / 1000 * $15.00`
 
 Example (200 tokens total, 50 input / 150 output):
-
 - Input: `50 / 1000 * $3.00 = $0.15`
 - Output: `150 / 1000 * $15.00 = $2.25`
 - **Total**: `$2.40` per conversation
@@ -496,7 +462,6 @@ Example (200 tokens total, 50 input / 150 output):
 ### Budget Alerts
 
 Set up CloudWatch alarms for Bedrock usage:
-
 ```bash
 aws cloudwatch put-metric-alarm \
   --alarm-name bedrock-high-usage \

@@ -14,7 +14,7 @@ Create `dashboard-server/.env`:
 
 ```bash
 AWS_REGION=us-west-2
-AWS_PROFILE=your-aws-profile
+AWS_PROFILE=baursoftware
 BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
 ```
 
@@ -92,7 +92,6 @@ Change model by setting `BEDROCK_MODEL_ID` in `.env`.
 ## Streaming vs Non-Streaming
 
 ### Non-Streaming (Default)
-
 ```typescript
 {
   type: 'chat.send_message',
@@ -102,7 +101,6 @@ Change model by setting `BEDROCK_MODEL_ID` in `.env`.
 ```
 
 ### Streaming (Recommended)
-
 ```typescript
 {
   type: 'chat.send_message',
@@ -139,18 +137,15 @@ aws bedrock list-foundation-models --region us-west-2
 ## Cost Estimation
 
 Claude 3.5 Sonnet pricing (per 1M tokens):
-
 - Input: $3.00
 - Output: $15.00
 
 Example conversation (200 tokens total):
-
 - Input (50 tokens): $0.15
 - Output (150 tokens): $2.25
 - **Total: $2.40**
 
 For typical chat usage (100 messages/day, 200 tokens avg):
-
 - Daily cost: ~$240
 - Monthly cost: ~$7,200
 

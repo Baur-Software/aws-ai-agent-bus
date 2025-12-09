@@ -9,7 +9,6 @@ AWS infrastructure setup and configuration documentation.
 ## Related Infrastructure Docs
 
 See the `infra/` folder for:
-
 - Terraform modules
 - Workspace configurations
 - Deployment scripts

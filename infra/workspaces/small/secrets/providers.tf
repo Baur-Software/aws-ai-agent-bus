@@ -9,9 +9,9 @@ terraform {
   }
 
   backend "s3" {
-    bucket = "baursoftware-terraform-state"
-    key    = "agent-mesh/small/secrets/terraform.tfstate"
-    region = "us-west-2"
+    bucket  = "baursoftware-terraform-state"
+    key     = "agent-mesh/small/secrets/terraform.tfstate"
+    region  = "us-west-2"
     # profile = "baursoftware" # Now using AWS_PROFILE env var or backend.hcl
     encrypt = true
   }

@@ -55,14 +55,12 @@ statement {
   - Future Claude versions
 
 **Why wildcard region?**
-
 - Bedrock availability varies by region
 - Allows failover to different regions
 - No additional cost for cross-region specification
 - Runtime region is controlled by `AWS_REGION` env var
 
 **Why Claude-only scope?**
-
 - Security: Limits to only Anthropic models
 - Cost control: Prevents accidental use of expensive models
 - Compliance: Clear audit trail of which model family is used
@@ -79,13 +77,11 @@ statement {
 ### Cost Control
 
 The IAM policy does NOT limit:
-
 - Number of invocations
 - Token usage
 - Total spending
 
 **Recommended Additional Controls:**
-
 1. CloudWatch alarms for Bedrock API calls
 2. Budget alerts for Bedrock costs
 3. Rate limiting in application code
@@ -96,7 +92,6 @@ See: [Cost Management](#cost-management) below
 ### Audit Trail
 
 All Bedrock API calls are logged to CloudTrail:
-
 - Timestamp of invocation
 - Model ID used
 - Input/output token counts
@@ -121,7 +116,6 @@ All Bedrock API calls are logged to CloudTrail:
    - Claude 3 Opus (optional)
 
 3. **Verify Access**
-
    ```bash
    aws bedrock list-foundation-models \
      --region us-west-2 \
@@ -146,13 +140,11 @@ Check latest availability: [AWS Bedrock Documentation](https://docs.aws.amazon.c
 **Name**: `agent-mesh-{env}-dashboard-execution`
 
 **Purpose**: ECS infrastructure operations
-
 - Pull container images from ECR
 - Write logs to CloudWatch
 - Retrieve secrets for startup
 
 **Permissions**: AWS Managed Policy
-
 - `AmazonECSTaskExecutionRolePolicy`
 
 **Does NOT** include Bedrock permissions (execution role ≠ runtime role)
@@ -162,7 +154,6 @@ Check latest availability: [AWS Bedrock Documentation](https://docs.aws.amazon.c
 **Name**: `agent-mesh-{env}-dashboard-task`
 
 **Purpose**: Application runtime operations
-
 - DynamoDB KV access
 - EventBridge event publishing
 - Secrets Manager for integrations
@@ -170,7 +161,6 @@ Check latest availability: [AWS Bedrock Documentation](https://docs.aws.amazon.c
 - **Bedrock Runtime API** ← New
 
 **Permissions**: Inline policy with multiple statements
-
 - `DynamoDBAccess` - Read/write KV store
 - `EventBridgeAccess` - Publish events
 - `BedrockRuntimeAccess` - **Invoke Claude models** ← New
@@ -206,7 +196,7 @@ variable "secrets_arn"      # Required from secrets module
 cd infra/workspaces/small/dashboard_service
 
 # Set environment
-export AWS_PROFILE=your-aws-profile
+export AWS_PROFILE=baursoftware
 export AWS_REGION=us-west-2
 
 # Review changes
@@ -230,14 +220,12 @@ terraform apply
 ### Zero-Downtime Update
 
 The IAM policy update is **non-disruptive**:
-
 - ✅ No ECS service restart required
 - ✅ No container redeployment required
 - ✅ IAM policy propagates in ~5 seconds
 - ✅ Existing connections remain active
 
 **Timeline:**
-
 1. Terraform updates IAM policy (2-3 seconds)
 2. AWS IAM propagates changes (2-5 seconds)
 3. Dashboard-server can immediately use Bedrock
@@ -255,7 +243,6 @@ aws iam get-role-policy \
 ```
 
 Expected output:
-
 ```json
 {
   "Sid": "BedrockRuntimeAccess",
@@ -316,12 +303,10 @@ Expected response with real Claude content (not simulated).
 ### Pricing (as of Oct 2024)
 
 **Claude 3.5 Sonnet:**
-
 - Input: $3.00 per million tokens
 - Output: $15.00 per million tokens
 
 **Claude 3 Haiku (cost-optimized):**
-
 - Input: $0.25 per million tokens
 - Output: $1.25 per million tokens
 
@@ -330,18 +315,15 @@ Expected response with real Claude content (not simulated).
 **Average conversation (200 tokens, 50 input / 150 output):**
 
 Claude 3.5 Sonnet:
-
 - Input: `50 / 1,000,000 × $3.00 = $0.00015`
 - Output: `150 / 1,000,000 × $15.00 = $0.00225`
 - **Total: $0.0024 per message**
 
 At 1,000 messages/day:
-
 - Daily: $2.40
 - Monthly: $72.00
 
 At 10,000 messages/day:
-
 - Daily: $24.00
 - Monthly: $720.00
 
@@ -395,20 +377,17 @@ async trackUsage(userId: string, usage: TokenUsage) {
 ### Error: AccessDeniedException
 
 **Symptom:**
-
 ```
 User: arn:aws:sts::ACCOUNT_ID:assumed-role/agent-mesh-dev-dashboard-task/...
 is not authorized to perform: bedrock:InvokeModel
 ```
 
 **Causes:**
-
 1. IAM policy not applied yet (wait 5 seconds)
 2. Model access not enabled in Bedrock console
 3. Using wrong region where model not available
 
 **Solution:**
-
 ```bash
 # 1. Verify IAM policy
 aws iam get-role-policy --role-name agent-mesh-dev-dashboard-task --policy-name agent-mesh-dev-dashboard-task-policy
@@ -423,13 +402,11 @@ aws bedrock list-foundation-models --region us-west-2
 ### Error: ResourceNotFoundException
 
 **Symptom:**
-
 ```
 The specified model is not available in this region
 ```
 
 **Solution:**
-
 - Verify `AWS_REGION` environment variable in ECS task
 - Check model availability for that region
 - Use us-west-2 or us-east-1 (most complete model availability)
@@ -437,13 +414,11 @@ The specified model is not available in this region
 ### Error: ThrottlingException
 
 **Symptom:**
-
 ```
 Rate exceeded for bedrock:InvokeModel
 ```
 
 **Solution:**
-
 - Implement exponential backoff in application
 - Request quota increase via AWS Support
 - Consider using Haiku model (higher default quotas)
@@ -451,12 +426,10 @@ Rate exceeded for bedrock:InvokeModel
 ### High Costs
 
 **Symptom:**
-
 - AWS bill higher than expected
 - Bedrock usage exceeding budget
 
 **Investigation:**
-
 ```bash
 # Check Bedrock CloudWatch metrics
 aws cloudwatch get-metric-statistics \
@@ -474,7 +447,6 @@ aws cloudtrail lookup-events \
 ```
 
 **Solutions:**
-
 1. Switch to Claude Haiku (1/12th the cost)
 2. Implement rate limiting per user
 3. Set conversation token limits

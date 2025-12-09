@@ -340,7 +340,6 @@ Events flow from Rust MCP → EventBridge → Dashboard Server → WebSocket →
 #### Complete Observability
 
 Every event stored in DynamoDB enables:
-
 - **Audit trails** - "Show me everything user X did"
 - **Debugging** - "Why did this workflow fail?"
 - **Analytics** - "How many deployments this week?"
@@ -359,7 +358,6 @@ Rust with tokio handles thousands of concurrent event streams effortlessly.
 We're excited about the possibilities this opens up. Visual workflow design, AI-powered automation, and the entire MCP ecosystem—all in one place.
 
 **Try the workflow examples**: We've included 11 importable workflows in `workflow-examples/`:
-
 - Infrastructure automation with Terraform generation
 - Financial dashboards with QuickBooks + CRM
 - Google Analytics reporting with AI content generation
