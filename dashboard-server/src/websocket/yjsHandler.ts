@@ -345,31 +345,35 @@ export class YjsWebSocketHandler {
     this.gcTimer = setInterval(async () => {
       const now = Date.now();
       const timeout = 5 * 60 * 1000; // 5 minutes
-      const toRemove: string[] = [];
 
-      // First pass: identify documents to remove and persist them
-      this.documents.forEach(async (yjsDoc, workflowId) => {
+      // First pass: identify documents to remove
+      const toRemove: Array<{ workflowId: string; yjsDoc: YjsDocument }> = [];
+      this.documents.forEach((yjsDoc, workflowId) => {
         if (yjsDoc.connections.size === 0 && (now - yjsDoc.lastActivity) > timeout) {
-          console.log(`[Yjs] Garbage collecting inactive document: ${workflowId}`);
-
-          // Persist before destroying (if persistence is enabled)
-          if (this.persistence) {
-            try {
-              await this.persistence.persistDocument(workflowId, yjsDoc.doc);
-              console.log(`[Yjs] Persisted document before GC: ${workflowId}`);
-            } catch (error) {
-              console.error(`[Yjs] Failed to persist document ${workflowId} before GC:`, error);
-              // Continue with GC anyway - data loss is possible but GC must proceed
-            }
-          }
-
-          yjsDoc.doc.destroy();
-          toRemove.push(workflowId);
+          toRemove.push({ workflowId, yjsDoc });
         }
       });
 
-      // Second pass: remove from map
-      toRemove.forEach(workflowId => this.documents.delete(workflowId));
+      // Second pass: persist all documents concurrently before removal
+      if (toRemove.length > 0 && this.persistence) {
+        const persistPromises = toRemove.map(async ({ workflowId, yjsDoc }) => {
+          try {
+            await this.persistence!.persistDocument(workflowId, yjsDoc.doc);
+            console.log(`[Yjs] Persisted document before GC: ${workflowId}`);
+          } catch (error) {
+            console.error(`[Yjs] Failed to persist document ${workflowId} before GC:`, error);
+            // Continue with GC anyway - data loss is possible but GC must proceed
+          }
+        });
+        await Promise.all(persistPromises);
+      }
+
+      // Third pass: destroy and remove from map
+      toRemove.forEach(({ workflowId, yjsDoc }) => {
+        console.log(`[Yjs] Garbage collecting inactive document: ${workflowId}`);
+        yjsDoc.doc.destroy();
+        this.documents.delete(workflowId);
+      });
     }, this.gcInterval);
   }
 

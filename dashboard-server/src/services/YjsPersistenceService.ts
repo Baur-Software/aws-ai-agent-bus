@@ -142,7 +142,7 @@ export class YjsPersistenceService {
       lastModified: Date.now(),
       size: state.length,
       stateVectorHash: this.hashStateVector(stateVector),
-      version: (await this.getMetadata(workflowId))?.version || 0 + 1
+      version: ((await this.getMetadata(workflowId))?.version || 0) + 1
     };
 
     await this.dynamodb.send(new PutItemCommand({
