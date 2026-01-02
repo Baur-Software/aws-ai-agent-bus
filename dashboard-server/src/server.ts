@@ -25,6 +25,7 @@ import kvRoutes from './routes/kvRoutes.js';
 import artifactsRoutes from './routes/artifactsRoutes.js';
 import { setupAuthRoutes } from './routes/authRoutes.js';
 import { setupWebhookRoutes } from './routes/webhookRoutes.js';
+import { AuthMiddleware } from './middleware/auth.js';
 import { profile } from 'console';
 
 interface ServerDependencies {
@@ -164,6 +165,15 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     message: err.message
   });
 });
+
+// Validate authentication configuration before starting
+// This will throw and prevent startup if JWT_SECRET is missing in production
+try {
+  AuthMiddleware.validateConfiguration();
+} catch (error) {
+  console.error('❌ FATAL:', (error as Error).message);
+  process.exit(1);
+}
 
 // Start server
 server.listen(PORT, async () => {

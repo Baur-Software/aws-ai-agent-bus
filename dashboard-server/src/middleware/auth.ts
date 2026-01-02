@@ -146,9 +146,42 @@ export class AuthMiddleware {
 
   /**
    * JWT token management
+   *
+   * SECURITY: JWT_SECRET is required in production environments.
+   * The application will fail to start if JWT_SECRET is not set when
+   * NODE_ENV is 'production' or ENABLE_DEV_AUTH is not 'true'.
    */
+  private static _jwtSecretValidated = false;
+
   private static get jwtSecret(): string {
-    return process.env.JWT_SECRET || 'dev-secret-key-please-change-in-production';
+    const secret = process.env.JWT_SECRET;
+
+    // In production mode, JWT_SECRET is required
+    if (!this.isDevAuthEnabled) {
+      if (!secret) {
+        throw new Error(
+          'SECURITY ERROR: JWT_SECRET environment variable is required in production. ' +
+          'Set JWT_SECRET to a strong, randomly generated secret (min 32 characters). ' +
+          'To enable development mode, set ENABLE_DEV_AUTH=true or NODE_ENV=development.'
+        );
+      }
+
+      // Warn if secret appears weak (only check once)
+      if (!this._jwtSecretValidated) {
+        if (secret.length < 32) {
+          console.warn('⚠️ WARNING: JWT_SECRET should be at least 32 characters for security.');
+        }
+        this._jwtSecretValidated = true;
+      }
+    }
+
+    // In dev mode, allow a fallback but warn
+    if (!secret) {
+      console.warn('⚠️ DEV MODE: Using fallback JWT secret. Do not use in production!');
+      return 'dev-only-secret-not-for-production-use';
+    }
+
+    return secret;
   }
 
   private static get jwtExpiresIn(): string {
@@ -246,6 +279,19 @@ export class AuthMiddleware {
    * Middleware to require admin role
    */
   static requireAdmin = AuthMiddleware.requireRole(['admin']);
+
+  /**
+   * Validate authentication configuration at startup.
+   * Call this early in application startup to fail fast if misconfigured.
+   *
+   * @throws Error if JWT_SECRET is missing in production mode
+   */
+  static validateConfiguration(): void {
+    // Trigger the jwtSecret getter to validate configuration
+    // This will throw if JWT_SECRET is required but missing
+    void this.jwtSecret;
+    console.log('✅ Authentication configuration validated');
+  }
 
   /**
    * Optional authentication - sets user if token is valid but doesn't require it
