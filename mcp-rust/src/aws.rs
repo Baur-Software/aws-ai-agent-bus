@@ -30,7 +30,7 @@ pub struct AwsClients {
     pub dynamodb: DynamoDbClient,
     pub s3: S3Client,
     pub eventbridge: EventBridgeClient,
-    pub _secrets_manager: SecretsManagerClient,
+    pub secrets_manager: SecretsManagerClient,
 }
 
 impl AwsClients {
@@ -41,7 +41,7 @@ impl AwsClients {
             dynamodb: DynamoDbClient::new(&config),
             s3: S3Client::new(&config),
             eventbridge: EventBridgeClient::new(&config),
-            _secrets_manager: SecretsManagerClient::new(&config),
+            secrets_manager: SecretsManagerClient::new(&config),
         })
     }
 }
@@ -1065,5 +1065,182 @@ impl AwsService {
             .map_err(|e| AwsError::DynamoDb(e.to_string()))?;
 
         Ok(())
+    }
+
+    // Secrets Manager operations for secure credential storage
+
+    /// Store a secret in AWS Secrets Manager
+    /// Returns the secret ARN for reference
+    pub async fn secret_store(
+        &self,
+        secret_name: &str,
+        secret_value: &str,
+        description: Option<&str>,
+    ) -> Result<String, AwsError> {
+        // Try to create the secret first
+        let create_result = self
+            .clients
+            .secrets_manager
+            .create_secret()
+            .name(secret_name)
+            .secret_string(secret_value)
+            .set_description(description.map(|s| s.to_string()))
+            .send()
+            .await;
+
+        match create_result {
+            Ok(output) => {
+                let arn = output.arn().unwrap_or(secret_name).to_string();
+                tracing::info!("Created secret: {}", secret_name);
+                Ok(arn)
+            }
+            Err(e) => {
+                // If secret already exists, update it instead
+                let error_str = e.to_string();
+                if error_str.contains("ResourceExistsException") {
+                    let update_result = self
+                        .clients
+                        .secrets_manager
+                        .put_secret_value()
+                        .secret_id(secret_name)
+                        .secret_string(secret_value)
+                        .send()
+                        .await
+                        .map_err(|e| AwsError::SecretsManager(e.to_string()))?;
+
+                    let arn = update_result.arn().unwrap_or(secret_name).to_string();
+                    tracing::info!("Updated existing secret: {}", secret_name);
+                    Ok(arn)
+                } else {
+                    Err(AwsError::SecretsManager(e.to_string()))
+                }
+            }
+        }
+    }
+
+    /// Retrieve a secret value from AWS Secrets Manager
+    pub async fn secret_get(&self, secret_name: &str) -> Result<Option<String>, AwsError> {
+        let result = self
+            .clients
+            .secrets_manager
+            .get_secret_value()
+            .secret_id(secret_name)
+            .send()
+            .await;
+
+        match result {
+            Ok(output) => Ok(output.secret_string().map(|s| s.to_string())),
+            Err(e) => {
+                let error_str = e.to_string();
+                if error_str.contains("ResourceNotFoundException") {
+                    Ok(None)
+                } else {
+                    Err(AwsError::SecretsManager(e.to_string()))
+                }
+            }
+        }
+    }
+
+    /// Delete a secret from AWS Secrets Manager
+    /// By default uses a 7-day recovery window; set force_delete=true to delete immediately
+    pub async fn secret_delete(&self, secret_name: &str, force_delete: bool) -> Result<(), AwsError> {
+        let mut request = self
+            .clients
+            .secrets_manager
+            .delete_secret()
+            .secret_id(secret_name);
+
+        if force_delete {
+            request = request.force_delete_without_recovery(true);
+        } else {
+            // Use minimum recovery window of 7 days
+            request = request.recovery_window_in_days(7);
+        }
+
+        let result = request.send().await;
+
+        match result {
+            Ok(_) => {
+                tracing::info!("Deleted secret: {} (force={})", secret_name, force_delete);
+                Ok(())
+            }
+            Err(e) => {
+                let error_str = e.to_string();
+                // Ignore if secret doesn't exist
+                if error_str.contains("ResourceNotFoundException") {
+                    Ok(())
+                } else {
+                    Err(AwsError::SecretsManager(e.to_string()))
+                }
+            }
+        }
+    }
+
+    /// Store integration credentials securely in Secrets Manager
+    /// Creates a structured secret with all credential key-value pairs
+    pub async fn store_integration_credentials(
+        &self,
+        tenant_id: &str,
+        user_id: &str,
+        service_id: &str,
+        connection_id: &str,
+        credentials: &std::collections::HashMap<String, String>,
+    ) -> Result<String, AwsError> {
+        let secret_name = format!(
+            "mcp-credentials/{}/{}/{}/{}",
+            tenant_id, user_id, service_id, connection_id
+        );
+
+        let secret_value = serde_json::to_string(credentials)
+            .map_err(|e| AwsError::Serialization(e))?;
+
+        let description = format!(
+            "MCP integration credentials for service {} (user: {}, connection: {})",
+            service_id, user_id, connection_id
+        );
+
+        self.secret_store(&secret_name, &secret_value, Some(&description))
+            .await
+    }
+
+    /// Retrieve integration credentials from Secrets Manager
+    pub async fn get_integration_credentials(
+        &self,
+        tenant_id: &str,
+        user_id: &str,
+        service_id: &str,
+        connection_id: &str,
+    ) -> Result<Option<std::collections::HashMap<String, String>>, AwsError> {
+        let secret_name = format!(
+            "mcp-credentials/{}/{}/{}/{}",
+            tenant_id, user_id, service_id, connection_id
+        );
+
+        match self.secret_get(&secret_name).await? {
+            Some(secret_value) => {
+                let credentials: std::collections::HashMap<String, String> =
+                    serde_json::from_str(&secret_value)
+                        .map_err(|e| AwsError::Serialization(e))?;
+                Ok(Some(credentials))
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// Delete integration credentials from Secrets Manager
+    pub async fn delete_integration_credentials(
+        &self,
+        tenant_id: &str,
+        user_id: &str,
+        service_id: &str,
+        connection_id: &str,
+        force_delete: bool,
+    ) -> Result<(), AwsError> {
+        let secret_name = format!(
+            "mcp-credentials/{}/{}/{}/{}",
+            tenant_id, user_id, service_id, connection_id
+        );
+
+        self.secret_delete(&secret_name, force_delete).await
     }
 }
