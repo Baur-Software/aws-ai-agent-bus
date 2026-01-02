@@ -195,8 +195,8 @@ variable "secrets_arn"      # Required from secrets module
 ```bash
 cd infra/workspaces/small/dashboard_service
 
-# Set environment
-export AWS_PROFILE=baursoftware
+# Set environment (use your AWS profile name)
+export AWS_PROFILE=your-aws-profile
 export AWS_REGION=us-west-2
 
 # Review changes
