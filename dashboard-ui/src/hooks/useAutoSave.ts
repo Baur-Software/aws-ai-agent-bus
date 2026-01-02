@@ -15,6 +15,11 @@ export interface AutoSaveState {
 /**
  * Auto-save hook with debounced real-time persistence
  * Watches for changes and automatically saves after debounce period
+ *
+ * Race condition protections:
+ * - lastSavedSnapshot only updates after successful save
+ * - forceSave preserves and saves pending debounced changes
+ * - Concurrent save operations are serialized via saveInProgress flag
  */
 export function useAutoSave<T>(
   data: () => T,
@@ -25,24 +30,81 @@ export function useAutoSave<T>(
   const [error, setError] = createSignal<Error | null>(null);
 
   let saveTimeout: ReturnType<typeof setTimeout> | null = null;
-  let lastDataSnapshot: string | null = null;
+  // Snapshot of data that was last SUCCESSFULLY saved
+  let lastSavedSnapshot: string | null = null;
+  // Snapshot of data that is pending save (scheduled but not yet executed)
+  let pendingSnapshot: string | null = null;
+  // Flag to prevent concurrent save operations
+  let saveInProgress = false;
+  // Promise that resolves when current save completes (for waiting)
+  let saveCompletionPromise: Promise<void> | null = null;
+  let resolveSaveCompletion: (() => void) | null = null;
 
   const debounceMs = options.debounceMs ?? 2000; // Default 2 second debounce
+
+  /**
+   * Core save logic - updates snapshot only on success
+   */
+  const executeSave = async (snapshotToSave: string): Promise<boolean> => {
+    if (saveInProgress) {
+      return false;
+    }
+
+    saveInProgress = true;
+    // Create promise for others to wait on
+    saveCompletionPromise = new Promise<void>((resolve) => {
+      resolveSaveCompletion = resolve;
+    });
+
+    try {
+      setIsSaving(true);
+      setError(null);
+
+      await options.onSave();
+
+      // Only update lastSavedSnapshot after successful save
+      lastSavedSnapshot = snapshotToSave;
+      setLastSaved(new Date());
+      return true;
+    } catch (err) {
+      console.error('Auto-save failed:', err);
+      setError(err instanceof Error ? err : new Error('Auto-save failed'));
+      return false;
+    } finally {
+      saveInProgress = false;
+      setIsSaving(false);
+      // Signal completion to any waiters
+      if (resolveSaveCompletion) {
+        resolveSaveCompletion();
+        resolveSaveCompletion = null;
+        saveCompletionPromise = null;
+      }
+    }
+  };
 
   // Watch for data changes and trigger auto-save
   createEffect(
     on(
       data,
-      async (newData) => {
+      (newData) => {
         if (!options.enabled) return;
 
         // Serialize data to detect actual changes
         const newSnapshot = JSON.stringify(newData);
 
-        // Skip if data hasn't actually changed
-        if (newSnapshot === lastDataSnapshot) return;
+        // Skip if data hasn't changed from last successful save
+        if (newSnapshot === lastSavedSnapshot) {
+          // Clear any pending save since we're back to saved state
+          if (saveTimeout) {
+            clearTimeout(saveTimeout);
+            saveTimeout = null;
+            pendingSnapshot = null;
+          }
+          return;
+        }
 
-        lastDataSnapshot = newSnapshot;
+        // Track what we're about to save
+        pendingSnapshot = newSnapshot;
 
         // Clear existing timeout
         if (saveTimeout) {
@@ -51,18 +113,12 @@ export function useAutoSave<T>(
 
         // Set new debounced save
         saveTimeout = setTimeout(async () => {
-          try {
-            setIsSaving(true);
-            setError(null);
+          const snapshotToSave = pendingSnapshot;
+          saveTimeout = null;
+          pendingSnapshot = null;
 
-            await options.onSave();
-
-            setLastSaved(new Date());
-          } catch (err) {
-            console.error('Auto-save failed:', err);
-            setError(err instanceof Error ? err : new Error('Auto-save failed'));
-          } finally {
-            setIsSaving(false);
+          if (snapshotToSave) {
+            await executeSave(snapshotToSave);
           }
         }, debounceMs);
       },
@@ -77,34 +133,68 @@ export function useAutoSave<T>(
     }
   });
 
-  // Force save immediately (bypasses debounce)
+  /**
+   * Force save immediately (bypasses debounce)
+   * Preserves any pending debounced changes by saving current data state
+   */
   const forceSave = async () => {
+    // Clear pending debounce - we'll save the current state which includes any pending changes
     if (saveTimeout) {
       clearTimeout(saveTimeout);
       saveTimeout = null;
     }
+    pendingSnapshot = null;
 
-    try {
-      setIsSaving(true);
-      setError(null);
+    // Get current data snapshot (includes any pending changes)
+    let snapshotToSave = JSON.stringify(data());
 
-      await options.onSave();
-
-      setLastSaved(new Date());
-      lastDataSnapshot = JSON.stringify(data());
-    } catch (err) {
-      console.error('Force save failed:', err);
-      setError(err instanceof Error ? err : new Error('Save failed'));
-      throw err;
-    } finally {
-      setIsSaving(false);
+    // Skip if nothing has changed since last successful save
+    if (snapshotToSave === lastSavedSnapshot) {
+      return;
     }
+
+    // Wait for any in-progress save to complete before starting force save
+    if (saveInProgress && saveCompletionPromise) {
+      // Use Promise-based wait instead of polling (more efficient)
+      const timeoutPromise = new Promise<void>((resolve) => {
+        setTimeout(resolve, 10000); // 10 second timeout
+      });
+      await Promise.race([saveCompletionPromise, timeoutPromise]);
+
+      // After waiting, get fresh snapshot and check if data still needs saving
+      snapshotToSave = JSON.stringify(data());
+      if (snapshotToSave === lastSavedSnapshot) {
+        return; // Previous save already saved our data
+      }
+    }
+
+    const success = await executeSave(snapshotToSave);
+    if (!success) {
+      // Provide specific error messages based on failure reason
+      const currentError = error();
+      if (currentError) {
+        throw currentError;
+      }
+      if (saveInProgress) {
+        throw new Error('Save failed: another save is already in progress');
+      }
+      throw new Error('Save failed');
+    }
+  };
+
+  /**
+   * Check if there are unsaved changes
+   */
+  const hasUnsavedChanges = () => {
+    const currentSnapshot = JSON.stringify(data());
+    return currentSnapshot !== lastSavedSnapshot;
   };
 
   return {
     isSaving,
     lastSaved,
     error,
-    forceSave
+    forceSave,
+    hasUnsavedChanges
   };
 }
