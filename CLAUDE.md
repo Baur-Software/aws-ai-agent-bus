@@ -8,9 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Current test debt status:
 
-- **11 skipped tests** in dashboard-ui (see `dashboard-ui/TODO_TESTS.md`)
+- **9 skipped tests** in dashboard-ui (see `dashboard-ui/TODO_TESTS.md`)
 - **1 timer logic bug** - could cause data loss in production
-- **10 component integration gaps** - no coverage for critical UI flows
+- **9 component integration gaps** - no coverage for critical UI flows
 
 Before claiming "production ready": ALL tests must pass without `.skip()`.
 
