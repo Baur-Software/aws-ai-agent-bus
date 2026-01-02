@@ -36,6 +36,9 @@ export function useAutoSave<T>(
   let pendingSnapshot: string | null = null;
   // Flag to prevent concurrent save operations
   let saveInProgress = false;
+  // Promise that resolves when current save completes (for waiting)
+  let saveCompletionPromise: Promise<void> | null = null;
+  let resolveSaveCompletion: (() => void) | null = null;
 
   const debounceMs = options.debounceMs ?? 2000; // Default 2 second debounce
 
@@ -48,6 +51,11 @@ export function useAutoSave<T>(
     }
 
     saveInProgress = true;
+    // Create promise for others to wait on
+    saveCompletionPromise = new Promise<void>((resolve) => {
+      resolveSaveCompletion = resolve;
+    });
+
     try {
       setIsSaving(true);
       setError(null);
@@ -65,6 +73,12 @@ export function useAutoSave<T>(
     } finally {
       saveInProgress = false;
       setIsSaving(false);
+      // Signal completion to any waiters
+      if (resolveSaveCompletion) {
+        resolveSaveCompletion();
+        resolveSaveCompletion = null;
+        saveCompletionPromise = null;
+      }
     }
   };
 
@@ -129,37 +143,42 @@ export function useAutoSave<T>(
       clearTimeout(saveTimeout);
       saveTimeout = null;
     }
-
-    // Get current data snapshot (includes any pending changes)
-    const currentSnapshot = JSON.stringify(data());
     pendingSnapshot = null;
 
+    // Get current data snapshot (includes any pending changes)
+    let snapshotToSave = JSON.stringify(data());
+
     // Skip if nothing has changed since last successful save
-    if (currentSnapshot === lastSavedSnapshot) {
+    if (snapshotToSave === lastSavedSnapshot) {
       return;
     }
 
     // Wait for any in-progress save to complete before starting force save
-    if (saveInProgress) {
-      // Poll until save completes (with reasonable timeout)
-      const maxWait = 10000; // 10 seconds
-      const pollInterval = 50; // 50ms
-      let waited = 0;
-      while (saveInProgress && waited < maxWait) {
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
-        waited += pollInterval;
-      }
+    if (saveInProgress && saveCompletionPromise) {
+      // Use Promise-based wait instead of polling (more efficient)
+      const timeoutPromise = new Promise<void>((resolve) => {
+        setTimeout(resolve, 10000); // 10 second timeout
+      });
+      await Promise.race([saveCompletionPromise, timeoutPromise]);
 
-      // After waiting, check if data still needs saving
-      const updatedSnapshot = JSON.stringify(data());
-      if (updatedSnapshot === lastSavedSnapshot) {
+      // After waiting, get fresh snapshot and check if data still needs saving
+      snapshotToSave = JSON.stringify(data());
+      if (snapshotToSave === lastSavedSnapshot) {
         return; // Previous save already saved our data
       }
     }
 
-    const success = await executeSave(currentSnapshot);
+    const success = await executeSave(snapshotToSave);
     if (!success) {
-      throw error() || new Error('Save failed');
+      // Provide specific error messages based on failure reason
+      const currentError = error();
+      if (currentError) {
+        throw currentError;
+      }
+      if (saveInProgress) {
+        throw new Error('Save failed: another save is already in progress');
+      }
+      throw new Error('Save failed');
     }
   };
 
