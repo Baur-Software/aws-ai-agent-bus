@@ -6,8 +6,8 @@ This directory contains pre-built report scripts that utilize the Google Analyti
 
 ### Users by Country Report
 
-**File**: `users-by-country.js`  
-**Sample**: `users-by-country-sample.js`
+**File**: `users-by-country.ts`
+**Sample**: `users-by-country-sample.ts`
 
 Generates a comprehensive report of unique users segmented by country for the last 30 days.
 
@@ -83,8 +83,8 @@ Summary:
 
 To create new reports:
 
-1. Follow the same structure as `users-by-country.js`
-2. Import the `GoogleAnalyticsService` from `../services/google-analytics.js`
+1. Follow the same structure as `users-by-country.ts`
+2. Import the `GoogleAnalyticsService` from `../services/google-analytics.ts`
 3. Use the service's `runReport()` method with custom dimensions/metrics
 4. Add comprehensive error handling and logging
 5. Include sample data version for testing
@@ -93,7 +93,7 @@ To create new reports:
 
 These reports can be integrated into the MCP server as tools by:
 
-1. Adding handler methods to `../modules/mcp/handlers/google-analytics.js`
+1. Adding handler methods to `../modules/mcp/handlers/google-analytics.ts`
 2. Registering new tools in the MCP server configuration
 3. Following the existing pattern for GA integrations
 
@@ -104,9 +104,10 @@ Reports follow the clean architecture pattern:
 ```
 reports/
 ├── README.md                    # This documentation
-├── users-by-country.js         # Production report script
-├── users-by-country-sample.js  # Sample data demonstration
-└── [future-report].js          # Additional reports
+├── index.ts                     # Module exports and configuration
+├── users-by-country.ts          # Production report script
+├── users-by-country-sample.ts   # Sample data demonstration
+└── [future-report].ts           # Additional reports
 ```
 
 Each report:
