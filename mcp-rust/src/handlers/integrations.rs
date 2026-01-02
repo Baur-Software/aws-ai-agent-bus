@@ -254,8 +254,37 @@ impl Handler for IntegrationConnectHandler {
             args.service_id, session.context.user_id, session.context.tenant_id
         );
 
-        // Store user connection in KV
         let connection_id = args.connection_id.unwrap_or_else(|| "default".to_string());
+
+        // Store credentials securely in AWS Secrets Manager (not DynamoDB!)
+        let credentials_secret_ref = if let Some(credentials) = &args.credentials {
+            if !credentials.is_empty() {
+                let secret_arn = self
+                    .aws_service
+                    .store_integration_credentials(
+                        &session.context.tenant_id,
+                        &session.context.user_id,
+                        &args.service_id,
+                        &connection_id,
+                        credentials,
+                    )
+                    .await
+                    .map_err(|e| HandlerError::Internal(format!("Failed to store credentials in Secrets Manager: {}", e)))?;
+
+                info!(
+                    "Stored credentials in Secrets Manager for integration {} connection {}",
+                    args.service_id, connection_id
+                );
+
+                Some(secret_arn)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        // Store connection metadata in KV (WITHOUT credentials - only the secret reference)
         let key = format!(
             "user-{}-integration-{}-{}",
             session.context.user_id, args.service_id, connection_id
@@ -265,10 +294,11 @@ impl Handler for IntegrationConnectHandler {
             service_id: args.service_id.clone(),
             connection_id: connection_id.clone(),
             connection_name: args.connection_name.clone(),
-            credentials: args.credentials.clone(),
+            credentials_secret_ref,
             settings: args.settings.clone(),
             created_at: chrono::Utc::now().to_rfc3339(),
             user_id: session.context.user_id.clone(),
+            tenant_id: session.context.tenant_id.clone(),
         };
 
         let value = serde_json::to_string(&connection_data)
@@ -278,21 +308,6 @@ impl Handler for IntegrationConnectHandler {
             .kv_set_direct(&key, &value, Some(24 * 30)) // 30 days TTL
             .await
             .map_err(|e| HandlerError::Internal(e.to_string()))?;
-
-        // Store credentials in Secrets Manager if sensitive
-        if let Some(credentials) = &args.credentials {
-            for (cred_key, cred_value) in credentials {
-                let secret_key = format!(
-                    "mcp-credential-{}-{}-{}",
-                    session.context.tenant_id, args.service_id, cred_key
-                );
-
-                self.aws_service
-                    .kv_set_direct(&secret_key, cred_value, Some(24 * 30))
-                    .await
-                    .map_err(|e| HandlerError::Internal(e.to_string()))?;
-            }
-        }
 
         // Connect to the MCP server
         self.registry
@@ -362,10 +377,14 @@ struct UserIntegrationConnection {
     service_id: String,
     connection_id: String,
     connection_name: Option<String>,
-    credentials: Option<std::collections::HashMap<String, String>>,
+    /// Reference to credentials stored in AWS Secrets Manager (secret ARN)
+    /// Credentials are NOT stored in DynamoDB for security
+    credentials_secret_ref: Option<String>,
+    /// Non-sensitive settings can still be stored directly
     settings: Option<std::collections::HashMap<String, String>>,
     created_at: String,
     user_id: String,
+    tenant_id: String,
 }
 
 pub struct IntegrationListHandler {
@@ -465,8 +484,34 @@ impl Handler for IntegrationDisconnectHandler {
             .await
             .map_err(|e| HandlerError::Internal(e.to_string()))?;
 
-        // Remove user connection from KV
         let connection_id = args.connection_id.unwrap_or_else(|| "default".to_string());
+
+        // Delete credentials from AWS Secrets Manager
+        // Using force_delete=false to allow 7-day recovery window
+        if let Err(e) = self
+            .aws_service
+            .delete_integration_credentials(
+                &session.context.tenant_id,
+                &session.context.user_id,
+                &args.service_id,
+                &connection_id,
+                false, // Use recovery window, not force delete
+            )
+            .await
+        {
+            // Log but don't fail - the secret may not exist
+            debug!(
+                "Could not delete credentials from Secrets Manager: {} (may not exist)",
+                e
+            );
+        } else {
+            info!(
+                "Deleted credentials from Secrets Manager for integration {} connection {}",
+                args.service_id, connection_id
+            );
+        }
+
+        // Remove user connection metadata from KV
         let key = format!(
             "user-{}-integration-{}-{}",
             session.context.user_id, args.service_id, connection_id
