@@ -152,6 +152,7 @@ export class AuthMiddleware {
    * NODE_ENV is 'production' or ENABLE_DEV_AUTH is not 'true'.
    */
   private static _jwtSecretValidated = false;
+  private static _devFallbackWarned = false;
 
   private static get jwtSecret(): string {
     const secret = process.env.JWT_SECRET;
@@ -175,9 +176,12 @@ export class AuthMiddleware {
       }
     }
 
-    // In dev mode, allow a fallback but warn
+    // In dev mode, allow a fallback but warn (only once to avoid log pollution)
     if (!secret) {
-      console.warn('⚠️ DEV MODE: Using fallback JWT secret. Do not use in production!');
+      if (!this._devFallbackWarned) {
+        console.warn('⚠️ DEV MODE: Using fallback JWT secret. Do not use in production!');
+        this._devFallbackWarned = true;
+      }
       return 'dev-only-secret-not-for-production-use';
     }
 
@@ -289,7 +293,7 @@ export class AuthMiddleware {
   static validateConfiguration(): void {
     // Trigger the jwtSecret getter to validate configuration
     // This will throw if JWT_SECRET is required but missing
-    void this.jwtSecret;
+    const _ = this.jwtSecret;
     console.log('✅ Authentication configuration validated');
   }
 
