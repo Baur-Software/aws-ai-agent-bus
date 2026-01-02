@@ -68,11 +68,14 @@ const metricsAggregator = new MetricsAggregator(dynamodb, s3);
 const eventSubscriber = new EventSubscriber(eventBridge, wss);
 const mcpRegistry = new MCPServiceRegistry();
 
-// Yjs handler for collaborative workflows
+// Yjs handler for collaborative workflows with persistence
 const yjsHandler = new YjsWebSocketHandler(wss, {
   eventBridge,
   eventBusName: process.env.EVENT_BUS_NAME || 'agent-mesh-events',
-  gcInterval: 60000 // 1 minute
+  gcInterval: 60000, // 1 minute
+  dynamodb, // Enable DynamoDB persistence for document metadata
+  s3, // Enable S3 persistence for document state
+  persistenceDebounceMs: 2000 // 2 second debounce for persistence writes
 });
 
 // Initialize MCP servers
@@ -185,6 +188,10 @@ async function gracefulShutdown(signal: string) {
   try {
     // Stop event subscriber
     eventSubscriber.stop();
+
+    // Flush Yjs documents to persistence before shutdown
+    console.log('💾 Persisting Yjs documents...');
+    await yjsHandler.destroy();
 
     // Clean up WebSocket connections
     await cleanupWebSocket();

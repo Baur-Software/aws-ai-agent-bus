@@ -1,6 +1,12 @@
 /**
  * Yjs WebSocket Handler for Dashboard Server
  * Enables real-time collaborative workflows with CRDT conflict resolution
+ *
+ * Persistence: Documents are automatically persisted to DynamoDB/S3 for durability.
+ * - Updates are debounced (2s default) to batch rapid changes
+ * - Documents are loaded from S3 on first connection if not in memory
+ * - Documents are persisted before garbage collection
+ * - All pending writes are flushed on shutdown
  */
 
 import { WebSocketServer, WebSocket } from 'ws';
@@ -8,18 +14,25 @@ import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { IncomingMessage } from 'http';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { S3Client } from '@aws-sdk/client-s3';
+import { YjsPersistenceService } from '../services/YjsPersistenceService.js';
 
 interface YjsDocument {
   doc: Y.Doc;
   awareness: any;
   connections: Set<WebSocket>;
   lastActivity: number;
+  persisted: boolean; // Track if document has been persisted at least once
 }
 
 interface YjsHandlerOptions {
   eventBridge?: EventBridgeClient;
   eventBusName?: string;
   gcInterval?: number; // Garbage collection interval in ms
+  dynamodb?: DynamoDBClient;
+  s3?: S3Client;
+  persistenceDebounceMs?: number; // Debounce for persistence writes
 }
 
 export class YjsWebSocketHandler {
@@ -28,11 +41,24 @@ export class YjsWebSocketHandler {
   private eventBusName?: string;
   private gcInterval: number;
   private gcTimer?: NodeJS.Timeout;
+  private persistence?: YjsPersistenceService;
 
   constructor(private wss: WebSocketServer, options: YjsHandlerOptions = {}) {
     this.eventBridge = options.eventBridge;
     this.eventBusName = options.eventBusName;
     this.gcInterval = options.gcInterval || 60000; // 1 minute default
+
+    // Initialize persistence service if AWS clients are provided
+    if (options.dynamodb && options.s3) {
+      this.persistence = new YjsPersistenceService({
+        dynamodb: options.dynamodb,
+        s3: options.s3,
+        debounceMs: options.persistenceDebounceMs || 2000
+      });
+      console.log('[Yjs] Persistence service initialized');
+    } else {
+      console.warn('[Yjs] Persistence service NOT initialized - documents will be lost on restart');
+    }
 
     // Start garbage collection for inactive documents
     this.startGarbageCollection();
@@ -41,7 +67,7 @@ export class YjsWebSocketHandler {
   /**
    * Handle Yjs WebSocket connection
    */
-  handleConnection(ws: WebSocket, req: IncomingMessage, userContext: any) {
+  async handleConnection(ws: WebSocket, req: IncomingMessage, userContext: any) {
     // Extract workflow ID from URL path
     // Expected format: /workflow/{workflowId}
     const url = new URL(req.url || '', `http://${req.headers.host}`);
@@ -60,7 +86,7 @@ export class YjsWebSocketHandler {
     // Get or create Yjs document for this workflow
     let yjsDoc = this.documents.get(workflowId);
     if (!yjsDoc) {
-      yjsDoc = this.createDocument(workflowId);
+      yjsDoc = await this.getOrCreateDocument(workflowId);
     }
 
     // Add connection
@@ -91,6 +117,42 @@ export class YjsWebSocketHandler {
   }
 
   /**
+   * Get existing document from memory or load from persistence, or create new
+   */
+  private async getOrCreateDocument(workflowId: string): Promise<YjsDocument> {
+    // Check if already in memory
+    const existing = this.documents.get(workflowId);
+    if (existing) {
+      return existing;
+    }
+
+    // Try to load from persistence
+    if (this.persistence) {
+      try {
+        const persistedDoc = await this.persistence.loadDocument(workflowId);
+        if (persistedDoc) {
+          console.log(`[Yjs] Restored document from persistence: ${workflowId}`);
+          const yjsDoc: YjsDocument = {
+            doc: persistedDoc,
+            awareness: null,
+            connections: new Set(),
+            lastActivity: Date.now(),
+            persisted: true
+          };
+          this.documents.set(workflowId, yjsDoc);
+          this.setupPersistenceObserver(workflowId, persistedDoc);
+          return yjsDoc;
+        }
+      } catch (error) {
+        console.error(`[Yjs] Failed to load document ${workflowId} from persistence:`, error);
+      }
+    }
+
+    // Create new document
+    return this.createDocument(workflowId);
+  }
+
+  /**
    * Create new Yjs document
    */
   private createDocument(workflowId: string): YjsDocument {
@@ -106,20 +168,38 @@ export class YjsWebSocketHandler {
       doc,
       awareness: null, // Will be set per connection
       connections: new Set(),
-      lastActivity: Date.now()
+      lastActivity: Date.now(),
+      persisted: false
     };
 
     this.documents.set(workflowId, yjsDoc);
 
     // Set up persistence observer
-    doc.on('update', (update: Uint8Array, origin: any) => {
-      // TODO: Persist to DynamoDB/S3 for durability
-      // For now, just log
-      console.log(`[Yjs] Document ${workflowId} updated (${update.length} bytes)`);
-    });
+    this.setupPersistenceObserver(workflowId, doc);
 
     console.log(`[Yjs] Created new document: ${workflowId}`);
     return yjsDoc;
+  }
+
+  /**
+   * Set up persistence observer for a document
+   * Schedules debounced writes to DynamoDB/S3 on updates
+   */
+  private setupPersistenceObserver(workflowId: string, doc: Y.Doc): void {
+    doc.on('update', (update: Uint8Array, origin: any) => {
+      // Schedule persistence (debounced)
+      if (this.persistence) {
+        this.persistence.schedulePersist(workflowId, doc);
+      }
+
+      // Update persisted flag
+      const yjsDoc = this.documents.get(workflowId);
+      if (yjsDoc && !yjsDoc.persisted) {
+        yjsDoc.persisted = true;
+      }
+
+      console.log(`[Yjs] Document ${workflowId} updated (${update.length} bytes)`);
+    });
   }
 
   /**
@@ -259,28 +339,67 @@ export class YjsWebSocketHandler {
 
   /**
    * Garbage collection: remove inactive documents
+   * Persists documents to durable storage before removing from memory
    */
   private startGarbageCollection() {
-    this.gcTimer = setInterval(() => {
+    this.gcTimer = setInterval(async () => {
       const now = Date.now();
       const timeout = 5 * 60 * 1000; // 5 minutes
+      const toRemove: string[] = [];
 
-      this.documents.forEach((yjsDoc, workflowId) => {
+      // First pass: identify documents to remove and persist them
+      this.documents.forEach(async (yjsDoc, workflowId) => {
         if (yjsDoc.connections.size === 0 && (now - yjsDoc.lastActivity) > timeout) {
           console.log(`[Yjs] Garbage collecting inactive document: ${workflowId}`);
+
+          // Persist before destroying (if persistence is enabled)
+          if (this.persistence) {
+            try {
+              await this.persistence.persistDocument(workflowId, yjsDoc.doc);
+              console.log(`[Yjs] Persisted document before GC: ${workflowId}`);
+            } catch (error) {
+              console.error(`[Yjs] Failed to persist document ${workflowId} before GC:`, error);
+              // Continue with GC anyway - data loss is possible but GC must proceed
+            }
+          }
+
           yjsDoc.doc.destroy();
-          this.documents.delete(workflowId);
+          toRemove.push(workflowId);
         }
       });
+
+      // Second pass: remove from map
+      toRemove.forEach(workflowId => this.documents.delete(workflowId));
     }, this.gcInterval);
   }
 
   /**
-   * Cleanup
+   * Cleanup - flushes all pending writes and destroys documents
+   * Should be called during graceful shutdown
    */
-  destroy() {
+  async destroy(): Promise<void> {
     if (this.gcTimer) {
       clearInterval(this.gcTimer);
+    }
+
+    // Flush all pending persistence writes
+    if (this.persistence) {
+      console.log('[Yjs] Flushing pending writes before shutdown...');
+      await this.persistence.flushPendingWrites();
+    }
+
+    // Persist all remaining documents
+    if (this.persistence) {
+      console.log('[Yjs] Persisting all documents before shutdown...');
+      const persistPromises: Promise<void>[] = [];
+      this.documents.forEach((yjsDoc, workflowId) => {
+        persistPromises.push(
+          this.persistence!.persistDocument(workflowId, yjsDoc.doc).catch(error => {
+            console.error(`[Yjs] Failed to persist ${workflowId} during shutdown:`, error);
+          })
+        );
+      });
+      await Promise.all(persistPromises);
     }
 
     // Destroy all documents
@@ -290,6 +409,7 @@ export class YjsWebSocketHandler {
     });
 
     this.documents.clear();
+    console.log('[Yjs] Cleanup complete');
   }
 
   /**
@@ -299,7 +419,8 @@ export class YjsWebSocketHandler {
     const stats = {
       totalDocuments: this.documents.size,
       activeConnections: 0,
-      documents: [] as any[]
+      documents: [] as any[],
+      persistence: this.persistence?.getStats() || null
     };
 
     this.documents.forEach((yjsDoc, workflowId) => {
@@ -308,10 +429,18 @@ export class YjsWebSocketHandler {
         workflowId,
         connections: yjsDoc.connections.size,
         lastActivity: new Date(yjsDoc.lastActivity).toISOString(),
-        size: yjsDoc.doc.store.clients.size
+        size: yjsDoc.doc.store.clients.size,
+        persisted: yjsDoc.persisted
       });
     });
 
     return stats;
+  }
+
+  /**
+   * Get the persistence service (for testing/monitoring)
+   */
+  getPersistenceService(): YjsPersistenceService | undefined {
+    return this.persistence;
   }
 }
