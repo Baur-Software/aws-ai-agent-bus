@@ -377,7 +377,7 @@ struct UserIntegrationConnection {
     service_id: String,
     connection_id: String,
     connection_name: Option<String>,
-    /// Reference to credentials stored in AWS Secrets Manager (ARN or name)
+    /// Reference to credentials stored in AWS Secrets Manager (secret ARN)
     /// Credentials are NOT stored in DynamoDB for security
     credentials_secret_ref: Option<String>,
     /// Non-sensitive settings can still be stored directly

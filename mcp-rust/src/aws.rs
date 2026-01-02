@@ -1153,7 +1153,7 @@ impl AwsService {
         if force_delete {
             request = request.force_delete_without_recovery(true);
         } else {
-            // Use minimum recovery window of 7 days
+            // Use AWS minimum allowed recovery window (7-30 days range)
             request = request.recovery_window_in_days(7);
         }
 
