@@ -1195,8 +1195,7 @@ impl AwsService {
             tenant_id, user_id, service_id, connection_id
         );
 
-        let secret_value =
-            serde_json::to_string(credentials).map_err(AwsError::Serialization)?;
+        let secret_value = serde_json::to_string(credentials).map_err(AwsError::Serialization)?;
 
         let description = format!(
             "MCP integration credentials for service {} (user: {}, connection: {})",
