@@ -219,6 +219,9 @@ describe('Auth Routes', () => {
   });
 
   describe('AuthService', () => {
+    // Generate unique email addresses to avoid test pollution
+    const uniqueEmail = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}@example.com`;
+
     describe('authenticateUser', () => {
       // Note: These tests depend on demo user being initialized which requires
       // ENABLE_DEMO_USER and DEMO_USER_PASSWORD_HASH env vars set before module load.
@@ -228,12 +231,13 @@ describe('Auth Routes', () => {
         bcrypt.hash.mockResolvedValue('hashed-password-123');
         bcrypt.compare.mockResolvedValue(true);
 
-        const newUser = await AuthService.createUser('auth-test@example.com', 'password123', 'Auth Test');
+        const email = uniqueEmail('auth-test');
+        const newUser = await AuthService.createUser(email, 'password123', 'Auth Test');
 
-        const result = await AuthService.authenticateUser('auth-test@example.com', 'password');
+        const result = await AuthService.authenticateUser(email, 'password');
 
         expect(result).toBeDefined();
-        expect(result.email).toBe('auth-test@example.com');
+        expect(result.email).toBe(email);
         expect(bcrypt.compare).toHaveBeenCalledWith('password', 'hashed-password-123');
       });
 
@@ -241,16 +245,17 @@ describe('Auth Routes', () => {
         bcrypt.hash.mockResolvedValue('hashed-password');
         bcrypt.compare.mockResolvedValue(false);
 
+        const email = uniqueEmail('auth-test-2');
         // Create user first
-        await AuthService.createUser('auth-test-2@example.com', 'password123', 'Auth Test 2').catch(() => {});
+        await AuthService.createUser(email, 'password123', 'Auth Test 2').catch(() => {});
 
-        const result = await AuthService.authenticateUser('auth-test-2@example.com', 'wrongpassword');
+        const result = await AuthService.authenticateUser(email, 'wrongpassword');
 
         expect(result).toBeNull();
       });
 
       it('should return null for non-existent user', async () => {
-        const result = await AuthService.authenticateUser('nonexistent@example.com', 'password');
+        const result = await AuthService.authenticateUser('nonexistent-random@example.com', 'password');
 
         expect(result).toBeNull();
       });
@@ -261,10 +266,11 @@ describe('Auth Routes', () => {
         const hashedPassword = 'hashed-password-123';
         bcrypt.hash.mockResolvedValue(hashedPassword);
 
-        const user = await AuthService.createUser('newuser@example.com', 'password123', 'New User');
+        const email = uniqueEmail('newuser');
+        const user = await AuthService.createUser(email, 'password123', 'New User');
 
         expect(user).toBeDefined();
-        expect(user.email).toBe('newuser@example.com');
+        expect(user.email).toBe(email);
         expect(user.name).toBe('New User');
         expect(user.passwordHash).toBe(hashedPassword);
         expect(user.organizations).toHaveLength(1);
@@ -272,13 +278,14 @@ describe('Auth Routes', () => {
       });
 
       it('should throw error for duplicate email', async () => {
-        // First create a user
+        // First create a user with a unique email
         bcrypt.hash.mockResolvedValue('hashed-password-123');
-        await AuthService.createUser('duplicate-test@example.com', 'password123', 'First User').catch(() => {});
+        const email = uniqueEmail('duplicate-test');
+        await AuthService.createUser(email, 'password123', 'First User');
 
         // Try to create another with same email
         await expect(
-          AuthService.createUser('duplicate-test@example.com', 'password123', 'Duplicate User')
+          AuthService.createUser(email, 'password123', 'Duplicate User')
         ).rejects.toThrow('User already exists');
       });
     });
@@ -287,13 +294,14 @@ describe('Auth Routes', () => {
       it('should return user by ID', async () => {
         // Create a user first
         bcrypt.hash.mockResolvedValue('hashed-password-123');
-        const createdUser = await AuthService.createUser('getuser-test@example.com', 'password123', 'Get User Test');
+        const email = uniqueEmail('getuser-test');
+        const createdUser = await AuthService.createUser(email, 'password123', 'Get User Test');
 
         const user = await AuthService.getUser(createdUser.id);
 
         expect(user).toBeDefined();
         expect(user.id).toBe(createdUser.id);
-        expect(user.email).toBe('getuser-test@example.com');
+        expect(user.email).toBe(email);
       });
 
       it('should return null for non-existent user', async () => {
@@ -307,16 +315,17 @@ describe('Auth Routes', () => {
       it('should return user by email', async () => {
         // Create a user first
         bcrypt.hash.mockResolvedValue('hashed-password-123');
-        await AuthService.createUser('getbyemail-test@example.com', 'password123', 'Email Test');
+        const email = uniqueEmail('getbyemail-test');
+        await AuthService.createUser(email, 'password123', 'Email Test');
 
-        const user = await AuthService.getUserByEmail('getbyemail-test@example.com');
+        const user = await AuthService.getUserByEmail(email);
 
         expect(user).toBeDefined();
-        expect(user.email).toBe('getbyemail-test@example.com');
+        expect(user.email).toBe(email);
       });
 
       it('should return null for non-existent email', async () => {
-        const user = await AuthService.getUserByEmail('nonexistent@example.com');
+        const user = await AuthService.getUserByEmail('nonexistent-random-12345@example.com');
 
         expect(user).toBeNull();
       });
@@ -326,7 +335,8 @@ describe('Auth Routes', () => {
       it('should switch user organization successfully', async () => {
         // Create a user and a second org
         bcrypt.hash.mockResolvedValue('hashed-password-123');
-        const user = await AuthService.createUser('switch-org-test@example.com', 'password123', 'Switch Org Test');
+        const email = uniqueEmail('switch-org-test');
+        const user = await AuthService.createUser(email, 'password123', 'Switch Org Test');
         const newOrg = await AuthService.createOrganization(user.id, 'Second Org', 'Second org for testing');
 
         const success = await AuthService.switchUserOrganization(user.id, newOrg.id);
@@ -337,15 +347,16 @@ describe('Auth Routes', () => {
       it('should fail for invalid organization', async () => {
         // Create a user
         bcrypt.hash.mockResolvedValue('hashed-password-123');
-        const user = await AuthService.createUser('switch-org-fail@example.com', 'password123', 'Switch Org Fail Test').catch(() => ({ id: 'test-user' }));
+        const email = uniqueEmail('switch-org-fail');
+        const user = await AuthService.createUser(email, 'password123', 'Switch Org Fail Test');
 
-        const success = await AuthService.switchUserOrganization(user.id, 'invalid-org');
+        const success = await AuthService.switchUserOrganization(user.id, 'invalid-org-12345');
 
         expect(success).toBe(false);
       });
 
       it('should fail for non-existent user', async () => {
-        const success = await AuthService.switchUserOrganization('non-existent', 'org-personal-123');
+        const success = await AuthService.switchUserOrganization('non-existent-user-12345', 'org-personal-123');
 
         expect(success).toBe(false);
       });
@@ -355,7 +366,8 @@ describe('Auth Routes', () => {
       it('should create new organization', async () => {
         // Create a user first
         bcrypt.hash.mockResolvedValue('hashed-password-123');
-        const user = await AuthService.createUser('create-org-test@example.com', 'password123', 'Create Org Test');
+        const email = uniqueEmail('create-org-test');
+        const user = await AuthService.createUser(email, 'password123', 'Create Org Test');
 
         const org = await AuthService.createOrganization(user.id, 'Test Org', 'Test description');
 
@@ -371,7 +383,8 @@ describe('Auth Routes', () => {
       it('should return user organizations', async () => {
         // Create a user (which creates a personal org) and add another org
         bcrypt.hash.mockResolvedValue('hashed-password-123');
-        const user = await AuthService.createUser('get-orgs-test@example.com', 'password123', 'Get Orgs Test');
+        const email = uniqueEmail('get-orgs-test');
+        const user = await AuthService.createUser(email, 'password123', 'Get Orgs Test');
         await AuthService.createOrganization(user.id, 'Additional Org', 'Additional org for testing');
 
         const orgs = await AuthService.getUserOrganizations(user.id);
@@ -381,7 +394,7 @@ describe('Auth Routes', () => {
       });
 
       it('should return empty array for non-existent user', async () => {
-        const orgs = await AuthService.getUserOrganizations('non-existent');
+        const orgs = await AuthService.getUserOrganizations('non-existent-user-12345');
 
         expect(orgs).toHaveLength(0);
       });
@@ -391,7 +404,8 @@ describe('Auth Routes', () => {
       it('should return organization by ID', async () => {
         // Create a user and org first
         bcrypt.hash.mockResolvedValue('hashed-password-123');
-        const user = await AuthService.createUser('get-org-test@example.com', 'password123', 'Get Org Test');
+        const email = uniqueEmail('get-org-test');
+        const user = await AuthService.createUser(email, 'password123', 'Get Org Test');
         const createdOrg = await AuthService.createOrganization(user.id, 'Find Me Org', 'Org to find');
 
         const org = await AuthService.getOrganization(createdOrg.id);
@@ -402,7 +416,7 @@ describe('Auth Routes', () => {
       });
 
       it('should return null for non-existent organization', async () => {
-        const org = await AuthService.getOrganization('non-existent');
+        const org = await AuthService.getOrganization('non-existent-org-12345');
 
         expect(org).toBeNull();
       });
