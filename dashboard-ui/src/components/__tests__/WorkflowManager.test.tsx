@@ -163,19 +163,18 @@ describe('WorkflowManager', () => {
     vi.resetAllMocks();
   });
 
-  it.skip('renders workflow manager with header', async () => {
-    // Context provider issues - skipping for now
-    createRoot(() => {
-      render(() => (
-        <WorkflowManager
-          onSelectWorkflow={mockOnSelectWorkflow}
-          onNewWorkflow={mockOnNewWorkflow}
-        />
-      ));
-    });
+  it('renders workflow manager with header', async () => {
+    render(() => (
+      <WorkflowManager
+        onSelectWorkflow={mockOnSelectWorkflow}
+        onNewWorkflow={mockOnNewWorkflow}
+      />
+    ));
 
-    expect(screen.getByText('Workflows')).toBeInTheDocument();
-    expect(screen.getByText('New Workflow')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Workflows')).toBeInTheDocument();
+      expect(screen.getByText('New Workflow')).toBeInTheDocument();
+    });
   });
 
   it('loads and displays workflows on mount', async () => {
@@ -503,21 +502,30 @@ describe('WorkflowManager', () => {
     });
   });
 
-  it.skip('shows loading state initially', async () => {
-    // Context provider issues - skipping for now
-    mockKVStore.get.mockImplementation(() => new Promise(resolve =>
-      setTimeout(() => resolve(JSON.stringify(['wf-1'])), 100)
+  it('shows loading state initially', async () => {
+    // Create a delayed promise to ensure loading state is visible
+    let resolvePromise: (value: string | null) => void;
+    const delayedPromise = new Promise<string | null>((resolve) => {
+      resolvePromise = resolve;
+    });
+
+    mockKVStore.get.mockImplementation(() => delayedPromise);
+
+    render(() => (
+      <WorkflowManager
+        onSelectWorkflow={mockOnSelectWorkflow}
+        onNewWorkflow={mockOnNewWorkflow}
+      />
     ));
 
-    createRoot(() => {
-      render(() => (
-        <WorkflowManager
-          onSelectWorkflow={mockOnSelectWorkflow}
-          onNewWorkflow={mockOnNewWorkflow}
-        />
-      ));
+    // Check for loading state
+    expect(screen.getByText('Loading workflows...')).toBeInTheDocument();
 
-      expect(screen.getByText('Loading workflows...')).toBeInTheDocument();
+    // Resolve the promise to complete the test
+    resolvePromise!(JSON.stringify(['wf-1']));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading workflows...')).not.toBeInTheDocument();
     });
   });
 });

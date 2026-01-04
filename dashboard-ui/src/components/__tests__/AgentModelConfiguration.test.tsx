@@ -397,24 +397,59 @@ describe('Agent Model Configuration', () => {
       expect(service.getAvailableModels('medium')).toContain('claude-3-sonnet');
     });
 
-    it.skip('displays current model selection', async () => {
-      // Component integration test - skipped due to context provider issues
+    it('displays current model selection via service', () => {
+      // Test service logic for model selection display
+      const node = createTestNode('agent-conductor');
+      const availableModels = service.getAvailableModels('medium');
+
+      // Verify current model is in available models
+      expect(availableModels).toContain(node.agentConfig?.modelId || 'claude-3-haiku');
+      expect(service.getModelCapabilities('claude-3-sonnet')).toBeDefined();
     });
 
-    it.skip('shows temperature slider with current value', async () => {
-      // Component integration test - skipped due to context provider issues
+    it('validates temperature range via service', () => {
+      // Test temperature validation (slider bounds 0-2)
+      const validConfig = { modelId: 'claude-3-haiku', temperature: 0.7, maxTokens: 4000 };
+      const invalidConfig = { modelId: 'claude-3-haiku', temperature: 3.0, maxTokens: 4000 };
+
+      const validErrors = service.validateAgentConfiguration('agent-conductor', validConfig, 'medium');
+      const invalidErrors = service.validateAgentConfiguration('agent-conductor', invalidConfig, 'medium');
+
+      expect(validErrors.filter(e => e.includes('Temperature'))).toHaveLength(0);
+      expect(invalidErrors).toContain('Temperature must be between 0 and 2');
     });
 
-    it.skip('updates model configuration when changed', async () => {
-      // Component integration test - skipped due to context provider issues
+    it('returns optimal model for configuration changes', () => {
+      // Test model recommendation when configuration changes
+      const optimal = service.getOptimalModel('agent-conductor', 'medium');
+      expect(optimal).toBeDefined();
+      expect(service.getAvailableModels('medium')).toContain(optimal);
     });
 
-    it.skip('shows privacy warning for sensitive agents', async () => {
-      // Component integration test - skipped due to context provider issues
+    it('validates privacy requirements for sensitive agents', () => {
+      // Test privacy warning for agents with requiresPrivacy
+      const cloudConfig = { modelId: 'claude-3-sonnet', temperature: 0.3, maxTokens: 4000 };
+      const localConfig = { modelId: 'llama2-70b', temperature: 0.3, maxTokens: 4000 };
+
+      // Critic agent requires privacy
+      const cloudErrors = service.validateAgentConfiguration('agent-critic', cloudConfig, 'medium');
+      const localErrors = service.validateAgentConfiguration('agent-critic', localConfig, 'medium');
+
+      expect(cloudErrors).toContain('This agent requires a local model for privacy');
+      expect(localErrors.filter(e => e.includes('privacy'))).toHaveLength(0);
     });
 
-    it.skip('validates configuration before saving', async () => {
-      // Component integration test - skipped due to context provider issues
+    it('validates configuration constraints before saving', () => {
+      // Test all validation rules are checked before save
+      const invalidConfig = {
+        modelId: 'claude-3-opus', // Not available in small workspace
+        temperature: 0.7,
+        maxTokens: 4000
+      };
+
+      const errors = service.validateAgentConfiguration('agent-conductor', invalidConfig, 'small');
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors).toContain('Model claude-3-opus is not available in small workspace');
     });
   });
 
@@ -434,8 +469,17 @@ describe('Agent Model Configuration', () => {
       expect(largeWorkspaceModels).toContain('claude-3-opus');
     });
 
-    it.skip('shows upgrade message for unavailable models', async () => {
-      // Component integration test - skipped due to context provider issues
+    it('returns validation error for unavailable models in workspace', () => {
+      // Test upgrade message logic - when model not available in workspace
+      const config = { modelId: 'claude-3-opus', temperature: 0.7, maxTokens: 4000 };
+
+      // Small workspace doesn't have opus
+      const errors = service.validateAgentConfiguration('agent-conductor', config, 'small');
+      expect(errors).toContain('Model claude-3-opus is not available in small workspace');
+
+      // Large workspace has opus
+      const largeErrors = service.validateAgentConfiguration('agent-conductor', config, 'large');
+      expect(largeErrors.filter(e => e.includes('not available'))).toHaveLength(0);
     });
   });
 
@@ -456,8 +500,20 @@ describe('Agent Model Configuration', () => {
       expect(defaults.preferredModel).toBe('claude-3-haiku');
     });
 
-    it.skip('handles model API failures gracefully', async () => {
-      // Component integration test - skipped due to context provider issues
+    it('handles missing model capabilities gracefully', () => {
+      // Test graceful handling when model info is missing
+      const unknownCapabilities = service.getModelCapabilities('unknown-model');
+      expect(unknownCapabilities).toBeNull();
+
+      // Cost estimate returns 0 for unknown models
+      const cost = service.getCostEstimate('unknown-model', 10000);
+      expect(cost).toBe(0);
+
+      // Validation doesn't crash with unknown models
+      const config = { modelId: 'unknown-model', temperature: 0.7, maxTokens: 4000 };
+      expect(() => {
+        service.validateAgentConfiguration('agent-conductor', config, 'medium');
+      }).not.toThrow();
     });
   });
 });
