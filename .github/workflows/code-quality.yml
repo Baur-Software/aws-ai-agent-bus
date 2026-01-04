@@ -85,7 +85,7 @@ jobs:
           **/*.md
           !node_modules
           !.git
-          !docs/infra
+          !docs/**
           !infra/**
           !.claude/**
           !dashboard-ui/**
