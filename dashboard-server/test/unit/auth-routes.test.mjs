@@ -220,20 +220,31 @@ describe('Auth Routes', () => {
 
   describe('AuthService', () => {
     describe('authenticateUser', () => {
-      it('should authenticate user with correct password', async () => {
+      // Note: These tests depend on demo user being initialized which requires
+      // ENABLE_DEMO_USER and DEMO_USER_PASSWORD_HASH env vars set before module load.
+      // In CI, these may not be set, so we test the logic paths instead.
+      it('should authenticate user with correct password when demo user exists', async () => {
+        // Create a new user first to ensure we have a user to test with
+        bcrypt.hash.mockResolvedValue('hashed-password-123');
         bcrypt.compare.mockResolvedValue(true);
 
-        const result = await AuthService.authenticateUser('demo@example.com', 'password');
+        const newUser = await AuthService.createUser('auth-test@example.com', 'password123', 'Auth Test');
+
+        const result = await AuthService.authenticateUser('auth-test@example.com', 'password');
 
         expect(result).toBeDefined();
-        expect(result.email).toBe('demo@example.com');
-        expect(bcrypt.compare).toHaveBeenCalledWith('password', expect.any(String));
+        expect(result.email).toBe('auth-test@example.com');
+        expect(bcrypt.compare).toHaveBeenCalledWith('password', 'hashed-password-123');
       });
 
       it('should return null for incorrect password', async () => {
+        bcrypt.hash.mockResolvedValue('hashed-password');
         bcrypt.compare.mockResolvedValue(false);
 
-        const result = await AuthService.authenticateUser('demo@example.com', 'wrongpassword');
+        // Create user first
+        await AuthService.createUser('auth-test-2@example.com', 'password123', 'Auth Test 2').catch(() => {});
+
+        const result = await AuthService.authenticateUser('auth-test-2@example.com', 'wrongpassword');
 
         expect(result).toBeNull();
       });
@@ -261,19 +272,28 @@ describe('Auth Routes', () => {
       });
 
       it('should throw error for duplicate email', async () => {
+        // First create a user
+        bcrypt.hash.mockResolvedValue('hashed-password-123');
+        await AuthService.createUser('duplicate-test@example.com', 'password123', 'First User').catch(() => {});
+
+        // Try to create another with same email
         await expect(
-          AuthService.createUser('demo@example.com', 'password123', 'Duplicate User')
+          AuthService.createUser('duplicate-test@example.com', 'password123', 'Duplicate User')
         ).rejects.toThrow('User already exists');
       });
     });
 
     describe('getUser', () => {
       it('should return user by ID', async () => {
-        const user = await AuthService.getUser('user-demo-123');
+        // Create a user first
+        bcrypt.hash.mockResolvedValue('hashed-password-123');
+        const createdUser = await AuthService.createUser('getuser-test@example.com', 'password123', 'Get User Test');
+
+        const user = await AuthService.getUser(createdUser.id);
 
         expect(user).toBeDefined();
-        expect(user.id).toBe('user-demo-123');
-        expect(user.email).toBe('demo@example.com');
+        expect(user.id).toBe(createdUser.id);
+        expect(user.email).toBe('getuser-test@example.com');
       });
 
       it('should return null for non-existent user', async () => {
@@ -285,10 +305,14 @@ describe('Auth Routes', () => {
 
     describe('getUserByEmail', () => {
       it('should return user by email', async () => {
-        const user = await AuthService.getUserByEmail('demo@example.com');
+        // Create a user first
+        bcrypt.hash.mockResolvedValue('hashed-password-123');
+        await AuthService.createUser('getbyemail-test@example.com', 'password123', 'Email Test');
+
+        const user = await AuthService.getUserByEmail('getbyemail-test@example.com');
 
         expect(user).toBeDefined();
-        expect(user.email).toBe('demo@example.com');
+        expect(user.email).toBe('getbyemail-test@example.com');
       });
 
       it('should return null for non-existent email', async () => {
@@ -300,13 +324,22 @@ describe('Auth Routes', () => {
 
     describe('switchUserOrganization', () => {
       it('should switch user organization successfully', async () => {
-        const success = await AuthService.switchUserOrganization('user-demo-123', 'org-personal-123');
+        // Create a user and a second org
+        bcrypt.hash.mockResolvedValue('hashed-password-123');
+        const user = await AuthService.createUser('switch-org-test@example.com', 'password123', 'Switch Org Test');
+        const newOrg = await AuthService.createOrganization(user.id, 'Second Org', 'Second org for testing');
+
+        const success = await AuthService.switchUserOrganization(user.id, newOrg.id);
 
         expect(success).toBe(true);
       });
 
       it('should fail for invalid organization', async () => {
-        const success = await AuthService.switchUserOrganization('user-demo-123', 'invalid-org');
+        // Create a user
+        bcrypt.hash.mockResolvedValue('hashed-password-123');
+        const user = await AuthService.createUser('switch-org-fail@example.com', 'password123', 'Switch Org Fail Test').catch(() => ({ id: 'test-user' }));
+
+        const success = await AuthService.switchUserOrganization(user.id, 'invalid-org');
 
         expect(success).toBe(false);
       });
@@ -320,23 +353,31 @@ describe('Auth Routes', () => {
 
     describe('createOrganization', () => {
       it('should create new organization', async () => {
-        const org = await AuthService.createOrganization('user-demo-123', 'Test Org', 'Test description');
+        // Create a user first
+        bcrypt.hash.mockResolvedValue('hashed-password-123');
+        const user = await AuthService.createUser('create-org-test@example.com', 'password123', 'Create Org Test');
+
+        const org = await AuthService.createOrganization(user.id, 'Test Org', 'Test description');
 
         expect(org).toBeDefined();
         expect(org.name).toBe('Test Org');
         expect(org.description).toBe('Test description');
-        expect(org.ownerId).toBe('user-demo-123');
+        expect(org.ownerId).toBe(user.id);
         expect(org.type).toBe('shared');
       });
     });
 
     describe('getUserOrganizations', () => {
       it('should return user organizations', async () => {
-        const orgs = await AuthService.getUserOrganizations('user-demo-123');
+        // Create a user (which creates a personal org) and add another org
+        bcrypt.hash.mockResolvedValue('hashed-password-123');
+        const user = await AuthService.createUser('get-orgs-test@example.com', 'password123', 'Get Orgs Test');
+        await AuthService.createOrganization(user.id, 'Additional Org', 'Additional org for testing');
 
+        const orgs = await AuthService.getUserOrganizations(user.id);
+
+        // Should have personal org + additional org = 2
         expect(orgs).toHaveLength(2);
-        expect(orgs.map(o => o.id)).toContain('org-personal-123');
-        expect(orgs.map(o => o.id)).toContain('org-shared-456');
       });
 
       it('should return empty array for non-existent user', async () => {
@@ -348,11 +389,16 @@ describe('Auth Routes', () => {
 
     describe('getOrganization', () => {
       it('should return organization by ID', async () => {
-        const org = await AuthService.getOrganization('org-personal-123');
+        // Create a user and org first
+        bcrypt.hash.mockResolvedValue('hashed-password-123');
+        const user = await AuthService.createUser('get-org-test@example.com', 'password123', 'Get Org Test');
+        const createdOrg = await AuthService.createOrganization(user.id, 'Find Me Org', 'Org to find');
+
+        const org = await AuthService.getOrganization(createdOrg.id);
 
         expect(org).toBeDefined();
-        expect(org.id).toBe('org-personal-123');
-        expect(org.name).toBe('Personal Projects');
+        expect(org.id).toBe(createdOrg.id);
+        expect(org.name).toBe('Find Me Org');
       });
 
       it('should return null for non-existent organization', async () => {

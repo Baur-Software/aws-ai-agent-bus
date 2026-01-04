@@ -1,47 +1,75 @@
 import { vi, describe, it, expect, beforeEach, beforeAll } from 'vitest';
 
-// Mock AWS SDK with proper class implementations
-const mockSend = vi.fn();
+// Use vi.hoisted to ensure mocks are created before any imports
+const { mockSend, mockUnmarshall } = vi.hoisted(() => {
+  const mockSend = vi.fn();
+  const mockUnmarshall = vi.fn().mockImplementation(item => {
+    // Simple unmarshall - just extract the value from DynamoDB format
+    const result = {};
+    for (const [key, val] of Object.entries(item)) {
+      if (typeof val === 'object' && val !== null) {
+        if ('S' in val) result[key] = val.S;
+        else if ('N' in val) result[key] = Number(val.N);
+        else if ('BOOL' in val) result[key] = val.BOOL;
+        else result[key] = val;
+      } else {
+        result[key] = val;
+      }
+    }
+    return result;
+  });
+  return { mockSend, mockUnmarshall };
+});
 
+// Mock AWS SDK with proper class implementations
 vi.mock('@aws-sdk/client-dynamodb', () => {
+  // Return a factory that creates command-like objects
+  class MockScanCommand {
+    constructor(params) {
+      this.params = params;
+      this.type = 'ScanCommand';
+    }
+  }
+  class MockQueryCommand {
+    constructor(params) {
+      this.params = params;
+      this.type = 'QueryCommand';
+    }
+  }
   return {
     DynamoDBClient: vi.fn().mockImplementation(() => ({
       send: mockSend,
     })),
-    ScanCommand: vi.fn().mockImplementation((params) => ({ params, type: 'ScanCommand' })),
-    QueryCommand: vi.fn().mockImplementation((params) => ({ params, type: 'QueryCommand' })),
+    ScanCommand: MockScanCommand,
+    QueryCommand: MockQueryCommand,
   };
 });
 
 vi.mock('@aws-sdk/client-s3', () => {
+  class MockListObjectsV2Command {
+    constructor(params) {
+      this.params = params;
+      this.type = 'ListObjectsV2Command';
+    }
+  }
+  class MockHeadBucketCommand {
+    constructor(params) {
+      this.params = params;
+      this.type = 'HeadBucketCommand';
+    }
+  }
   return {
     S3Client: vi.fn().mockImplementation(() => ({
       send: mockSend,
     })),
-    ListObjectsV2Command: vi.fn().mockImplementation((params) => ({ params, type: 'ListObjectsV2Command' })),
-    HeadBucketCommand: vi.fn().mockImplementation((params) => ({ params, type: 'HeadBucketCommand' })),
+    ListObjectsV2Command: MockListObjectsV2Command,
+    HeadBucketCommand: MockHeadBucketCommand,
   };
 });
 
-vi.mock('@aws-sdk/util-dynamodb', () => {
-  return {
-    unmarshall: vi.fn().mockImplementation(item => {
-      // Simple unmarshall - just extract the value from DynamoDB format
-      const result = {};
-      for (const [key, val] of Object.entries(item)) {
-        if (typeof val === 'object' && val !== null) {
-          if ('S' in val) result[key] = val.S;
-          else if ('N' in val) result[key] = Number(val.N);
-          else if ('BOOL' in val) result[key] = val.BOOL;
-          else result[key] = val;
-        } else {
-          result[key] = val;
-        }
-      }
-      return result;
-    }),
-  };
-});
+vi.mock('@aws-sdk/util-dynamodb', () => ({
+  unmarshall: mockUnmarshall,
+}));
 
 let MetricsAggregator;
 
