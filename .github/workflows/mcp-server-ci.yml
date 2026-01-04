@@ -22,7 +22,7 @@ jobs:
 
     strategy:
       matrix:
-        rust-version: ['1.80', 'stable', 'beta']  # MSRV (1.80), stable, and beta
+        rust-version: ['1.85', 'stable', 'beta']  # MSRV (1.85 for edition2024 support), stable, and beta
 
     steps:
     - uses: actions/checkout@v4
