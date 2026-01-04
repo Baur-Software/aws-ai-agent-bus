@@ -111,13 +111,7 @@ resource "aws_cognito_user_pool" "agent_mesh" {
   # MFA (optional - can be enabled later)
   mfa_configuration = "OFF"
 
-  # Remove this from main.tf and place in variables.tf:
-
-  variable "tags" {
-    description = "A map of tags to assign to resources."
-    type        = map(string)
-    default     = {}
-  }
+  tags = var.tags
 }
 
 # User Pool Client for web application
@@ -263,9 +257,3 @@ resource "aws_cognito_identity_pool_roles_attachment" "agent_mesh" {
     "authenticated" = aws_iam_role.authenticated[0].arn
   }
 }
-
-# Minimal resource so Terraform can read the module
-resource "aws_cognito_user_pool" "main" {
-  name = "example-user-pool"
-}
-

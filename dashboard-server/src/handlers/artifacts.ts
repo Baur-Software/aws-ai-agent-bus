@@ -1,4 +1,4 @@
-import S3Service from '../aws/s3';
+import S3Service from '../aws/s3.js';
 
 /**
  * Handler for artifact storage and retrieval using S3.

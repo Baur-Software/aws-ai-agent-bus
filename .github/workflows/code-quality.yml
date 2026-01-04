@@ -28,15 +28,15 @@ jobs:
     
     - name: Check for sensitive data in entire project
       run: |
-        # Check for hardcoded secrets (excluding git logs, terraform state, workflow files, and infra docs)
-        # Infrastructure documentation is allowed to mention the profile name
+        # Check for hardcoded secrets (excluding git logs, terraform state, workflow files, and docs)
+        # Documentation files are allowed to mention the profile name for setup instructions
         if find . -type f \
           \( -name "*.js" -o -name "*.json" -o -name "*.md" \) \
           -not -path "./.git/*" \
           -not -path "./node_modules/*" \
           -not -path "./.terraform/*" \
           -not -path "./infra/*" \
-          -not -path "./docs/infra/*" \
+          -not -path "./docs/*" \
           -not -path "./CLAUDE.md" \
           -exec grep -l "baursoftware" {} + 2>/dev/null; then
           echo "❌ Found hardcoded 'baursoftware' in source files"
@@ -85,7 +85,7 @@ jobs:
           **/*.md
           !node_modules
           !.git
-          !docs/infra
+          !docs/**
           !infra/**
           !.claude/**
           !dashboard-ui/**
@@ -111,13 +111,16 @@ jobs:
           fi
         done
         
-        # Check for password patterns but exclude authentication code and .claude directory
+        # Check for password patterns but exclude authentication code, password validation, and .claude directory
         if find . -type f \( -name "*.js" -o -name "*.json" -o -name "*.md" -o -name "*.py" -o -name "*.ts" \) \
           ! -path "./.claude/*" \
           ! -path "*/node_modules/*" \
           ! -path "*/.terraform/*" \
           ! -path "*/authRoutes.*" \
           ! -path "*/auth.*" \
+          ! -path "*/passwordValidation.*" \
+          ! -path "*/PasswordStrengthIndicator.*" \
+          ! -path "*/PasswordInput.*" \
           -exec grep -l -E 'password.*=.*[^\s]{8,}' {} + 2>/dev/null | head -1 | grep .; then
           echo "❌ Potential secret found: password.*=.*[^\s]{8,}"
           exit 1

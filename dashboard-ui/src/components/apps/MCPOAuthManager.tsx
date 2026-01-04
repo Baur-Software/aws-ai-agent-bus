@@ -79,7 +79,7 @@ export default function MCPOAuthManager(props: MCPOAuthManagerProps) {
           type: 'url' as const,
           required: false,
           description: 'OAuth callback URL (optional)',
-          placeholder: 'http://localhost:3001/oauth/callback'
+          placeholder: `${window.location.origin}/oauth/callback`
         },
         {
           key: 'scope',

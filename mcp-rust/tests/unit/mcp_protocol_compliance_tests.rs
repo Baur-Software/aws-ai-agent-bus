@@ -291,6 +291,9 @@ async fn test_concurrent_request_and_notification_handling() {
 
 #[tokio::test]
 async fn test_error_response_preserves_request_id() {
+    std::env::set_var("DEFAULT_TENANT_ID", "test");
+    std::env::set_var("DEFAULT_USER_ID", "test");
+
     let tenant_manager = Arc::new(TenantManager::new().await.unwrap());
     let server = MCPServer::new(tenant_manager).await.unwrap();
 

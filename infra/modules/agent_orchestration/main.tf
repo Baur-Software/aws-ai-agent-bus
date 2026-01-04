@@ -15,6 +15,7 @@ locals {
 
 # Data source to get MCP server infrastructure outputs
 data "terraform_remote_state" "mcp_server" {
+  backend = "local"
   config = {
     path = var.mcp_server_state_path
   }
@@ -22,6 +23,7 @@ data "terraform_remote_state" "mcp_server" {
 
 # Data source to get timeline store outputs
 data "terraform_remote_state" "timeline_store" {
+  backend = "local"
   config = {
     path = var.timeline_store_state_path
   }
@@ -29,6 +31,7 @@ data "terraform_remote_state" "timeline_store" {
 
 # Data source to get workflow outputs
 data "terraform_remote_state" "workflow" {
+  backend = "local"
   config = {
     path = var.workflow_state_path
   }

@@ -34,20 +34,40 @@ interface AuthDependencies {
 }
 
 // Mock service for now - will be replaced with real authentication
+// NOTE: In production, replace with database-backed user storage
 class AuthService {
-  private static users: User[] = [
-    {
+  private static users: User[] = AuthService.initializeDemoUsers();
+
+  /**
+   * Initialize demo users from environment configuration
+   * In production, this should be replaced with database queries
+   */
+  private static initializeDemoUsers(): User[] {
+    // Only enable demo user in development mode with explicit opt-in
+    if (process.env.NODE_ENV === 'production' || !process.env.ENABLE_DEMO_USER) {
+      return [];
+    }
+
+    const demoEmail = process.env.DEMO_USER_EMAIL || 'demo@example.com';
+    const demoPasswordHash = process.env.DEMO_USER_PASSWORD_HASH;
+
+    if (!demoPasswordHash) {
+      console.warn('DEMO_USER_PASSWORD_HASH not set - demo user disabled');
+      return [];
+    }
+
+    return [{
       id: 'user-demo-123',
-      email: 'demo@example.com',
+      email: demoEmail,
       name: 'Demo User',
       avatar: 'https://via.placeholder.com/40',
-      passwordHash: '$2b$10$bzngWtS8seD0KoF2cqD3reNkCN5NDvqCkWJUKRcNCwiBMeuQodUXO', // demo password: "password"
+      passwordHash: demoPasswordHash,
       organizations: ['org-personal-123', 'org-shared-456'],
       currentOrganizationId: 'org-shared-456',
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z'
-    }
-  ];
+    }];
+  }
 
   private static organizations: Organization[] = [
     {
@@ -191,6 +211,38 @@ class AuthService {
    */
   static async getUserByEmail(email: string): Promise<User | null> {
     return this.users.find(u => u.email === email) || null;
+  }
+
+  /**
+   * Reset state for testing - clears all users and organizations
+   * and reinitializes with demo users if configured
+   */
+  static resetForTesting(): void {
+    this.users = AuthService.initializeDemoUsers();
+    this.organizations = [
+      {
+        id: 'org-personal-123',
+        name: 'Personal Projects',
+        slug: 'personal',
+        description: 'My personal workspace',
+        type: 'personal',
+        memberCount: 1,
+        createdAt: '2024-01-15T00:00:00Z',
+        updatedAt: '2024-01-15T00:00:00Z',
+        ownerId: 'user-demo-123'
+      },
+      {
+        id: 'org-shared-456',
+        name: 'Acme Corporation',
+        slug: 'acme',
+        description: 'Building the future',
+        type: 'shared',
+        memberCount: 15,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+        ownerId: 'user-demo-123'
+      }
+    ];
   }
 }
 

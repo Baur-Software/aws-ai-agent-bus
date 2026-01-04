@@ -1,7 +1,8 @@
 import { WebSocket } from 'ws';
-import { mcpMarketplace, MCPServerListing } from '../services/MCPMarketplace';
-import { KVHandler } from '../handlers/kv';
-import { EventsHandler } from '../handlers/events';
+import { mcpMarketplace, MCPServerListing } from '../services/MCPMarketplace.js';
+import { KVHandler } from '../handlers/kv.js';
+import { EventsHandler } from '../handlers/events.js';
+import * as crypto from 'crypto';
 
 export interface MCPMessage {
   type: string;
@@ -33,7 +34,21 @@ export const MCP_MESSAGE_TYPES = {
 };
 
 export class MCPWebSocketHandler {
-  constructor(private ws: WebSocket) {}
+  private encryptionKey: Buffer;
+
+  constructor(private ws: WebSocket) {
+    // Use environment encryption key or fail in production
+    const keyString = process.env.CREDENTIALS_ENCRYPTION_KEY;
+    if (!keyString && process.env.NODE_ENV === 'production') {
+      throw new Error('CREDENTIALS_ENCRYPTION_KEY must be set in production');
+    }
+    // In development, use a default key (still not secure, but better than plaintext)
+    this.encryptionKey = crypto.scryptSync(
+      keyString || 'dev-only-change-in-production',
+      'mcp-credentials-salt',
+      32
+    );
+  }
 
   async handleMessage(message: MCPMessage): Promise<void> {
     try {
@@ -220,9 +235,43 @@ export class MCPWebSocketHandler {
     });
   }
 
+  /**
+   * Encrypt credentials using AES-256-GCM for secure storage
+   * Returns format: iv:authTag:encryptedData (all hex encoded)
+   */
   private encryptCredentials(credentials: any): string {
-    // TODO: Implement proper encryption
-    return Buffer.from(JSON.stringify(credentials)).toString('base64');
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv('aes-256-gcm', this.encryptionKey, iv);
+
+    let encrypted = cipher.update(JSON.stringify(credentials), 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+
+    const authTag = cipher.getAuthTag();
+
+    // Format: iv:authTag:encryptedData (all hex)
+    return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
+  }
+
+  /**
+   * Decrypt credentials encrypted with encryptCredentials
+   */
+  private decryptCredentials(encryptedData: string): any {
+    const [ivHex, authTagHex, encrypted] = encryptedData.split(':');
+
+    if (!ivHex || !authTagHex || !encrypted) {
+      throw new Error('Invalid encrypted credentials format');
+    }
+
+    const iv = Buffer.from(ivHex, 'hex');
+    const authTag = Buffer.from(authTagHex, 'hex');
+
+    const decipher = crypto.createDecipheriv('aes-256-gcm', this.encryptionKey, iv);
+    decipher.setAuthTag(authTag);
+
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+
+    return JSON.parse(decrypted);
   }
 
   private sendResponse(type: string, requestId: string | undefined, payload: any): void {

@@ -1,5 +1,12 @@
 output "eventbridge_bus_name" {
-  value = aws_cloudwatch_event_bus.main.name
+  description = "EventBridge bus name"
+  value       = aws_cloudwatch_event_bus.mesh.name
+}
+
+# Alias for eventbridge_bus_name for compatibility
+output "bus_name" {
+  description = "EventBridge bus name (alias)"
+  value       = aws_cloudwatch_event_bus.mesh.name
 }
 
 output "bus_arn" {

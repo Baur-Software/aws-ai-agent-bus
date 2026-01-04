@@ -60,9 +60,12 @@ export class AuthMiddleware {
 
   /**
    * Check if development authentication is enabled
+   * This is true when ENABLE_DEV_AUTH=true OR when running in development/test environments
    */
   private static get isDevAuthEnabled(): boolean {
-    return process.env.ENABLE_DEV_AUTH === 'true' || process.env.NODE_ENV === 'development';
+    return process.env.ENABLE_DEV_AUTH === 'true' ||
+           process.env.NODE_ENV === 'development' ||
+           process.env.NODE_ENV === 'test';
   }
 
   /**

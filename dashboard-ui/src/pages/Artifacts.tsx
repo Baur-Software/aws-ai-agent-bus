@@ -113,7 +113,8 @@ function Artifacts() {
       const fileKey = contextPrefix ? `${contextPrefix}${file.name}` : file.name;
       formData.append('key', fileKey);
 
-      const response = await fetch('http://localhost:3001/api/artifacts/upload', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/artifacts/upload`, {
         method: 'POST',
         body: formData,
       });

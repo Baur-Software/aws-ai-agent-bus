@@ -1,5 +1,5 @@
 // Using native fetch (Node 18+)
-import { ArtifactsHandler } from '../handlers/artifacts';
+import { ArtifactsHandler } from '../handlers/artifacts.js';
 
 export interface ConfigurationField {
   key: string;

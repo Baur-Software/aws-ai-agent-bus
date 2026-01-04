@@ -3,40 +3,10 @@
  * Provides MCP tools for sending and managing notifications via SNS
  */
 
-// TODO: Implement proper SNSService
-class SNSService {
-  async publish(params: any) {
-    console.log('SNS publish (stub):', params);
-    return { MessageId: 'stub-message-id' };
-  }
+import { getSNSService, SNSService } from '../services/SNSService.js';
 
-  async publishNotification(params: any) {
-    console.log('SNS publishNotification (stub):', params);
-    return { success: true, messageId: 'stub-message-id' };
-  }
-
-  async subscribeToNotifications(protocol: any, endpoint: any, topicName: any) {
-    console.log('SNS subscribeToNotifications (stub):', { protocol, endpoint, topicName });
-    return { success: true, subscriptionArn: 'stub-subscription-arn' };
-  }
-
-  async unsubscribeFromNotifications(subscriptionArn: any) {
-    console.log('SNS unsubscribeFromNotifications (stub):', subscriptionArn);
-    return { success: true };
-  }
-
-  async publishIntegrationEvent(eventType: any, connectionName: any, userId: any, details: any) {
-    console.log('SNS publishIntegrationEvent (stub):', { eventType, connectionName, userId, details });
-    return { success: true, messageId: 'stub-message-id' };
-  }
-
-  async publishSystemEvent(level: any, component: any, message: any) {
-    console.log('SNS publishSystemEvent (stub):', { level, component, message });
-    return { success: true, messageId: 'stub-message-id' };
-  }
-}
-
-const snsService = new SNSService();
+// Get the singleton SNS service instance
+const snsService = getSNSService();
 
 export const notificationTools = [
   {
@@ -89,8 +59,8 @@ export const notificationTools = [
         },
         topicName: {
           type: 'string',
-          description: 'SNS topic name (optional, defaults to agent-mesh-notifications)',
-          default: 'agent-mesh-notifications'
+          description: 'SNS topic name (optional, defaults to notifications)',
+          default: 'notifications'
         }
       },
       required: ['protocol', 'endpoint']
@@ -122,7 +92,7 @@ export const notificationTools = [
         },
         action: {
           type: 'string',
-          enum: ['connected', 'disconnected', 'error'],
+          enum: ['connected', 'disconnected', 'error', 'sync_started', 'sync_completed'],
           description: 'Integration action'
         },
         userId: {
@@ -149,96 +119,160 @@ export const notificationTools = [
           type: 'string',
           description: 'Type of system event'
         },
-        eventData: {
-          type: 'object',
-          description: 'Event data',
-          additionalProperties: true
-        },
-        userId: {
+        component: {
           type: 'string',
-          description: 'User ID (optional, defaults to system)',
-          default: 'system'
+          description: 'Component name that triggered the event'
+        },
+        message: {
+          type: 'string',
+          description: 'Event message'
+        },
+        level: {
+          type: 'string',
+          enum: ['info', 'warning', 'error', 'critical'],
+          description: 'Event severity level',
+          default: 'info'
+        },
+        metadata: {
+          type: 'object',
+          description: 'Additional event metadata',
+          additionalProperties: true
         }
       },
-      required: ['eventType', 'eventData']
+      required: ['eventType', 'component', 'message']
+    }
+  },
+  {
+    name: 'notifications.health',
+    description: 'Check SNS service health status',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      required: []
     }
   }
 ];
 
-export async function handleNotificationTool(name, args) {
+export async function handleNotificationTool(name: string, args: any) {
   try {
     switch (name) {
-      case 'notifications.send':
-        const messageId = await snsService.publishNotification(args);
+      case 'notifications.send': {
+        const result = await snsService.publishNotification({
+          type: args.type,
+          message: args.message,
+          title: args.title,
+          userId: args.userId,
+          metadata: args.metadata
+        });
+
         return {
-          success: true,
-          messageId,
-          message: 'Notification sent successfully',
+          success: result.success,
+          messageId: result.messageId,
+          message: result.success
+            ? 'Notification sent successfully via SNS'
+            : 'Failed to send notification',
           notification: args
         };
+      }
 
-      case 'notifications.subscribe':
-        const subscriptionArn = await snsService.subscribeToNotifications(
+      case 'notifications.subscribe': {
+        const result = await snsService.subscribeToNotifications(
           args.protocol,
           args.endpoint,
-          args.topicName
+          args.topicName || 'notifications'
         );
+
         return {
-          success: true,
-          subscriptionArn,
-          message: `Subscribed ${args.endpoint} to notifications`,
+          success: result.success,
+          subscriptionArn: result.subscriptionArn,
+          message: result.success
+            ? `Subscribed ${args.endpoint} to notifications`
+            : 'Failed to subscribe to notifications',
           subscription: {
             protocol: args.protocol,
             endpoint: args.endpoint,
-            topicName: args.topicName || 'agent-mesh-notifications'
-          }
+            topicName: args.topicName || 'notifications'
+          },
+          note: result.subscriptionArn === 'pending-confirmation'
+            ? 'Please check your email/endpoint to confirm the subscription'
+            : undefined
         };
+      }
 
-      case 'notifications.unsubscribe':
-        await snsService.unsubscribeFromNotifications(args.subscriptionArn);
+      case 'notifications.unsubscribe': {
+        const result = await snsService.unsubscribeFromNotifications(args.subscriptionArn);
+
         return {
-          success: true,
-          message: 'Unsubscribed successfully',
+          success: result.success,
+          message: result.success
+            ? 'Unsubscribed successfully'
+            : 'Failed to unsubscribe',
           subscriptionArn: args.subscriptionArn
         };
+      }
 
-      case 'notifications.integration-event':
-        const integrationMessageId = await snsService.publishIntegrationEvent(
-          args.integration,
-          args.action,
-          args.userId,
-          args.details
-        );
+      case 'notifications.integration-event': {
+        const result = await snsService.publishIntegrationEvent({
+          integration: args.integration,
+          action: args.action,
+          userId: args.userId,
+          details: args.details
+        });
+
         return {
-          success: true,
-          messageId: integrationMessageId,
-          message: `Integration event published: ${args.integration} ${args.action}`,
+          success: result.success,
+          messageId: result.messageId,
+          message: result.success
+            ? `Integration event published: ${args.integration} ${args.action}`
+            : 'Failed to publish integration event',
           event: args
         };
+      }
 
-      case 'notifications.system-event':
-        const systemMessageId = await snsService.publishSystemEvent(
-          args.eventType,
-          args.eventData,
-          args.userId
-        );
+      case 'notifications.system-event': {
+        const result = await snsService.publishSystemEvent({
+          eventType: args.eventType,
+          component: args.component,
+          message: args.message,
+          level: args.level,
+          metadata: args.metadata
+        });
+
         return {
-          success: true,
-          messageId: systemMessageId,
-          message: `System event published: ${args.eventType}`,
+          success: result.success,
+          messageId: result.messageId,
+          message: result.success
+            ? `System event published: ${args.eventType}`
+            : 'Failed to publish system event',
           event: args
         };
+      }
+
+      case 'notifications.health': {
+        const health = await snsService.getHealth();
+
+        return {
+          success: health.healthy,
+          status: health.healthy ? 'healthy' : 'unhealthy',
+          topicCount: health.topicCount,
+          error: health.error,
+          timestamp: new Date().toISOString()
+        };
+      }
 
       default:
         throw new Error(`Unknown notification tool: ${name}`);
     }
-  } catch (error) {
-    console.error(`❌ Notification tool error (${name}):`, error);
+  } catch (error: any) {
+    console.error(`Notification tool error (${name}):`, error);
     return {
       success: false,
-      error: error.message,
+      error: error.message || 'Unknown error',
       tool: name,
       args
     };
   }
 }
+
+// Export the SNS service for use by other modules (like EventsHandler)
+export { getSNSService };

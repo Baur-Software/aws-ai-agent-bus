@@ -4,7 +4,7 @@ use std::sync::Arc;
 use thiserror::Error;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::sync::RwLock;
-use tracing::{debug, error};
+use tracing::debug;
 
 use crate::handlers::HandlerRegistry;
 use crate::rate_limiting::AwsOperation;

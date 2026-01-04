@@ -336,23 +336,28 @@ user-demo-user-123-integration-google-analytics-personal    # Personal account
 The dashboard-server uses a **hybrid WebSocket-first architecture**:
 
 ### WebSocket (Primary - Preferred for new features)
+
 - **Real-time operations**: KV, chat, agents, workflows, MCP tools
 - **Event streaming**: Metrics, activity updates, collaboration
 - **Pub/Sub patterns**: Event subscriptions, broadcasts
 - **Collaborative editing**: Yjs CRDT for workflow editing
 
 ### REST (Secondary - Use only when necessary)
+
 REST endpoints are acceptable only for these specific use cases:
+
 - **Initial authentication**: Login/register before WebSocket connection established
 - **External webhooks**: Third-party systems triggering workflows
 - **File uploads**: Multipart form data (multer) for artifact uploads
 - **MCP JSON-RPC**: Protocol compatibility for external MCP clients
 
 ### Guidelines
+
 - **New internal features**: Always use WebSocket message handlers
 - **Existing REST routes**: Consider migrating to WebSocket equivalents
 - **External integrations**: REST acceptable for incoming webhooks
 - **Composable patterns**: Keep the codebase maintainable with clear separation
 
 ### MCP Server Isolation
+
 The MCP server operates as a stdio-only backend service. The dashboard-server acts as the sole gateway for UI communication, proxying MCP operations through WebSocket handlers.

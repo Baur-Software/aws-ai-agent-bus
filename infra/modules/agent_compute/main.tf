@@ -14,7 +14,8 @@ locals {
 
 # Data source to get MCP server infrastructure outputs
 data "terraform_remote_state" "mcp_server" {
-  count = var.mcp_server_state_path != "" ? 1 : 0
+  count   = var.mcp_server_state_path != "" ? 1 : 0
+  backend = "local"
   config = {
     path = var.mcp_server_state_path
   }

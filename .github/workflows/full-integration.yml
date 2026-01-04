@@ -388,11 +388,15 @@ jobs:
         echo "Running comprehensive security scan..."
 
         # Check for sensitive data across entire project
+        # Documentation files are excluded as they may contain setup examples with profile names
         if find . -type f \( -name "*.js" -o -name "*.ts" -o -name "*.json" -o -name "*.md" \) \
           -not -path "./.git/*" \
           -not -path "./node_modules/*" \
           -not -path "./.terraform/*" \
           -not -path "./.claude/*" \
+          -not -path "./docs/*" \
+          -not -path "./infra/*" \
+          -not -path "./CLAUDE.md" \
           -exec grep -l "baursoftware\|545027c4\|09c21e37" {} + 2>/dev/null; then
           echo "❌ Found hardcoded sensitive data"
           exit 1

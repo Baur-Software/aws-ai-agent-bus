@@ -1,5 +1,5 @@
-import DynamoDBService from '../aws/dynamodb';
-import { EventsHandler } from './events';
+import DynamoDBService from '../aws/dynamodb.js';
+import { EventsHandler } from './events.js';
 
 /**
  * Handler for key-value storage operations using DynamoDB.
