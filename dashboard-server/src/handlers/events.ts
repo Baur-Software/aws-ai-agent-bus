@@ -1,11 +1,13 @@
 /**
  * Event Hub for dashboard-server
  * Central pub/sub system for all events: EventBridge + WebSocket + SNS
- * All events flow through this hub - no direct Lambda/EventBridge → WebSocket
+ * All events flow through this hub - no direct Lambda/EventBridge -> WebSocket
  */
 
 import { WebSocket, WebSocketServer } from 'ws';
 import MCPStdioService from '../services/MCPStdioService.js';
+import { getSNSService } from './notifications.js';
+import { Logger } from '../utils/Logger.js';
 
 export interface EventMessage {
   eventId?: string;

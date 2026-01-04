@@ -162,12 +162,15 @@ resource "aws_security_group" "dashboard" {
   name_prefix = "${local.name}-"
   vpc_id      = local.vpc_id
 
+  # When ALB is used, only allow traffic from ALB security group
+  # When no ALB, use explicitly configured CIDR blocks (empty by default for security)
   ingress {
     from_port       = var.container_port
     to_port         = var.container_port
     protocol        = "tcp"
-    cidr_blocks     = var.create_alb ? [] : ["0.0.0.0/0"] # If no ALB, allow direct access
+    cidr_blocks     = var.create_alb ? [] : var.allowed_cidr_blocks
     security_groups = var.create_alb ? [aws_security_group.alb[0].id] : []
+    description     = var.create_alb ? "Allow traffic from ALB only" : "Allow traffic from configured CIDR blocks"
   }
 
   egress {
@@ -175,11 +178,20 @@ resource "aws_security_group" "dashboard" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
   }
 
   tags = merge(local.tags, {
     Name = "${local.name}-sg"
   })
+
+  lifecycle {
+    # Prevent accidental exposure - validate CIDR blocks are not 0.0.0.0/0 in production
+    precondition {
+      condition     = var.env != "prod" || var.create_alb || !contains(var.allowed_cidr_blocks, "0.0.0.0/0")
+      error_message = "Production environments must use ALB or restrict allowed_cidr_blocks (0.0.0.0/0 not allowed)."
+    }
+  }
 }
 
 # CloudWatch Log Group
@@ -316,11 +328,25 @@ resource "aws_security_group" "alb" {
   name_prefix = "${local.name}-alb-"
   vpc_id      = local.vpc_id
 
+  # HTTP ingress (for redirect to HTTPS or non-TLS environments)
   ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow HTTP traffic (redirects to HTTPS when certificate configured)"
+  }
+
+  # HTTPS ingress (when certificate is configured)
+  dynamic "ingress" {
+    for_each = var.certificate_arn != "" ? [1] : []
+    content {
+      from_port   = 443
+      to_port     = 443
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+      description = "Allow HTTPS traffic"
+    }
   }
 
   egress {
@@ -328,6 +354,7 @@ resource "aws_security_group" "alb" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
   }
 
   tags = merge(local.tags, {
@@ -371,11 +398,44 @@ resource "aws_lb_target_group" "main" {
   tags = local.tags
 }
 
-resource "aws_lb_listener" "main" {
+# HTTP Listener - redirects to HTTPS when certificate is configured
+resource "aws_lb_listener" "http" {
   count             = var.create_alb ? 1 : 0
   load_balancer_arn = aws_lb.main[0].arn
   port              = "80"
   protocol          = "HTTP"
+
+  # Redirect to HTTPS when certificate is provided and https_only is enabled
+  dynamic "default_action" {
+    for_each = var.certificate_arn != "" && var.enable_https_only ? [1] : []
+    content {
+      type = "redirect"
+      redirect {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
+    }
+  }
+
+  # Forward to target group when no certificate or https_only disabled
+  dynamic "default_action" {
+    for_each = var.certificate_arn == "" || !var.enable_https_only ? [1] : []
+    content {
+      type             = "forward"
+      target_group_arn = aws_lb_target_group.main[0].arn
+    }
+  }
+}
+
+# HTTPS Listener - only created when ACM certificate is provided
+resource "aws_lb_listener" "https" {
+  count             = var.create_alb && var.certificate_arn != "" ? 1 : 0
+  load_balancer_arn = aws_lb.main[0].arn
+  port              = "443"
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.certificate_arn
 
   default_action {
     type             = "forward"

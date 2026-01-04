@@ -88,3 +88,21 @@ variable "create_alb" {
   type        = bool
   default     = false
 }
+
+variable "allowed_cidr_blocks" {
+  description = "CIDR blocks allowed to access the service directly (only used when create_alb=false). Empty list blocks all direct access for security."
+  type        = list(string)
+  default     = []
+}
+
+variable "certificate_arn" {
+  description = "ACM certificate ARN for HTTPS listener (required for production with ALB)"
+  type        = string
+  default     = ""
+}
+
+variable "enable_https_only" {
+  description = "When true with ALB, redirects HTTP to HTTPS (recommended for production)"
+  type        = bool
+  default     = true
+}
