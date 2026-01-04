@@ -269,7 +269,12 @@ impl Handler for IntegrationConnectHandler {
                         credentials,
                     )
                     .await
-                    .map_err(|e| HandlerError::Internal(format!("Failed to store credentials in Secrets Manager: {}", e)))?;
+                    .map_err(|e| {
+                        HandlerError::Internal(format!(
+                            "Failed to store credentials in Secrets Manager: {}",
+                            e
+                        ))
+                    })?;
 
                 info!(
                     "Stored credentials in Secrets Manager for integration {} connection {}",

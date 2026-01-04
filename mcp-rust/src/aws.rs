@@ -1143,7 +1143,11 @@ impl AwsService {
 
     /// Delete a secret from AWS Secrets Manager
     /// By default uses a 7-day recovery window; set force_delete=true to delete immediately
-    pub async fn secret_delete(&self, secret_name: &str, force_delete: bool) -> Result<(), AwsError> {
+    pub async fn secret_delete(
+        &self,
+        secret_name: &str,
+        force_delete: bool,
+    ) -> Result<(), AwsError> {
         let mut request = self
             .clients
             .secrets_manager
@@ -1191,8 +1195,8 @@ impl AwsService {
             tenant_id, user_id, service_id, connection_id
         );
 
-        let secret_value = serde_json::to_string(credentials)
-            .map_err(|e| AwsError::Serialization(e))?;
+        let secret_value =
+            serde_json::to_string(credentials).map_err(|e| AwsError::Serialization(e))?;
 
         let description = format!(
             "MCP integration credentials for service {} (user: {}, connection: {})",
@@ -1219,8 +1223,7 @@ impl AwsService {
         match self.secret_get(&secret_name).await? {
             Some(secret_value) => {
                 let credentials: std::collections::HashMap<String, String> =
-                    serde_json::from_str(&secret_value)
-                        .map_err(|e| AwsError::Serialization(e))?;
+                    serde_json::from_str(&secret_value).map_err(|e| AwsError::Serialization(e))?;
                 Ok(Some(credentials))
             }
             None => Ok(None),
