@@ -1119,6 +1119,7 @@ impl AwsService {
     }
 
     /// Retrieve a secret value from AWS Secrets Manager
+    #[allow(dead_code)]
     pub async fn secret_get(&self, secret_name: &str) -> Result<Option<String>, AwsError> {
         let result = self
             .clients
@@ -1207,6 +1208,7 @@ impl AwsService {
     }
 
     /// Retrieve integration credentials from Secrets Manager
+    #[allow(dead_code)]
     pub async fn get_integration_credentials(
         &self,
         tenant_id: &str,
