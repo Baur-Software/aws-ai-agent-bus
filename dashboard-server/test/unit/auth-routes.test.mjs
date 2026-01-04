@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
 
@@ -70,6 +70,11 @@ describe('Auth Routes', () => {
 
     // Reset environment for each test
     process.env.ENABLE_DEV_AUTH = 'false';
+  });
+
+  afterEach(() => {
+    // Restore all spies to prevent pollution between tests
+    vi.restoreAllMocks();
   });
 
   describe('POST /api/auth/login', () => {
@@ -191,18 +196,25 @@ describe('Auth Routes', () => {
     });
 
     it('should return 409 for existing user', async () => {
-      vi.spyOn(AuthService, 'createUser').mockRejectedValue(new Error('User already exists'));
+      // Save original function and mock it
+      const originalCreateUser = AuthService.createUser;
+      AuthService.createUser = vi.fn().mockRejectedValue(new Error('User already exists'));
 
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'existing@example.com',
-          password: 'password123',
-          name: 'Test User'
-        });
+      try {
+        const response = await request(app)
+          .post('/api/auth/register')
+          .send({
+            email: 'existing@example.com',
+            password: 'password123',
+            name: 'Test User'
+          });
 
-      expect(response.status).toBe(409);
-      expect(response.body.error).toBe('User already exists');
+        expect(response.status).toBe(409);
+        expect(response.body.error).toBe('User already exists');
+      } finally {
+        // Restore original function immediately
+        AuthService.createUser = originalCreateUser;
+      }
     });
 
     it('should return 400 for missing required fields', async () => {
