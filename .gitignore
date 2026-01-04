@@ -54,6 +54,8 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+*.bak
+*.bak2
 
 # Build artifacts
 dist/
