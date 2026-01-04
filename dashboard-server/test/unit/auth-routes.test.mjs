@@ -2,6 +2,12 @@ import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
 
+// Set up environment BEFORE importing AuthService
+// These must be set before the module is loaded since initializeDemoUsers() runs at import time
+process.env.ENABLE_DEMO_USER = 'true';
+process.env.DEMO_USER_PASSWORD_HASH = '$2b$10$xyz1234567890abcdefghijklmnopqrstuvwxyzABCDEFGH';
+process.env.NODE_ENV = 'test';
+
 // Mock bcrypt
 vi.mock('bcrypt', () => ({
   default: {
@@ -62,9 +68,8 @@ describe('Auth Routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Reset environment
+    // Reset environment for each test
     process.env.ENABLE_DEV_AUTH = 'false';
-    process.env.NODE_ENV = 'test';
   });
 
   describe('POST /api/auth/login', () => {

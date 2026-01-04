@@ -1,27 +1,47 @@
 import { vi, describe, it, expect, beforeEach, beforeAll } from 'vitest';
 
-// Mock AWS SDK
+// Mock AWS SDK with proper class implementations
 const mockSend = vi.fn();
 
-vi.mock('@aws-sdk/client-dynamodb', () => ({
-  DynamoDBClient: vi.fn().mockImplementation(() => ({
-    send: mockSend,
-  })),
-  ScanCommand: vi.fn(),
-  QueryCommand: vi.fn(),
-}));
+vi.mock('@aws-sdk/client-dynamodb', () => {
+  return {
+    DynamoDBClient: vi.fn().mockImplementation(() => ({
+      send: mockSend,
+    })),
+    ScanCommand: vi.fn().mockImplementation((params) => ({ params, type: 'ScanCommand' })),
+    QueryCommand: vi.fn().mockImplementation((params) => ({ params, type: 'QueryCommand' })),
+  };
+});
 
-vi.mock('@aws-sdk/client-s3', () => ({
-  S3Client: vi.fn().mockImplementation(() => ({
-    send: mockSend,
-  })),
-  ListObjectsV2Command: vi.fn(),
-  HeadBucketCommand: vi.fn(),
-}));
+vi.mock('@aws-sdk/client-s3', () => {
+  return {
+    S3Client: vi.fn().mockImplementation(() => ({
+      send: mockSend,
+    })),
+    ListObjectsV2Command: vi.fn().mockImplementation((params) => ({ params, type: 'ListObjectsV2Command' })),
+    HeadBucketCommand: vi.fn().mockImplementation((params) => ({ params, type: 'HeadBucketCommand' })),
+  };
+});
 
-vi.mock('@aws-sdk/util-dynamodb', () => ({
-  unmarshall: vi.fn().mockImplementation(item => item),
-}));
+vi.mock('@aws-sdk/util-dynamodb', () => {
+  return {
+    unmarshall: vi.fn().mockImplementation(item => {
+      // Simple unmarshall - just extract the value from DynamoDB format
+      const result = {};
+      for (const [key, val] of Object.entries(item)) {
+        if (typeof val === 'object' && val !== null) {
+          if ('S' in val) result[key] = val.S;
+          else if ('N' in val) result[key] = Number(val.N);
+          else if ('BOOL' in val) result[key] = val.BOOL;
+          else result[key] = val;
+        } else {
+          result[key] = val;
+        }
+      }
+      return result;
+    }),
+  };
+});
 
 let MetricsAggregator;
 
