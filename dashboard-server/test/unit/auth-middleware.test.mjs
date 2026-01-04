@@ -47,9 +47,11 @@ describe('AuthMiddleware', () => {
     // Clear all mocks
     vi.clearAllMocks();
 
-    // Reset environment
+    // Reset environment for production-like testing
+    // Use NODE_ENV=production to test production behavior (JWT_SECRET required)
     process.env.ENABLE_DEV_AUTH = 'false';
-    process.env.NODE_ENV = 'test';
+    process.env.NODE_ENV = 'production';
+    process.env.JWT_SECRET = 'test-secret-for-unit-tests-minimum-32-chars';
   });
 
   describe('generateToken', () => {
@@ -343,7 +345,7 @@ describe('AuthMiddleware', () => {
         'UserId': 'user-123',
         'OrganizationId': 'org-123',
         'OrganizationRole': 'admin',
-        'Environment': 'test'
+        'Environment': 'production' // Match the NODE_ENV set in beforeEach
       });
     });
   });
