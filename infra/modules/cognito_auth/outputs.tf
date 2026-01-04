@@ -2,7 +2,7 @@
 
 output "user_pool_id" {
   description = "ID of the Cognito User Pool"
-  value       = aws_cognito_user_pool.auth.id
+  value       = aws_cognito_user_pool.agent_mesh.id
 }
 
 output "user_pool_arn" {
