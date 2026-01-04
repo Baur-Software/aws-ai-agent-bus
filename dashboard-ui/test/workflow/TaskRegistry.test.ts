@@ -483,22 +483,21 @@ describe('TaskRegistry', () => {
     });
 
     it('should detect task type mismatch', () => {
-      // Create task with mismatched type
-      class MismatchedTask extends SimpleMockTask {
-        constructor() {
-          super('declared-type');
-          // Manually override the type to create mismatch
-          (this as any).type = 'actual-type';
-        }
-      }
-
-      const task = new MismatchedTask();
+      // Create a task and register it normally
+      const task = new SimpleMockTask('original-type');
       taskRegistry.registerTask(task);
-      
+
+      // Directly manipulate the internal map to create a mismatch
+      // This simulates a corruption scenario where the key doesn't match task.type
+      const tasksMap = (taskRegistry as any).tasks as Map<string, WorkflowTask>;
+      const registeredTask = tasksMap.get('original-type')!;
+      tasksMap.delete('original-type');
+      tasksMap.set('wrong-key', registeredTask);
+
       const validation = taskRegistry.validateRegistry();
-      
+
       expect(validation.isValid).toBe(false);
-      expect(validation.errors.some(e => 
+      expect(validation.errors.some(e =>
         e.includes('Task type mismatch')
       )).toBe(true);
     });
@@ -531,43 +530,104 @@ describe('TaskRegistry', () => {
 
   describe('service injection patterns', () => {
     it('should support dependency injection in constructor', () => {
-      const service1 = new MockServiceImpl();
-      const service2 = new MockServiceImpl();
-      
-      const task1 = new MockServiceTask(service1, logger);
-      const task2 = new MockServiceTask(service2, logger);
-      
-      taskRegistry.registerTask(task1);
-      taskRegistry.registerTask(task2);
-      
-      // Both tasks should be registered but use different service instances
-      expect(taskRegistry.getTaskCount()).toBe(2);
-    });
-
-    it('should handle tasks with optional service dependencies', () => {
-      class OptionalServiceTask extends MockServiceTask {
-        constructor(service?: MockService, logger?: Logger) {
-          super(service || new MockServiceImpl(), logger);
+      // Create tasks with unique types that accept injected services
+      class InjectedServiceTask implements WorkflowTask {
+        readonly type: string;
+        constructor(
+          type: string,
+          private service: MockService,
+          private logger?: Logger
+        ) {
+          this.type = type;
         }
 
         async execute(input: any, context: WorkflowContext): Promise<any> {
-          // Can work without external service
+          this.logger?.info(`Executing ${this.type}`);
+          const result = await this.service.callAPI('/test');
+          return { taskType: this.type, serviceResult: result };
+        }
+
+        validate(): { isValid: boolean; errors: string[] } {
+          return { isValid: true, errors: [] };
+        }
+
+        getSchema() {
+          return { type: 'object', title: this.type, description: '', properties: {}, required: [] };
+        }
+
+        getDisplayInfo(): TaskDisplayInfo {
           return {
-            taskType: this.type,
-            input,
-            hasService: !!this.mockService,
-            executedAt: new Date().toISOString()
+            category: NODE_CATEGORIES.MCP_TOOLS,
+            label: this.type,
+            icon: 'Cog',
+            color: 'bg-blue-500',
+            description: `Task ${this.type}`
           };
         }
       }
 
-      const taskWithService = new OptionalServiceTask(mockService, logger);
-      const taskWithoutService = new OptionalServiceTask();
-      
+      const service1 = new MockServiceImpl();
+      const service2 = new MockServiceImpl();
+
+      const task1 = new InjectedServiceTask('injected-task-1', service1, logger);
+      const task2 = new InjectedServiceTask('injected-task-2', service2, logger);
+
+      taskRegistry.registerTask(task1);
+      taskRegistry.registerTask(task2);
+
+      // Both tasks should be registered with different service instances
+      expect(taskRegistry.getTaskCount()).toBe(2);
+      expect(taskRegistry.hasTask('injected-task-1')).toBe(true);
+      expect(taskRegistry.hasTask('injected-task-2')).toBe(true);
+    });
+
+    it('should handle tasks with optional service dependencies', () => {
+      class OptionalServiceTask implements WorkflowTask {
+        readonly type: string;
+        private service: MockService;
+
+        constructor(type: string, service?: MockService, private logger?: Logger) {
+          this.type = type;
+          this.service = service || new MockServiceImpl();
+        }
+
+        async execute(input: any, context: WorkflowContext): Promise<any> {
+          return {
+            taskType: this.type,
+            input,
+            hasService: !!this.service,
+            executedAt: new Date().toISOString()
+          };
+        }
+
+        validate(): { isValid: boolean; errors: string[] } {
+          return { isValid: true, errors: [] };
+        }
+
+        getSchema() {
+          return { type: 'object', title: this.type, description: '', properties: {}, required: [] };
+        }
+
+        getDisplayInfo(): TaskDisplayInfo {
+          return {
+            category: NODE_CATEGORIES.DATA_PROCESSING,
+            label: this.type,
+            icon: 'Cog',
+            color: 'bg-gray-500',
+            description: `Task ${this.type}`
+          };
+        }
+      }
+
+      const taskWithService = new OptionalServiceTask('optional-with-service', mockService, logger);
+      const taskWithoutService = new OptionalServiceTask('optional-without-service');
+
       expect(() => {
         taskRegistry.registerTask(taskWithService);
         taskRegistry.registerTask(taskWithoutService);
       }).not.toThrow();
+
+      expect(taskRegistry.getTaskCount()).toBe(2);
     });
 
     it('should support factory pattern for task creation', () => {
