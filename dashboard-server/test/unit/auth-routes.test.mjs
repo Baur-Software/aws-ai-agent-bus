@@ -68,6 +68,9 @@ describe('Auth Routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
+    // Reset AuthService state to prevent pollution between tests
+    AuthService.resetForTesting();
+
     // Reset environment for each test
     process.env.ENABLE_DEV_AUTH = 'false';
   });

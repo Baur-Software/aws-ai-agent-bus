@@ -212,6 +212,38 @@ class AuthService {
   static async getUserByEmail(email: string): Promise<User | null> {
     return this.users.find(u => u.email === email) || null;
   }
+
+  /**
+   * Reset state for testing - clears all users and organizations
+   * and reinitializes with demo users if configured
+   */
+  static resetForTesting(): void {
+    this.users = AuthService.initializeDemoUsers();
+    this.organizations = [
+      {
+        id: 'org-personal-123',
+        name: 'Personal Projects',
+        slug: 'personal',
+        description: 'My personal workspace',
+        type: 'personal',
+        memberCount: 1,
+        createdAt: '2024-01-15T00:00:00Z',
+        updatedAt: '2024-01-15T00:00:00Z',
+        ownerId: 'user-demo-123'
+      },
+      {
+        id: 'org-shared-456',
+        name: 'Acme Corporation',
+        slug: 'acme',
+        description: 'Building the future',
+        type: 'shared',
+        memberCount: 15,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+        ownerId: 'user-demo-123'
+      }
+    ];
+  }
 }
 
 export function setupAuthRoutes(deps: AuthDependencies): Router {
