@@ -66,7 +66,7 @@ const DashboardServerContext = createContext<DashboardServerContextValue>();
 export const DashboardServerProvider: ParentComponent<DashboardServerProviderProps> = (props) => {
   const { user, isAuthenticated } = useAuth();
   const notifications = useNotifications();
-  const serverUrl = () => props.serverUrl || 'ws://localhost:3001';
+  const serverUrl = () => props.serverUrl || import.meta.env.VITE_WS_URL || 'ws://localhost:3001';
   const userId = () => user()?.userId || 'anonymous';
 
   const [ws, setWs] = createSignal<WebSocket | null>(null);
@@ -454,7 +454,8 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
   const switchOrganization = async (orgId: string): Promise<boolean> => {
     try {
       // Make HTTP request to switch organization
-      const response = await fetch(`http://localhost:3001/api/auth/switch-organization`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/auth/switch-organization`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -478,7 +479,8 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
 
   const createOrganization = async (name: string, description?: string) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/auth/organizations`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/auth/organizations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

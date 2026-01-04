@@ -4,7 +4,7 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
-use tracing::{debug, error};
+use tracing::debug;
 
 use crate::aws::{AwsError, AwsService};
 use crate::registry::MCPServerRegistry;

@@ -48,7 +48,7 @@ export function generateOAuth2Config(input: {
     auth_url,
     token_url,
     scopes,
-    redirect_uri: 'http://localhost:3000/oauth/callback'
+    redirect_uri: import.meta.env.VITE_OAUTH_REDIRECT_URI || `${window.location.origin}/oauth/callback`
   };
 
   // Build UI fields - ensure required is always defined

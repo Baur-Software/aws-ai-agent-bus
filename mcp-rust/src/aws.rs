@@ -1196,7 +1196,7 @@ impl AwsService {
         );
 
         let secret_value =
-            serde_json::to_string(credentials).map_err(|e| AwsError::Serialization(e))?;
+            serde_json::to_string(credentials).map_err(AwsError::Serialization)?;
 
         let description = format!(
             "MCP integration credentials for service {} (user: {}, connection: {})",
@@ -1223,7 +1223,7 @@ impl AwsService {
         match self.secret_get(&secret_name).await? {
             Some(secret_value) => {
                 let credentials: std::collections::HashMap<String, String> =
-                    serde_json::from_str(&secret_value).map_err(|e| AwsError::Serialization(e))?;
+                    serde_json::from_str(&secret_value).map_err(AwsError::Serialization)?;
                 Ok(Some(credentials))
             }
             None => Ok(None),

@@ -116,7 +116,7 @@ export class OrganizationService {
   private baseUrl: string;
   private tokens: AuthTokens | null = null;
 
-  constructor(baseUrl: string = 'http://localhost:3001/api/auth') {
+  constructor(baseUrl: string = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/auth') {
     this.baseUrl = baseUrl;
   }
 

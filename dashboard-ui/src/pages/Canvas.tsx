@@ -244,7 +244,7 @@ export default function Canvas() {
     >
       <YjsWorkflowProvider
         workflowId={params.id!}
-        wsUrl={`ws://localhost:3001/workflow/${params.id}`}
+        wsUrl={import.meta.env.VITE_WS_URL ? `${import.meta.env.VITE_WS_URL}/workflow/${params.id}` : `ws://localhost:3001/workflow/${params.id}`}
       >
         {canvasContent()}
       </YjsWorkflowProvider>
