@@ -22,7 +22,8 @@ const upload = multer({
 router.post('/upload', upload.single('file'), async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.file) {
-      return res.status(400).send({ error: 'No file uploaded' });
+      res.status(400).send({ error: 'No file uploaded' });
+      return;
     }
 
     const file = req.file;
@@ -43,7 +44,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     // Use res.end() with JSON string to avoid Express mime issues
     res.setHeader('Content-Type', 'application/json');
-    return res.status(200).end(JSON.stringify({
+    res.status(200).end(JSON.stringify({
       success: true,
       key,
       size: file.size,
@@ -53,7 +54,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
   } catch (error) {
     logger.error('File upload failed:', error);
     res.setHeader('Content-Type', 'application/json');
-    return res.status(500).end(JSON.stringify({
+    res.status(500).end(JSON.stringify({
       error: 'Upload failed',
       message: error instanceof Error ? error.message : 'Unknown error',
     }));
@@ -71,11 +72,11 @@ router.get('/list', async (req: Request, res: Response): Promise<void> => {
     const result = await mcpService.executeTool('artifacts_list', { prefix });
 
     res.setHeader('Content-Type', 'application/json');
-    return res.status(200).end(JSON.stringify(result));
+    res.status(200).end(JSON.stringify(result));
   } catch (error) {
     logger.error('Failed to list artifacts:', error);
     res.setHeader('Content-Type', 'application/json');
-    return res.status(500).end(JSON.stringify({
+    res.status(500).end(JSON.stringify({
       error: 'Failed to list artifacts',
       message: error instanceof Error ? error.message : 'Unknown error',
     }));
@@ -93,11 +94,11 @@ router.get('/:key(*)', async (req: Request, res: Response): Promise<void> => {
     const result = await mcpService.executeTool('artifacts_get', { key });
 
     res.setHeader('Content-Type', 'application/json');
-    return res.status(200).end(JSON.stringify(result));
+    res.status(200).end(JSON.stringify(result));
   } catch (error) {
     logger.error(`Failed to get artifact ${req.params.key}:`, error);
     res.setHeader('Content-Type', 'application/json');
-    return res.status(500).end(JSON.stringify({
+    res.status(500).end(JSON.stringify({
       error: 'Failed to get artifact',
       message: error instanceof Error ? error.message : 'Unknown error',
     }));
