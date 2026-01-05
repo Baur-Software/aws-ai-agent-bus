@@ -1,5 +1,6 @@
 import { createSignal, createResource, Show, For } from 'solid-js';
 import { useOrganization } from '../../../contexts/OrganizationContext';
+import { useAuth } from '../../../contexts/AuthContext';
 import WorkflowCapabilityGenerator from '../generator/WorkflowCapabilityGenerator';
 import MCPToolGenerator from '../generator/MCPToolGenerator';
 
@@ -25,11 +26,11 @@ export interface MCPContext {
 }
 
 class WorkflowService {
-  static async getWorkflows(orgSlug: string): Promise<Workflow[]> {
+  static async getWorkflows(orgSlug: string, userId: string): Promise<Workflow[]> {
     const response = await fetch('/api/workflows', {
       headers: {
         'x-organization-id': orgSlug,
-        'x-user-id': 'demo-user'
+        'x-user-id': userId
       }
     });
 
@@ -41,11 +42,11 @@ class WorkflowService {
     return data.workflows || [];
   }
 
-  static async getContexts(orgSlug: string): Promise<MCPContext[]> {
+  static async getContexts(orgSlug: string, userId: string): Promise<MCPContext[]> {
     const response = await fetch('/api/workflows/contexts', {
       headers: {
         'x-organization-id': orgSlug,
-        'x-user-id': 'demo-user'
+        'x-user-id': userId
       }
     });
 
@@ -57,7 +58,7 @@ class WorkflowService {
     return data.contexts || [];
   }
 
-  static async createWorkflow(orgSlug: string, workflow: {
+  static async createWorkflow(orgSlug: string, userId: string, workflow: {
     contextId: string;
     name: string;
     description: string;
@@ -69,7 +70,7 @@ class WorkflowService {
       headers: {
         'Content-Type': 'application/json',
         'x-organization-id': orgSlug,
-        'x-user-id': 'demo-user'
+        'x-user-id': userId
       },
       body: JSON.stringify(workflow)
     });
@@ -84,33 +85,38 @@ class WorkflowService {
 
 export function WorkflowList() {
   const { currentOrganization } = useOrganization();
+  const { user } = useAuth();
   const [showCreateModal, setShowCreateModal] = createSignal(false);
   const [activeTab, setActiveTab] = createSignal<'workflows' | 'generator' | 'tools'>('workflows');
 
+  // Get userId from auth context with fallback for dev mode
+  const getUserId = () => user()?.userId || 'demo-user';
+
   // Load workflows for current organization
   const [workflows, { refetch: refetchWorkflows }] = createResource(
-    () => currentOrganization()?.slug,
-    async (orgSlug) => {
+    () => ({ orgSlug: currentOrganization()?.slug, userId: getUserId() }),
+    async ({ orgSlug, userId }) => {
       if (!orgSlug) return [];
-      return WorkflowService.getWorkflows(orgSlug);
+      return WorkflowService.getWorkflows(orgSlug, userId);
     }
   );
 
   // Load MCP contexts for current organization
   const [contexts] = createResource(
-    () => currentOrganization()?.slug,
-    async (orgSlug) => {
+    () => ({ orgSlug: currentOrganization()?.slug, userId: getUserId() }),
+    async ({ orgSlug, userId }) => {
       if (!orgSlug) return [];
-      return WorkflowService.getContexts(orgSlug);
+      return WorkflowService.getContexts(orgSlug, userId);
     }
   );
 
   const handleCreateWorkflow = async (workflowData: any) => {
     const orgSlug = currentOrganization()?.slug;
+    const userId = getUserId();
     if (!orgSlug) return;
 
     try {
-      await WorkflowService.createWorkflow(orgSlug, workflowData);
+      await WorkflowService.createWorkflow(orgSlug, userId, workflowData);
       refetchWorkflows();
       setShowCreateModal(false);
     } catch (error) {

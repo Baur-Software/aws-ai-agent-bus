@@ -2,6 +2,7 @@ import { createSignal, createMemo, createEffect, Show, For } from 'solid-js';
 import { usePageHeader } from '../../contexts/HeaderContext';
 import { useDashboardServer } from '../../contexts/DashboardServerContext';
 import { useNotifications } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { MCPServerListing } from '../../types/mcpCatalog';
 import MCPServerCard from './MCPServerCard';
 import ServerFilters from './ServerFilters';
@@ -13,6 +14,10 @@ export default function AppsTab() {
   usePageHeader('Connect Apps', 'Discover and connect your apps for enhanced AI capabilities');
 
   const dashboardServer = useDashboardServer();
+  const { user } = useAuth();
+
+  // Get userId from auth context with fallback for dev mode
+  const getUserId = () => user()?.userId || 'demo-user-123';
   const { addNotification } = useNotifications();
 
   // Core state signals
@@ -506,8 +511,9 @@ export default function AppsTab() {
         }
       }
 
-      // Also check static integration-style credentials
-      const legacyKey = `user-demo-user-123-integration-${serverId}-default`;
+      // Also check static integration-style credentials using auth context
+      const userId = getUserId();
+      const legacyKey = `user-${userId}-integration-${serverId}-default`;
       const legacyResult = await dashboardServer.kvStore.get(legacyKey);
       if (legacyResult?.value &&
           typeof legacyResult.value === 'object' &&
