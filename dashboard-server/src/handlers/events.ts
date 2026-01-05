@@ -165,29 +165,205 @@ export class EventsHandler {
    * Execute actions for a matched rule
    */
   private static async executeRuleActions(event: EventMessage, rule: EventRule): Promise<void> {
-    console.log(`🎯 Rule "${rule.name}" matched event ${event.eventId}, executing actions`);
+    const logger = new Logger('EventsHandler');
+    logger.info(`Rule "${rule.name}" matched event ${event.eventId}, executing ${rule.actions.length} action(s)`);
 
     for (const action of rule.actions) {
       try {
         switch (action.type) {
           case 'sns':
-            // TODO: Publish to SNS topic via AWS SDK
-            console.log(`📬 SNS notification for rule "${rule.name}"`);
+            await this.executeSNSAction(event, rule, action.config);
             break;
 
           case 'webhook':
-            // TODO: HTTP POST to webhook URL
-            console.log(`🪝 Webhook trigger for rule "${rule.name}"`);
+            await this.executeWebhookAction(event, rule, action.config);
             break;
 
           case 'workflow_trigger':
-            // TODO: Start workflow execution
-            console.log(`⚡ Workflow trigger for rule "${rule.name}"`);
+            await this.executeWorkflowTriggerAction(event, rule, action.config);
             break;
         }
       } catch (error) {
-        console.error(`Failed to execute action ${action.type} for rule ${rule.name}:`, error);
+        logger.error(`Failed to execute action ${action.type} for rule ${rule.name}:`, error);
       }
+    }
+  }
+
+  /**
+   * Execute SNS notification action
+   */
+  private static async executeSNSAction(
+    event: EventMessage,
+    rule: EventRule,
+    config: { topicArn?: string; topicName?: string; subject?: string }
+  ): Promise<void> {
+    const logger = new Logger('EventsHandler');
+    const snsService = getSNSService();
+
+    const message = {
+      eventId: event.eventId,
+      ruleId: rule.ruleId,
+      ruleName: rule.name,
+      detailType: event.detailType,
+      source: event.source,
+      detail: event.detail,
+      timestamp: event.timestamp,
+      userId: event.userId,
+      organizationId: event.organizationId
+    };
+
+    const subject = config.subject || `Event Rule Triggered: ${rule.name}`;
+
+    if (config.topicArn) {
+      const result = await snsService.publishToTopic(config.topicArn, message, subject);
+      if (result.success) {
+        logger.info(`SNS notification sent for rule "${rule.name}"`, { messageId: result.messageId });
+      } else {
+        logger.error(`SNS notification failed for rule "${rule.name}"`);
+      }
+    } else if (config.topicName) {
+      // Use system event publishing for named topics
+      const result = await snsService.publishSystemEvent({
+        eventType: event.detailType,
+        component: 'EventRules',
+        message: JSON.stringify(message),
+        level: 'info',
+        metadata: { ruleId: rule.ruleId, ruleName: rule.name }
+      });
+      if (result.success) {
+        logger.info(`SNS notification sent for rule "${rule.name}"`, { messageId: result.messageId });
+      } else {
+        logger.error(`SNS notification failed for rule "${rule.name}"`);
+      }
+    } else {
+      logger.warn(`SNS action for rule "${rule.name}" missing topicArn or topicName`);
+    }
+  }
+
+  /**
+   * Execute webhook HTTP POST action
+   */
+  private static async executeWebhookAction(
+    event: EventMessage,
+    rule: EventRule,
+    config: { url: string; headers?: Record<string, string>; secret?: string }
+  ): Promise<void> {
+    const logger = new Logger('EventsHandler');
+
+    if (!config.url) {
+      logger.warn(`Webhook action for rule "${rule.name}" missing URL`);
+      return;
+    }
+
+    const payload = {
+      eventId: event.eventId,
+      ruleId: rule.ruleId,
+      ruleName: rule.name,
+      detailType: event.detailType,
+      source: event.source,
+      detail: event.detail,
+      timestamp: event.timestamp,
+      userId: event.userId,
+      organizationId: event.organizationId
+    };
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Event-Id': event.eventId || '',
+      'X-Rule-Id': rule.ruleId,
+      'X-Rule-Name': rule.name,
+      ...(config.headers || {})
+    };
+
+    // Add HMAC signature if secret is provided
+    if (config.secret) {
+      const crypto = await import('crypto');
+      const signature = crypto
+        .createHmac('sha256', config.secret)
+        .update(JSON.stringify(payload))
+        .digest('hex');
+      headers['X-Signature-256'] = `sha256=${signature}`;
+    }
+
+    try {
+      const response = await fetch(config.url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(30000) // 30 second timeout
+      });
+
+      if (response.ok) {
+        logger.info(`Webhook triggered for rule "${rule.name}"`, {
+          url: config.url,
+          status: response.status
+        });
+      } else {
+        logger.error(`Webhook failed for rule "${rule.name}"`, {
+          url: config.url,
+          status: response.status,
+          statusText: response.statusText
+        });
+      }
+    } catch (error) {
+      logger.error(`Webhook request failed for rule "${rule.name}":`, error);
+    }
+  }
+
+  /**
+   * Execute workflow trigger action
+   */
+  private static async executeWorkflowTriggerAction(
+    event: EventMessage,
+    rule: EventRule,
+    config: { workflowId: string; input?: Record<string, any> }
+  ): Promise<void> {
+    const logger = new Logger('EventsHandler');
+
+    if (!config.workflowId) {
+      logger.warn(`Workflow trigger action for rule "${rule.name}" missing workflowId`);
+      return;
+    }
+
+    if (!this.mcpService) {
+      logger.warn('MCP service not initialized, cannot trigger workflow');
+      return;
+    }
+
+    try {
+      // Merge event data with custom input
+      const workflowInput = {
+        triggeredBy: 'event_rule',
+        ruleId: rule.ruleId,
+        ruleName: rule.name,
+        event: {
+          eventId: event.eventId,
+          detailType: event.detailType,
+          source: event.source,
+          detail: event.detail,
+          timestamp: event.timestamp,
+          userId: event.userId,
+          organizationId: event.organizationId
+        },
+        ...(config.input || {})
+      };
+
+      // Start workflow execution via MCP
+      const result = await this.mcpService.executeTool('workflow_start', {
+        workflowId: config.workflowId,
+        input: workflowInput
+      });
+
+      if (result?.executionId) {
+        logger.info(`Workflow triggered for rule "${rule.name}"`, {
+          workflowId: config.workflowId,
+          executionId: result.executionId
+        });
+      } else {
+        logger.warn(`Workflow trigger returned no execution ID for rule "${rule.name}"`);
+      }
+    } catch (error) {
+      logger.error(`Workflow trigger failed for rule "${rule.name}":`, error);
     }
   }
 

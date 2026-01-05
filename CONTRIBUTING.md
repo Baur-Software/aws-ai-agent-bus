@@ -112,6 +112,7 @@ Example: `feature/add-event-monitoring`, `fix/websocket-reconnection`
 ### Development Workflow
 
 1. **Create a branch** from `main`:
+
    ```bash
    git checkout main
    git pull origin main
@@ -121,6 +122,7 @@ Example: `feature/add-event-monitoring`, `fix/websocket-reconnection`
 2. **Make your changes** following the code standards below
 
 3. **Run tests** to ensure nothing is broken:
+
    ```bash
    npm run test:all
    ```
@@ -128,6 +130,7 @@ Example: `feature/add-event-monitoring`, `fix/websocket-reconnection`
 4. **Commit your changes** following the commit guidelines
 
 5. **Push and create a PR**:
+
    ```bash
    git push origin feature/your-feature
    ```
@@ -163,6 +166,7 @@ npm run tf:fmt         # Format Terraform files
 ### Test Debt Tracking
 
 If you must temporarily skip a test, document it in the appropriate `TODO_TESTS.md` file with:
+
 - Reason for skipping
 - Expected fix timeline
 - Impact assessment
