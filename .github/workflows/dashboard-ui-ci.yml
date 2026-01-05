@@ -175,6 +175,11 @@ jobs:
         cd ${{ github.workspace }}
         npm ci
 
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+
     - name: Start dashboard-server
       run: |
         cd ${{ github.workspace }}/dashboard-server
