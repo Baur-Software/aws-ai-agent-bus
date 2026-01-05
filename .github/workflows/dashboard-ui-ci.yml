@@ -181,7 +181,6 @@ jobs:
         npm start &
         SERVER_PID=$!
         echo $SERVER_PID > server.pid
-        sleep 5
       env:
         NODE_ENV: test
         ENABLE_DEV_AUTH: true
@@ -192,22 +191,43 @@ jobs:
         npm run preview &
         PREVIEW_PID=$!
         echo $PREVIEW_PID > preview.pid
-        sleep 5
 
     - name: Test integration
       run: |
         echo "Testing dashboard integration..."
 
-        # Test dashboard-server health
-        if curl -f http://localhost:3001/health; then
+        # Function to wait for a server with retry logic
+        wait_for_server() {
+          local url=$1
+          local name=$2
+          local max_attempts=30
+          local attempt=1
+
+          echo "Waiting for $name at $url..."
+          while [ $attempt -le $max_attempts ]; do
+            if curl -sf "$url" > /dev/null 2>&1; then
+              echo "✅ $name is ready (attempt $attempt)"
+              return 0
+            fi
+            echo "  Attempt $attempt/$max_attempts: $name not ready, waiting..."
+            sleep 2
+            attempt=$((attempt + 1))
+          done
+
+          echo "❌ $name failed to start after $max_attempts attempts"
+          return 1
+        }
+
+        # Wait for dashboard-server health
+        if wait_for_server "http://localhost:3001/health" "Dashboard Server"; then
           echo "✅ Dashboard server health check passed"
         else
           echo "❌ Dashboard server health check failed"
           exit 1
         fi
 
-        # Test dashboard-ui serving
-        if curl -f http://localhost:4173/; then
+        # Wait for dashboard-ui serving
+        if wait_for_server "http://localhost:4173/" "Dashboard UI"; then
           echo "✅ Dashboard UI serving check passed"
         else
           echo "❌ Dashboard UI serving check failed"
