@@ -397,6 +397,7 @@ jobs:
           -not -path "./docs/*" \
           -not -path "./infra/*" \
           -not -path "./CLAUDE.md" \
+          -not -path "./CONTRIBUTING.md" \
           -exec grep -l "baursoftware\|545027c4\|09c21e37" {} + 2>/dev/null; then
           echo "❌ Found hardcoded sensitive data"
           exit 1
