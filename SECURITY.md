@@ -71,21 +71,25 @@ When reporting a vulnerability, please provide:
 This project implements several security measures:
 
 ### Authentication & Authorization
+
 - JWT-based authentication with configurable secrets
 - Role-based access control (RBAC) in MCP server
 - Multi-tenant isolation with tenant-aware data access
 
 ### Data Protection
+
 - Credentials stored in AWS Secrets Manager (not DynamoDB)
 - Encrypted artifact storage in S3
 - Session management with automatic cleanup
 
 ### Infrastructure Security
+
 - Terraform modules follow AWS security best practices
 - Security groups restrict ingress to necessary ports
 - VPC isolation for ECS services
 
 ### Application Security
+
 - Input validation on all API endpoints
 - Rate limiting per tenant session
 - CORS configuration for web security
@@ -94,7 +98,9 @@ This project implements several security measures:
 ## Known Security Considerations
 
 ### Development Mode
+
 In development mode, some security features may be relaxed for convenience:
+
 - Demo user authentication for local testing
 - Localhost URLs without TLS
 - Debug logging that may expose sensitive data
@@ -102,7 +108,9 @@ In development mode, some security features may be relaxed for convenience:
 **Never use development configurations in production.**
 
 ### Multi-Tenant Isolation
+
 The MCP server implements tenant isolation at the application level. For higher security requirements, consider:
+
 - Separate AWS accounts per tenant
 - Dedicated infrastructure per tenant
 - Additional network isolation
@@ -110,6 +118,7 @@ The MCP server implements tenant isolation at the application level. For higher 
 ## Security Changelog
 
 ### 2026-01
+
 - Implemented event rule actions with proper authentication
 - Enhanced multi-agent security hardening
 - Added SNS integration for security notifications
