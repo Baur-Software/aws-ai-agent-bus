@@ -126,11 +126,14 @@ jobs:
         export PATH="$HOME/.bun/bin:$PATH"
         bun --version
 
-    - name: Build MCP Server
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Build MCP Server (Rust)
       run: |
-        cd mcp-server
-        npm ci
-        echo "✅ MCP Server dependencies installed"
+        cd mcp-rust
+        cargo build --release
+        echo "✅ MCP Server (Rust) built"
 
     - name: Build Dashboard Server
       run: |
@@ -287,11 +290,8 @@ jobs:
         # Use docker-compose or similar for localstack testing
         # This keeps the existing container-based testing for local development
 
-        # Start MCP Server in HTTP mode for testing
-        cd mcp-server
-        timeout 30s npm run dev:http &
-        MCP_PID=$!
-        cd ..
+        # MCP Server is now Rust-based and runs on stdio (not HTTP)
+        # For integration tests, we test it through the Dashboard Server proxy
 
         # Start Dashboard Server
         cd dashboard-server
@@ -310,9 +310,6 @@ jobs:
         sleep 10
 
         # Test services
-        echo "Testing MCP Server health..."
-        curl -f http://localhost:3000/health || echo "MCP Server test failed"
-
         echo "Testing Dashboard Server health..."
         curl -f http://localhost:3001/health || echo "Dashboard Server test failed"
 
@@ -320,7 +317,7 @@ jobs:
         curl -f http://localhost:4173/ || echo "Dashboard UI test failed"
 
         # Cleanup
-        kill $MCP_PID $DASHBOARD_PID $UI_PID 2>/dev/null || true
+        kill $DASHBOARD_PID $UI_PID 2>/dev/null || true
         echo "✅ Local integration test completed"
 
     - name: Integration test - AWS (GitHub Actions)
