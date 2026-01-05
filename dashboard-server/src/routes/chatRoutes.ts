@@ -5,6 +5,7 @@ import { Logger } from '../utils/Logger.js';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { EventBridgeClient } from '@aws-sdk/client-eventbridge';
 import { MCPServiceRegistry } from '../services/MCPServiceRegistry.js';
+import { AuthMiddleware, AuthenticatedRequest } from '../middleware/auth.js';
 import crypto from 'crypto';
 
 const router = Router();
@@ -60,11 +61,25 @@ interface MCPContextScope {
 }
 
 /**
- * Middleware to extract user context from request
+ * Extract user context from authenticated request
+ * Uses AuthMiddleware for proper authentication
  */
-const extractUserContext = (req: Request): { userId: string; organizationId?: string } => {
-  const userId = req.headers['x-user-id'] as string || 'demo-user';
+const extractUserContext = (req: AuthenticatedRequest): { userId: string; organizationId?: string } => {
+  // Get from authenticated user context (set by AuthMiddleware)
+  if (req.user) {
+    return {
+      userId: req.user.userId,
+      organizationId: req.user.organizationId
+    };
+  }
+
+  // Fallback to headers only in development mode (when AuthMiddleware allows it)
+  const userId = req.headers['x-user-id'] as string;
   const organizationId = req.headers['x-organization-id'] as string;
+
+  if (!userId) {
+    throw new Error('User authentication required');
+  }
 
   return { userId, organizationId };
 };

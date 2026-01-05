@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import TokenService from '../services/TokenService.js';
 import { Logger } from '../utils/Logger.js';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { AuthMiddleware, AuthenticatedRequest } from '../middleware/auth.js';
 
 const router = Router();
 const logger = new Logger('WorkflowRoutes');
@@ -11,16 +12,27 @@ const dynamodb = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-west
 const tokenService = new TokenService(dynamodb);
 
 /**
- * Middleware to extract user context from request
- * In production, this would validate JWT tokens
+ * Extract user context from authenticated request
+ * Uses AuthMiddleware for proper authentication
  */
-const extractUserContext = (req: Request): { userId: string; organizationId: string } => {
-  // For demo purposes, extract from headers
-  // In production, decode from JWT
-  const userId = req.headers['x-user-id'] as string || 'demo-user';
-  const organizationId = req.headers['x-organization-id'] as string || 'demo-org';
+const extractUserContext = (req: AuthenticatedRequest): { userId: string; organizationId: string } => {
+  // Get from authenticated user context (set by AuthMiddleware)
+  if (req.user) {
+    return {
+      userId: req.user.userId,
+      organizationId: req.user.organizationId
+    };
+  }
 
-  return { userId, organizationId };
+  // Fallback to headers only in development mode (when AuthMiddleware allows it)
+  const userId = req.headers['x-user-id'] as string;
+  const organizationId = req.headers['x-organization-id'] as string;
+
+  if (!userId) {
+    throw new Error('User authentication required');
+  }
+
+  return { userId, organizationId: organizationId || 'default-org' };
 };
 
 /**
