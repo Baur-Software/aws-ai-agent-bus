@@ -302,32 +302,63 @@ jobs:
         # MCP Server is now Rust-based and runs on stdio (not HTTP)
         # For integration tests, we test it through the Dashboard Server proxy
 
+        # Helper function to wait for a server to be ready
+        wait_for_server() {
+          local url=$1
+          local name=$2
+          local max_attempts=${3:-30}
+          local attempt=1
+
+          echo "Waiting for $name at $url..."
+          while [ $attempt -le $max_attempts ]; do
+            if curl -sf "$url" > /dev/null 2>&1; then
+              echo "$name is ready (attempt $attempt/$max_attempts)"
+              return 0
+            fi
+            echo "Attempt $attempt/$max_attempts: $name not ready, waiting..."
+            sleep 2
+            attempt=$((attempt + 1))
+          done
+
+          echo "$name failed to start after $max_attempts attempts"
+          return 1
+        }
+
         # Start Dashboard Server
         cd dashboard-server
         export PATH="$HOME/.bun/bin:$PATH"
-        timeout 30s bun run start &
+        timeout 120s bun run start &
         DASHBOARD_PID=$!
         cd ..
 
         # Start Dashboard UI preview
         cd dashboard-ui
-        timeout 30s npm run preview &
+        timeout 120s npm run preview &
         UI_PID=$!
         cd ..
 
-        # Wait for services to start
-        sleep 10
-
-        # Test services
+        # Wait for services with retry logic
         echo "Testing Dashboard Server health..."
-        curl -f http://localhost:3001/health || echo "Dashboard Server test failed"
+        if wait_for_server "http://localhost:3001/health" "Dashboard Server" 30; then
+          echo "Dashboard Server health check passed"
+        else
+          echo "Dashboard Server health check failed"
+          kill $DASHBOARD_PID $UI_PID 2>/dev/null || true
+          exit 1
+        fi
 
         echo "Testing Dashboard UI..."
-        curl -f http://localhost:4173/ || echo "Dashboard UI test failed"
+        if wait_for_server "http://localhost:4173/" "Dashboard UI" 30; then
+          echo "Dashboard UI health check passed"
+        else
+          echo "Dashboard UI health check failed"
+          kill $DASHBOARD_PID $UI_PID 2>/dev/null || true
+          exit 1
+        fi
 
         # Cleanup
         kill $DASHBOARD_PID $UI_PID 2>/dev/null || true
-        echo "✅ Local integration test completed"
+        echo "Local integration test completed"
 
     - name: Integration test - AWS (GitHub Actions)
       if: ${{ !contains(github.actor, 'nektos/act') }}
