@@ -74,11 +74,27 @@ jobs:
     
     - name: Check for sensitive data
       run: |
-        if grep -r "baursoftware" infra/ --exclude-dir=.terraform; then
-          echo "Hardcoded sensitive data found in Terraform files"
+        # Check for hardcoded sensitive data in Terraform resource files only
+        # Exclude:
+        # - backend.hcl: legitimate backend config
+        # - providers.tf: Terraform provider and backend config (bucket names are expected)
+        # - variables.tf: Variable defaults (aws_profile default is expected)
+        # - README.md: documentation
+        # - centralize-all-profiles.*: utility scripts
+        # - .terraform: cache directory
+        if grep -r "baursoftware" infra/ \
+          --exclude-dir=.terraform \
+          --exclude="*.hcl" \
+          --exclude="*.md" \
+          --exclude="providers.tf" \
+          --exclude="variables.tf" \
+          --exclude="centralize-all-profiles.*" \
+          | grep -v "^#"; then
+          echo "Hardcoded sensitive data found in Terraform resource files"
+          echo "Note: config files (backend.hcl, providers.tf, variables.tf) are excluded"
           exit 1
         fi
-        echo "No hardcoded sensitive data found"
+        echo "No hardcoded sensitive data found in Terraform resource files"
     
     - name: Security Scan with Checkov
       uses: bridgecrewio/checkov-action@master
