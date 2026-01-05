@@ -1,5 +1,6 @@
 import { createContext, useContext, createSignal, createEffect, JSX } from 'solid-js';
 import { useDashboardServer } from './DashboardServerContext';
+import { useAuth } from './AuthContext';
 import {
   Home,
   BarChart3,
@@ -89,9 +90,13 @@ interface SidebarProviderProps {
 
 export function SidebarProvider(props: SidebarProviderProps) {
   const { kvStore, isConnected } = useDashboardServer();
+  const { user } = useAuth();
   const [preferences, setPreferences] = createSignal<SidebarPreferences>(defaultPreferences);
   const [connectedIntegrations, setConnectedIntegrations] = createSignal<Set<string>>(new Set());
   const [availableInfrastructure, setAvailableInfrastructure] = createSignal<Set<string>>(new Set());
+
+  // Get userId from auth context with fallback for dev mode
+  const getUserId = () => user()?.userId || 'demo-user-123';
 
   // Load preferences from KV store
   const loadPreferences = async () => {
@@ -163,6 +168,7 @@ export function SidebarProvider(props: SidebarProviderProps) {
       // Check for integration configuration keys
       const integrationTypes = ['google-analytics', 'slack', 'github', 'stripe', 'hubspot'];
       const connected = new Set<string>();
+      const userId = getUserId();
 
       for (const type of integrationTypes) {
         try {
@@ -170,7 +176,7 @@ export function SidebarProvider(props: SidebarProviderProps) {
           const appConfig = await kvStore.get(`integration-${type}`);
           if (appConfig?.value) {
             // Check for at least one user connection
-            const userConnection = await kvStore.get(`user-demo-user-123-integration-${type}-default`);
+            const userConnection = await kvStore.get(`user-${userId}-integration-${type}-default`);
             if (userConnection?.value) {
               connected.add(type);
             }

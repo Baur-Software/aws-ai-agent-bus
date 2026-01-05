@@ -516,7 +516,7 @@ export default function FloatingNodePanel(props: FloatingNodePanelProps) {
         2. Workflow integration points
         3. MCP tool mappings
         4. Example usage patterns`,
-            userId: 'demo-user-123',
+            userId: user()?.userId || 'demo-user-123',
             sessionId: `session-${Date.now()}`,
             context: {
               type: 'agent-creation',

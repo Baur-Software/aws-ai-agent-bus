@@ -1,5 +1,6 @@
 import { createSignal, For, Show, onMount } from 'solid-js';
 import { useDashboardServer } from '../contexts/DashboardServerContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Plus, Trash2, Wand2, Eye, Code, Save, History, GitBranch, Edit2 } from 'lucide-solid';
 import { ShapePicker } from '../components/ShapePicker';
 import { NODE_CATEGORIES } from '../types/NodeCategories';
@@ -38,9 +39,13 @@ interface NodeSchema {
 
 export default function NodeDesigner() {
   const dashboardServer = useDashboardServer();
+  const { user } = useAuth();
   const versioningService = new NodeVersioningService(dashboardServer.kvStore);
   const tenantConfigService = new TenantNodeConfigService(dashboardServer.kvStore);
-  const currentTenantId = 'demo-tenant'; // TODO: Get from auth context
+
+  // Get userId from auth context with fallback for dev mode
+  const getUserId = () => user()?.userId || 'demo-user';
+  const currentTenantId = user()?.organizationId || 'demo-tenant';
 
   const [mode, setMode] = createSignal<'create' | 'edit-registry' | 'edit-custom'>('create');
   const [selectedRegistryNode, setSelectedRegistryNode] = createSignal<NodeDefinition | null>(null);
@@ -252,7 +257,7 @@ ${nodeDefinition}`);
       const newVersion = await versioningService.saveNodeVersion(
         nodeSchema().type,
         nodeSchema(),
-        'demo-user', // TODO: Get from auth context
+        getUserId(),
         changelog() || 'Updated node configuration',
         versionType
       );
@@ -270,7 +275,7 @@ ${nodeDefinition}`);
       const rolledBackVersion = await versioningService.rollbackToVersion(
         nodeSchema().type,
         targetVersion,
-        'demo-user'
+        getUserId()
       );
 
       setNodeSchema(rolledBackVersion.schema);
@@ -355,7 +360,7 @@ ${nodeDefinition}`);
         tenantId: currentTenantId,
         nodeType: schema.type,
         updatedAt: new Date().toISOString(),
-        updatedBy: 'demo-user', // TODO: Get from auth
+        updatedBy: getUserId(),
         enabled: true,
         fieldOverrides: Object.keys(fieldOverrides).length > 0 ? fieldOverrides : undefined
       });
