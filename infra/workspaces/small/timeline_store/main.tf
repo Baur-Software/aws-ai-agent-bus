@@ -1,5 +1,5 @@
 module "timeline_store" {
-  source = "../../../modules/timestream"
+  source = "../../../modules/timeline_store"
 
   env            = var.env
   database_name  = "${var.env}-timeline-store"

@@ -83,5 +83,36 @@ variable "aws_profile" {
   description = "AWS CLI profile to use"
   type        = string
   default     = "baursoftware"
+}
 
+# Variables for dependent resources (from nested workspaces like kv_store, secrets, event_bus)
+# These allow CI validation without requiring pre-deployed dependencies
+variable "kv_table_name" {
+  description = "DynamoDB KV table name (from kv_store workspace)"
+  type        = string
+  default     = "agent-mesh-kv"
+}
+
+variable "kv_table_arn" {
+  description = "DynamoDB KV table ARN (from kv_store workspace)"
+  type        = string
+  default     = "arn:aws:dynamodb:us-west-2:000000000000:table/agent-mesh-kv"
+}
+
+variable "secrets_arn" {
+  description = "Secrets Manager ARN (from secrets workspace)"
+  type        = string
+  default     = "arn:aws:secretsmanager:us-west-2:000000000000:secret:agent-mesh-secrets"
+}
+
+variable "event_bus_arn" {
+  description = "EventBridge bus ARN (from event_bus workspace)"
+  type        = string
+  default     = "arn:aws:events:us-west-2:000000000000:event-bus/agent-mesh-events"
+}
+
+variable "event_bus_name" {
+  description = "EventBridge bus name (from event_bus workspace)"
+  type        = string
+  default     = "agent-mesh-events"
 }

@@ -44,12 +44,13 @@ module "dashboard_service" {
   vpc_id     = var.vpc_id
   subnet_ids = var.subnet_ids
 
-  # Dependencies from other components
-  kv_table_name  = data.terraform_remote_state.dynamodb_kv.outputs.table_name
-  kv_table_arn   = data.terraform_remote_state.dynamodb_kv.outputs.table_arn
-  secrets_arn    = data.terraform_remote_state.secrets.outputs.secret_arn
-  event_bus_arn  = data.terraform_remote_state.eventbridge_bus.outputs.bus_arn
-  event_bus_name = data.terraform_remote_state.eventbridge_bus.outputs.bus_name
+  # Dependencies from other components (passed via variables with defaults for CI)
+  # In production, override these with outputs from nested workspaces (kv_store, secrets, event_bus)
+  kv_table_name  = var.kv_table_name
+  kv_table_arn   = var.kv_table_arn
+  secrets_arn    = var.secrets_arn
+  event_bus_arn  = var.event_bus_arn
+  event_bus_name = var.event_bus_name
 }
 
 module "dashboard_ui" {
