@@ -22,10 +22,32 @@ services:
       retries: 3
       start_period: 10s
 
-  mcp-server-test:
+  # Rust MCP Server Tests
+  # Uses the existing Dockerfile.build which includes Rust toolchain
+  mcp-rust-test:
     build:
-      context: ./mcp-server
-      dockerfile: Dockerfile.test
+      context: ./mcp-rust
+      dockerfile: Dockerfile.build
+    depends_on:
+      localstack:
+        condition: service_healthy
+    environment:
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=us-east-1
+      - RUST_LOG=debug
+      - AGENT_MESH_KV_TABLE=agent-mesh-kv
+      - AGENT_MESH_ARTIFACTS_BUCKET=agent-mesh-artifacts
+      - AGENT_MESH_EVENT_BUS=agent-mesh-events
+    working_dir: /app
+    command: cargo test
+
+  # Dashboard Server Tests
+  dashboard-server-test:
+    build:
+      context: ./dashboard-server
+      dockerfile: Dockerfile
     depends_on:
       localstack:
         condition: service_healthy
@@ -35,10 +57,8 @@ services:
       - AWS_SECRET_ACCESS_KEY=test
       - AWS_REGION=us-east-1
       - NODE_ENV=test
-    volumes:
-      - ./mcp-server:/app
-      - ./mcp-server/node_modules:/app/node_modules
-    command: npm test
+    working_dir: /app
+    command: bun test
 
 networks:
   default:
