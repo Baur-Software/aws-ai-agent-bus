@@ -1,6 +1,6 @@
 output "bucket_name" {
   description = "S3 bucket name"
-  value       = module.artifacts_bucket.bucket_name
+  value       = module.artifacts_bucket.artifacts_bucket_name
 }
 
 output "bucket_arn" {
