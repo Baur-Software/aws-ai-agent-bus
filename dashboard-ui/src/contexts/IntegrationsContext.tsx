@@ -301,8 +301,8 @@ export function IntegrationsProvider(props: { children: JSX.Element }) {
 
   const testConnection = async (integrationId: string, connectionId = 'default'): Promise<{ success: boolean; message: string }> => {
     try {
-      // Mock test implementation - in real app would test actual connection
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      // TODO: Implement real connection test via WebSocket message to dashboard-server
+      // Should send 'integration:test-connection' message and verify credentials
       success(`Test connection successful for ${integrationId}`);
       return { success: true, message: 'Connection test passed' };
     } catch (err) {
