@@ -74,7 +74,7 @@ export const TIER_CONFIGS: Record<WorkspaceTier, TierCapabilities> = {
     tier: WorkspaceTier.EXTRA_SMALL,
     displayName: 'Extra Small',
     description: 'Minimal infrastructure for testing',
-    monthlyEstimate: '~$5/month',
+    monthlyEstimate: '~$10/month',
 
     modules: {
       kvStore: false,
@@ -110,7 +110,7 @@ export const TIER_CONFIGS: Record<WorkspaceTier, TierCapabilities> = {
     tier: WorkspaceTier.SMALL,
     displayName: 'Small',
     description: 'Basic AWS components for simple workflows',
-    monthlyEstimate: '~$10/month',
+    monthlyEstimate: '~$15-20/month',
 
     modules: {
       kvStore: true,
@@ -146,7 +146,7 @@ export const TIER_CONFIGS: Record<WorkspaceTier, TierCapabilities> = {
     tier: WorkspaceTier.MEDIUM,
     displayName: 'Medium',
     description: 'ECS agents, workflows, and observability',
-    monthlyEstimate: '~$100/month',
+    monthlyEstimate: '~$50-80/month',
 
     modules: {
       kvStore: true,
@@ -182,7 +182,7 @@ export const TIER_CONFIGS: Record<WorkspaceTier, TierCapabilities> = {
     tier: WorkspaceTier.LARGE,
     displayName: 'Large',
     description: 'Full platform with vector database',
-    monthlyEstimate: '~$1000/month',
+    monthlyEstimate: '~$200-400/month',
 
     modules: {
       kvStore: true,

@@ -139,7 +139,8 @@ data "aws_iam_policy_document" "task_role_policy" {
     resources = [var.secrets_arn]
   }
 
-  # CloudWatch Logs (minimal for cost control)
+  # CloudWatch Logs - restricted to this service's log group only
+  # Security: Do not use "*" - it grants access to ALL log groups in the account
   statement {
     sid    = "CloudWatchLogs"
     effect = "Allow"
@@ -147,7 +148,7 @@ data "aws_iam_policy_document" "task_role_policy" {
       "logs:CreateLogStream",
       "logs:PutLogEvents"
     ]
-    resources = ["*"]
+    resources = ["${aws_cloudwatch_log_group.dashboard.arn}:*"]
   }
 }
 
