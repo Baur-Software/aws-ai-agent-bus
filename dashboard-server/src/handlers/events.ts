@@ -50,9 +50,38 @@ export interface EventRuleAction {
 export class EventsHandler {
   private static subscribers = new Map<string, EventSubscription>();
   private static mcpService: MCPStdioService | null = null;
+  private static cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
   static initialize(mcpService: MCPStdioService) {
     this.mcpService = mcpService;
+    // Start cleanup interval if not already running
+    if (!this.cleanupInterval) {
+      this.startCleanupInterval();
+    }
+  }
+
+  /**
+   * Start the cleanup interval for closed connections
+   */
+  private static startCleanupInterval(): void {
+    this.cleanupInterval = setInterval(() => {
+      this.cleanup();
+    }, 30000); // Every 30 seconds
+  }
+
+  /**
+   * Shutdown the events handler and cleanup resources
+   * Call this during graceful shutdown to prevent memory leaks
+   */
+  static shutdown(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    // Close all subscriptions
+    this.subscribers.clear();
+    this.mcpService = null;
+    console.log('🔌 EventsHandler shutdown complete');
   }
 
   /**
@@ -532,10 +561,5 @@ export class EventsHandler {
     };
   }
 }
-
-// Start cleanup interval
-setInterval(() => {
-  EventsHandler.cleanup();
-}, 30000); // Every 30 seconds
 
 export default EventsHandler;
