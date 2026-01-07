@@ -47,6 +47,7 @@ interface FloatingToolbarProps {
   // Actions
   onSave: () => void;
   onLoad: () => void;
+  onExport?: () => void;
   onRun: () => void;
   onClear: () => void;
   onBack?: () => void;
@@ -281,8 +282,8 @@ export default function FloatingToolbar(props: FloatingToolbarProps) {
     {
       icon: Download,
       label: 'Export',
-      onClick: () => {}, // TODO: Implement export
-      show: true,
+      onClick: props.onExport,
+      show: !!props.onExport,
       variant: 'secondary' as const
     },
     {

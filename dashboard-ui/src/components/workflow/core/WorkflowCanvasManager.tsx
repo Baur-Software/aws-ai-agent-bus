@@ -180,6 +180,31 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
     }
   };
 
+  // Export workflow as JSON file
+  const exportWorkflow = () => {
+    const workflowData = {
+      id: workflow.currentWorkflow()?.id || 'exported-workflow',
+      name: workflow.currentWorkflow()?.name || 'Exported Workflow',
+      description: workflow.currentWorkflow()?.description || '',
+      nodes: workflow.currentNodes(),
+      connections: workflow.currentConnections(),
+      exportedAt: new Date().toISOString(),
+      version: '1.0'
+    };
+
+    const jsonString = JSON.stringify(workflowData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${workflowData.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${Date.now()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // Canvas background classes with zoom-responsive grid
   const getBackgroundClasses = () => {
     const baseClasses = "w-full h-full relative overflow-hidden";
@@ -287,6 +312,7 @@ function WorkflowCanvasManagerInner(props: WorkflowCanvasManagerProps) {
             <FloatingToolbar
               onSave={autoSave.forceSave}
               onLoad={workflow.importWorkflow}
+              onExport={exportWorkflow}
               autoSaveEnabled={autoSaveEnabled()}
               onToggleAutoSave={() => setAutoSaveEnabled(!autoSaveEnabled())}
               isSaving={autoSave.isSaving()}

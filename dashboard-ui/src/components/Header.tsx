@@ -119,16 +119,15 @@ function Header(props) {
 
                   <div class="border-t border-slate-200 dark:border-slate-600 mt-1">
                     <button
-                      class="w-full flex items-center gap-3 px-4 py-2 text-left text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                      onClick={() => {
-                        // TODO: Implement create organization
-                        setOrgMenuOpen(false);
-                      }}
+                      class="w-full flex items-center gap-3 px-4 py-2 text-left text-sm text-slate-400 dark:text-slate-500 cursor-not-allowed"
+                      disabled
+                      title="Coming soon"
                     >
-                      <div class="p-1.5 rounded bg-blue-100 dark:bg-blue-900/30">
-                        <Plus class="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                      <div class="p-1.5 rounded bg-slate-100 dark:bg-slate-700">
+                        <Plus class="w-3 h-3 text-slate-400 dark:text-slate-500" />
                       </div>
                       <span class="font-medium">Create Organization</span>
+                      <span class="ml-auto text-xs text-slate-400 dark:text-slate-500">Soon</span>
                     </button>
                   </div>
                 </div>

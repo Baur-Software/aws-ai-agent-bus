@@ -110,6 +110,8 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
   const [validationErrors, setValidationErrors] = createSignal<string[]>([]);
   const [showModelDetails, setShowModelDetails] = createSignal(false);
   const [nodeConfig, setNodeConfig] = createSignal<any>(null);
+  const [testStatus, setTestStatus] = createSignal<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [testMessage, setTestMessage] = createSignal<string>('');
 
   const { executeTool, kvStore } = useDashboardServer();
   const { currentOrganization } = useOrganization();
@@ -431,13 +433,59 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
   // Test node configuration
   const testNode = async () => {
     const node = localNode();
-    if (!node || !validateNode()) return;
+    if (!node) return;
+
+    setTestStatus('testing');
+    setTestMessage('Validating configuration...');
+
+    // First validate the node
+    if (!validateNode()) {
+      setTestStatus('error');
+      setTestMessage('Configuration has validation errors. Please fix them before testing.');
+      return;
+    }
 
     try {
-      // TODO: Implement node testing logic
-      console.log('Testing node:', node);
+      // Simulate validation delay for UX feedback
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Check for required fields based on node type
+      const config = nodeConfig();
+      const requiredFields = config?.fields?.filter((f: any) => f.required) || [];
+      const missingFields = requiredFields.filter((f: any) => {
+        const value = node.config[f.key];
+        return value === undefined || value === null || value === '';
+      });
+
+      if (missingFields.length > 0) {
+        setTestStatus('error');
+        setTestMessage(`Missing required fields: ${missingFields.map((f: any) => f.label).join(', ')}`);
+        return;
+      }
+
+      // Node-type specific validation
+      if (node.type === 'http' && node.config.url) {
+        try {
+          new URL(node.config.url);
+        } catch {
+          setTestStatus('error');
+          setTestMessage('Invalid URL format');
+          return;
+        }
+      }
+
+      setTestStatus('success');
+      setTestMessage('Configuration is valid. Node will be tested during workflow execution.');
+
+      // Reset status after 3 seconds
+      setTimeout(() => {
+        setTestStatus('idle');
+        setTestMessage('');
+      }, 3000);
     } catch (error) {
       console.error('Node test failed:', error);
+      setTestStatus('error');
+      setTestMessage(error instanceof Error ? error.message : 'Test failed');
     }
   };
 
@@ -1140,14 +1188,34 @@ function WorkflowNodeDetails(props: NodeDetailsProps) {
 
         {/* Footer Actions */}
         <div class="p-4 border-t border-slate-200 dark:border-slate-700">
+          {/* Test status message */}
+          <Show when={testMessage()}>
+            <div class={`mb-3 px-3 py-2 rounded-md text-sm ${
+              testStatus() === 'success' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+              testStatus() === 'error' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+              'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+            }`}>
+              {testMessage()}
+            </div>
+          </Show>
           <div class="flex items-center justify-between">
             <div class="flex gap-2">
               <button
-                class="btn btn-secondary text-sm"
+                class={`btn text-sm ${
+                  testStatus() === 'success' ? 'btn-success' :
+                  testStatus() === 'error' ? 'btn-error' :
+                  'btn-secondary'
+                }`}
                 onClick={testNode}
+                disabled={testStatus() === 'testing'}
               >
-                <Play class="w-4 h-4 mr-1" />
-                Test
+                <Show when={testStatus() === 'testing'}>
+                  <span class="w-4 h-4 mr-1 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                </Show>
+                <Show when={testStatus() !== 'testing'}>
+                  <Play class="w-4 h-4 mr-1" />
+                </Show>
+                {testStatus() === 'testing' ? 'Testing...' : 'Test'}
               </button>
             </div>
 
