@@ -15,7 +15,7 @@ COPY src ./src
 ENV AWS_LC_SYS_NO_ASM=1
 ENV RUSTFLAGS="-C target-cpu=generic"
 
-# Build the actual binary (debug build to work with NO_ASM)
-RUN cargo build
+# Build the actual binary with release optimizations
+RUN cargo build --release
 
-# The binary will be at /app/target/debug/mcp-multi-tenant
+# The binary will be at /app/target/release/mcp-multi-tenant
