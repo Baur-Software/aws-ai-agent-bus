@@ -129,7 +129,7 @@ jobs:
     - name: Setup Bun
       uses: oven-sh/setup-bun@v1
       with:
-        bun-version: 'latest'
+        bun-version: '1.2.22'
 
     - name: Install dependencies
       run: |
@@ -186,7 +186,7 @@ jobs:
     - name: Setup Bun
       uses: oven-sh/setup-bun@v1
       with:
-        bun-version: 'latest'
+        bun-version: '1.2.22'
 
     - name: Install dependencies
       run: |
@@ -237,7 +237,7 @@ jobs:
     - name: Setup Bun
       uses: oven-sh/setup-bun@v1
       with:
-        bun-version: 'latest'
+        bun-version: '1.2.22'
 
     - name: Install Rust (for use_aws_mcp)
       uses: dtolnay/rust-toolchain@stable
