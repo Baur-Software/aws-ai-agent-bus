@@ -112,6 +112,17 @@ export class ChatService {
   private async saveSessionToKV(session: ChatSession): Promise<void> {
     try {
       const key = `chat-session-${session.userId}-${session.sessionId}`;
+      const jwt = {
+        userId: session.userId,
+        email: '',
+        name: '',
+        organizationMemberships: [],
+        personalNamespace: session.userId,
+        organizationId: session.organizationId || 'default-org'
+      } as JWTPayload;
+      const orgId = session.organizationId || 'default-org';
+
+      // Save the session itself
       await this.mcpRegistry.executeTool(
         'kv_set',
         {
@@ -119,19 +130,99 @@ export class ChatService {
           value: JSON.stringify(session),
           ttl_hours: 24 * 30 // 30 days
         },
-        {
-          userId: session.userId,
-          email: '',
-          name: '',
-          organizationMemberships: [],
-          personalNamespace: session.userId,
-          organizationId: session.organizationId || 'default-org'
-        } as JWTPayload,
-        session.organizationId || 'default-org'
+        jwt,
+        orgId
       );
+
+      // Update the session index for this user
+      await this.updateSessionIndex(session.userId, session.sessionId, session.organizationId);
     } catch (error) {
       this.logger.warn(`Failed to save session ${session.sessionId} to KV:`, error);
     }
+  }
+
+  /**
+   * Update the session index for a user (add sessionId to list)
+   */
+  private async updateSessionIndex(userId: string, sessionId: string, organizationId?: string): Promise<void> {
+    try {
+      const indexKey = `chat-session-index-${userId}`;
+      const jwt = {
+        userId,
+        email: '',
+        name: '',
+        organizationMemberships: [],
+        personalNamespace: userId,
+        organizationId: organizationId || 'default-org'
+      } as JWTPayload;
+      const orgId = organizationId || 'default-org';
+
+      // Get existing index
+      let sessionIds: string[] = [];
+      try {
+        const result = await this.mcpRegistry.executeTool('kv_get', { key: indexKey }, jwt, orgId);
+        if (result && result.value) {
+          sessionIds = JSON.parse(result.value);
+        }
+      } catch {
+        // Index doesn't exist yet
+      }
+
+      // Add sessionId if not already present
+      if (!sessionIds.includes(sessionId)) {
+        sessionIds.push(sessionId);
+        await this.mcpRegistry.executeTool(
+          'kv_set',
+          {
+            key: indexKey,
+            value: JSON.stringify(sessionIds),
+            ttl_hours: 24 * 30 // 30 days
+          },
+          jwt,
+          orgId
+        );
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to update session index for user ${userId}:`, error);
+    }
+  }
+
+  /**
+   * Load all sessions for a user from KV store using the session index
+   */
+  private async loadUserSessionsFromKV(userId: string, organizationId?: string): Promise<ChatSession[]> {
+    const sessions: ChatSession[] = [];
+    try {
+      const indexKey = `chat-session-index-${userId}`;
+      const jwt = {
+        userId,
+        email: '',
+        name: '',
+        organizationMemberships: [],
+        personalNamespace: userId,
+        organizationId: organizationId || 'default-org'
+      } as JWTPayload;
+      const orgId = organizationId || 'default-org';
+
+      // Get session index
+      const indexResult = await this.mcpRegistry.executeTool('kv_get', { key: indexKey }, jwt, orgId);
+      if (!indexResult || !indexResult.value) {
+        return sessions;
+      }
+
+      const sessionIds: string[] = JSON.parse(indexResult.value);
+
+      // Load each session
+      for (const sessionId of sessionIds) {
+        const session = await this.loadSessionFromKV(userId, sessionId, organizationId);
+        if (session) {
+          sessions.push(session);
+        }
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to load sessions from KV for user ${userId}:`, error);
+    }
+    return sessions;
   }
 
   /**
@@ -167,18 +258,37 @@ export class ChatService {
 
   /**
    * List user's chat sessions
-   * TODO: Once kv_list is available in MCP, we can load from KV store
-   * For now, returns in-memory sessions only
+   * Loads from KV store using session index, merges with in-memory sessions
    */
   async listUserSessions(userId: string, organizationId?: string): Promise<ChatSession[]> {
-    // Return in-memory sessions for this user
-    const userSessions = Array.from(this.sessions.values())
-      .filter(session => session.userId === userId)
-      .sort((a, b) =>
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-      );
+    // Load sessions from KV store
+    const kvSessions = await this.loadUserSessionsFromKV(userId, organizationId);
 
-    return userSessions;
+    // Get in-memory sessions for this user
+    const memSessions = Array.from(this.sessions.values())
+      .filter(session => session.userId === userId);
+
+    // Merge: KV sessions + in-memory sessions (deduplicated by sessionId)
+    const sessionMap = new Map<string, ChatSession>();
+
+    // Add KV sessions first
+    for (const session of kvSessions) {
+      sessionMap.set(session.sessionId, session);
+      // Also update in-memory cache
+      this.sessions.set(session.sessionId, session);
+    }
+
+    // Override with in-memory sessions (they may have newer data)
+    for (const session of memSessions) {
+      const existing = sessionMap.get(session.sessionId);
+      if (!existing || new Date(session.updatedAt) > new Date(existing.updatedAt)) {
+        sessionMap.set(session.sessionId, session);
+      }
+    }
+
+    // Sort by updatedAt descending (most recent first)
+    return Array.from(sessionMap.values())
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }
 
   /**
@@ -1448,15 +1558,54 @@ Your Response:
   }
 
   /**
-   * Delete session
+   * Delete session (also removes from KV store and session index)
    */
-  deleteSession(sessionId: string, userId: string): boolean {
+  async deleteSession(sessionId: string, userId: string, organizationId?: string): Promise<boolean> {
     const session = this.sessions.get(sessionId);
     if (!session || session.userId !== userId) {
       return false;
     }
 
+    // Delete from in-memory cache
     this.sessions.delete(sessionId);
+
+    // Delete from KV store and session index
+    try {
+      const jwt = {
+        userId,
+        email: '',
+        name: '',
+        organizationMemberships: [],
+        personalNamespace: userId,
+        organizationId: organizationId || 'default-org'
+      } as JWTPayload;
+      const orgId = organizationId || 'default-org';
+
+      // Delete the session itself
+      const sessionKey = `chat-session-${userId}-${sessionId}`;
+      await this.mcpRegistry.executeTool('kv_delete', { key: sessionKey }, jwt, orgId);
+
+      // Update session index (remove this sessionId)
+      const indexKey = `chat-session-index-${userId}`;
+      const indexResult = await this.mcpRegistry.executeTool('kv_get', { key: indexKey }, jwt, orgId);
+      if (indexResult && indexResult.value) {
+        const sessionIds: string[] = JSON.parse(indexResult.value);
+        const updatedIds = sessionIds.filter(id => id !== sessionId);
+        await this.mcpRegistry.executeTool(
+          'kv_set',
+          {
+            key: indexKey,
+            value: JSON.stringify(updatedIds),
+            ttl_hours: 24 * 30
+          },
+          jwt,
+          orgId
+        );
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to delete session ${sessionId} from KV:`, error);
+    }
+
     return true;
   }
 }
