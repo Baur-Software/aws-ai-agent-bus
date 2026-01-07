@@ -417,18 +417,6 @@ export const DashboardServerProvider: ParentComponent<DashboardServerProviderPro
         // Store discovered servers in component state or emit event for interested components
         break;
 
-      // TODO: Remove these logging-only handlers post-troubleshooting
-      case 'mcp_catalog_list_response':
-      case 'event_send_response':
-      case 'event_published':
-      case 'subscription_confirmed':
-      case 'organization_list_response':
-      case 'organization_members_response':
-      case 'organization_permissions_response':
-        // These responses are handled by sendMessage promise resolution
-        // Logging cases can be removed once debugging is complete
-        break;
-
       default:
         console.log('🔍 Unhandled dashboard server message type:', message.type);
     }
