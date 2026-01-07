@@ -25,6 +25,8 @@
     "tf:destroy": "cd infra/workspaces/${WS:-small/kv_store} && terraform destroy -auto-approve -var env=${ENV:-dev}",
     "install:hooks": "bash scripts/install-hooks.sh",
     "ui:test": "npm run test --workspace=dashboard-ui",
+    "server:test": "npm run test --workspace=dashboard-server",
+    "check:test-debt": "! grep -r '\\.skip\\|it\\.skip\\|describe\\.skip\\|test\\.skip' dashboard-ui/src dashboard-server/src --include='*.test.*' --include='*.spec.*' 2>/dev/null || echo 'No skipped tests found'",
     "test:all": "npm run test --workspace=dashboard-server && npm run test --workspace=dashboard-ui && npm run check:test-debt"
   },
   "keywords": [

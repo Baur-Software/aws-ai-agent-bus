@@ -187,18 +187,15 @@ Form Submission → Data Enrichment → Compliance Check → Manual Review → A
 
 ## Contributing
 
-See [CLAUDE.md](CLAUDE.md) for development guidelines and setup instructions.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [CLAUDE.md](CLAUDE.md) for development setup instructions.
 
 ## Documentation
 
 - [`CLAUDE.md`](CLAUDE.md) - Complete codebase overview and architecture
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) - Contribution guidelines
 - [`mcp-rust/`](mcp-rust/README.md) - MCP server documentation
 - [`.claude/`](.claude/README.md) - Agent orchestration system
 - [`infra/`](infra/) - Terraform infrastructure modules
-
-## Contributing
-
-See [CLAUDE.md](CLAUDE.md) for development guidelines.
 
 ## License
 
