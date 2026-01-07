@@ -160,6 +160,8 @@ export function setupWebSocketHandlers(wss: WebSocketServer, { metricsAggregator
     cleanup: async () => {
       // Cleanup agent handler MCP connection
       await AgentHandler.cleanup();
+      // Shutdown events handler (cleanup interval timer)
+      EventsHandler.shutdown();
     }
   };
 }
