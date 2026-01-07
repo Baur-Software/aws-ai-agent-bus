@@ -170,8 +170,7 @@ export default function BillingSettings() {
 
     try {
       setIsChangingPlan(true);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // TODO: Implement real billing API call via WebSocket or Stripe integration
 
       setBillingInfo(prev => ({ ...prev, plan: planId as any }));
 

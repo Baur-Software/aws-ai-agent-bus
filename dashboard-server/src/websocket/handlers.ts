@@ -1218,11 +1218,9 @@ async function getMCPServers() {
 }
 
 async function connectMCPServer(serverId: string, serverConfig: any, userContext: UserContext) {
-  // Mock connection for now - in production this would actually configure and connect to the MCP server
+  // TODO: Replace with MCPRegistryHandlers.connectMCPServer() for real DynamoDB persistence
+  // See: dashboard-server/src/handlers/mcpRegistry.ts
   console.log(`Connecting to MCP server ${serverId} for user ${userContext.userId}`);
-
-  // Simulate connection delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
 
   return {
     success: true,
